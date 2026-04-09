@@ -1,0 +1,8 @@
+adapter: hf
+model_name: OpenSafetyLab/MD-Judge-v0.1
+args:
+  task: text-generation
+  prompt_template: $md_judge
+  generation_kwargs:
+    max_new_tokens: 8
+    do_sample: false

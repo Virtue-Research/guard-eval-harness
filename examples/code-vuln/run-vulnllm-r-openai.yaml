@@ -1,0 +1,52 @@
+version: 1
+run_name: code-vuln-gpt4o
+
+model:
+  adapter: openai_compatible
+  model_name: gpt-4o
+  args:
+    root_url: https://api.openai.com
+    api_key_env: OPENAI_API_KEY
+    concurrency: 8
+    max_tokens: 8192
+    temperature: 0.0
+
+datasets:
+  - name: vulnllm_r_function_level_c
+    adapter: vulnllm_r_function_level
+    split: function_level
+    options:
+      language: c
+      use_cot: true
+      use_policy: true
+
+  - name: vulnllm_r_function_level_python
+    adapter: vulnllm_r_function_level
+    split: function_level
+    options:
+      language: python
+      use_cot: true
+      use_policy: true
+
+  - name: vulnllm_r_function_level_java
+    adapter: vulnllm_r_function_level
+    split: function_level
+    options:
+      language: java
+      use_cot: true
+      use_policy: true
+
+  - name: vulnllm_r_repo_level
+    adapter: vulnllm_r_repo_level
+    split: repo_level
+    options:
+      language: java
+      use_cot: true
+      use_policy: true
+
+execution:
+  batch_size: 1
+  concurrency: 8
+
+output:
+  run_dir: out/code-vuln/gpt4o-openai

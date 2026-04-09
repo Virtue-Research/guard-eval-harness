@@ -1,0 +1,6 @@
+adapter: hf
+model_name: unitary/multilingual-toxic-xlm-roberta
+args:
+  device: -1
+  task: text-classification
+  label_score_aggregation: max

@@ -1,0 +1,14 @@
+adapter: hf
+model_name: unitary/unbiased-toxic-roberta
+args:
+  device: -1
+  task: text-classification
+  label_score_aggregation: max
+  score_labels:
+    - toxicity
+    - severe_toxicity
+    - obscene
+    - identity_attack
+    - insult
+    - threat
+    - sexual_explicit

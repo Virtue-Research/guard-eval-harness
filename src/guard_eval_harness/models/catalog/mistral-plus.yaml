@@ -1,0 +1,12 @@
+adapter: hf
+model_name: mistralai/Mistral-7B-Instruct-v0.2
+args:
+  task: text-generation
+  prompt_template: $mistral_plus
+  generated_text_line_index: 0
+  text_score_mapping:
+    safe: 0.0
+    unsafe: 1.0
+  generation_kwargs:
+    max_new_tokens: 8
+    do_sample: false

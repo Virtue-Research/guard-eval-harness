@@ -1,0 +1,68 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "guard-eval-harness"
+version = "0.1.0"
+description = "CLI-first harness for safety and guardrail evaluation"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Guard Eval Harness Maintainers" }]
+dependencies = [
+  "datasets>=2.18",
+  "pydantic>=2.8",
+  "PyYAML>=6.0",
+]
+
+[project.optional-dependencies]
+hf = [
+  "accelerate>=0.30",
+  "Pillow>=10.0",
+  "sentencepiece>=0.2",
+  "torch>=2.1",
+  "transformers>=4.41",
+]
+audio = [
+  "librosa>=0.10",
+  "soundfile>=0.12",
+]
+vllm = [
+  # vLLM pins its own torch version (e.g. 0.17.x requires torch==2.10).
+  # Do NOT pin torch here — let vLLM's dependency resolver handle it.
+  # Note: vLLM 0.18.0 has a torch.compile bug (pytorch#176562) that
+  # breaks CUDA graph capture; pin <0.18 until a fixed release ships.
+  "vllm>=0.8.0,<0.18",
+  "transformers>=4.41",
+]
+api = [
+  "httpx>=0.27",
+  "tenacity>=8.2",
+]
+report = [
+  "jinja2>=3.1",
+  "pandas>=2.2",
+]
+sheets = [
+  "google-auth>=2.29",
+  "gspread>=6.1",
+]
+dev = [
+  "build>=1.2",
+  "pytest>=8.2",
+  "ruff>=0.4",
+]
+
+[project.scripts]
+geh = "guard_eval_harness.cli.main:main"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["guard_eval_harness*"]
+
+[tool.ruff]
+line-length = 80

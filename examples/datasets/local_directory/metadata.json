@@ -1,0 +1,14 @@
+{
+  "display_name": "Local Directory Demo",
+  "version": "2026.03",
+  "source_uri": "examples/datasets/local_directory",
+  "license": "CC-BY-4.0",
+  "languages": ["en"],
+  "categories": ["moderation"],
+  "metric_eligibility": {
+    "binary_classification": true
+  },
+  "metadata": {
+    "owner": "example"
+  }
+}

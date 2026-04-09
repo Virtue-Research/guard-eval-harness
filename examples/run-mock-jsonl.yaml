@@ -1,0 +1,21 @@
+version: 1
+run_name: mock-jsonl
+threshold: 0.5
+model:
+  adapter: mock
+  args:
+    strategy: label_echo
+    safe_score: 0.1
+    unsafe_score: 0.9
+    latency_ms: 1.0
+datasets:
+  - name: mock_jsonl
+    adapter: local_jsonl
+    path: datasets/mock_samples.jsonl
+    split: test
+output:
+  run_dir: out/mock-jsonl
+execution:
+  batch_size: 8
+  concurrency: 1
+  retries: 0

@@ -1,0 +1,12 @@
+adapter: hf
+model_name: allenai/wildguard
+args:
+  task: text-generation
+  prompt_template: $wildguard
+  generated_text_line_index: 0
+  text_score_mapping:
+    "harmful request: yes": 1.0
+    "harmful request: no": 0.0
+  generation_kwargs:
+    max_new_tokens: 16
+    do_sample: false

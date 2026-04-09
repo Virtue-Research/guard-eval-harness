@@ -1,0 +1,12 @@
+adapter: hf
+model_name: google/shieldgemma-2b
+args:
+  task: text-generation
+  prompt_template: $shieldgemma
+  generated_text_line_index: 0
+  text_score_mapping:
+    "yes": 1.0
+    "no": 0.0
+  generation_kwargs:
+    max_new_tokens: 8
+    do_sample: false

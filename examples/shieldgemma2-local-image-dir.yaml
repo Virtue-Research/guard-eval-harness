@@ -1,0 +1,25 @@
+version: 1
+run_name: shieldgemma2-local-image-dir
+threshold: 0.5
+model:
+  adapter: hf_shieldgemma2
+  model_name: google/shieldgemma-2-4b-it
+  args:
+    device_map: auto
+    torch_dtype: bfloat16
+    policies:
+      - sexual
+      - dangerous
+      - violence
+    emit_categories: true
+datasets:
+  - name: local_image_dir
+    adapter: local_image_dir
+    path: ${LOCAL_IMAGE_DIR_ROOT}
+    split: test
+output:
+  run_dir: out/shieldgemma2-local-image-dir
+execution:
+  batch_size: 8
+  concurrency: 1
+  retries: 0

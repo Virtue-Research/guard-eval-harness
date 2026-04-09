@@ -1,0 +1,22 @@
+version: 1
+run_name: mock-csv
+threshold: 0.5
+model:
+  adapter: mock
+  args:
+    strategy: label_echo
+datasets:
+  - name: mock_csv
+    adapter: local_csv
+    path: datasets/mock_samples.csv
+    split: test
+    prompt_field: prompt
+    label_field: unsafe
+    metadata_fields:
+      - category
+output:
+  run_dir: out/mock-csv
+execution:
+  batch_size: 4
+  concurrency: 1
+  retries: 0

@@ -1,0 +1,26 @@
+version: 1
+run_name: vllm-llama-guard
+threshold: 0.5
+model:
+  adapter: vllm
+  model_name: meta-llama/Llama-Guard-3-8B
+  args:
+    apply_chat_template: true
+    add_generation_prompt: true
+    max_new_tokens: 16
+    tensor_parallel_size: 1
+    gpu_memory_utilization: 0.9
+    text_score_mapping:
+      safe: 0.0
+      unsafe: 1.0
+datasets:
+  - name: mock_jsonl
+    adapter: local_jsonl
+    path: datasets/mock_samples.jsonl
+    split: test
+output:
+  run_dir: out/vllm-llama-guard
+execution:
+  batch_size: 512
+  concurrency: 1
+  retries: 0

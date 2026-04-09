@@ -1,0 +1,20 @@
+version: 1
+run_name: hf-mock-jsonl
+threshold: 0.5
+model:
+  adapter: hf
+  model_name: unitary/toxic-bert
+  args:
+    task: text-classification
+    label_score_aggregation: max
+datasets:
+  - name: mock_jsonl
+    adapter: local_jsonl
+    path: datasets/mock_samples.jsonl
+    split: test
+output:
+  run_dir: out/hf-mock-jsonl
+execution:
+  batch_size: 8
+  concurrency: 1
+  retries: 0

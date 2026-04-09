@@ -1,0 +1,123 @@
+site_name: Guard Eval Harness
+site_description: CLI-first harness for benchmarking guardrail, moderation, and safety classification models
+site_url: https://virtue-research.github.io/guard-eval-harness/
+repo_url: https://github.com/Virtue-Research/guard-eval-harness
+repo_name: Virtue-Research/guard-eval-harness
+
+theme:
+  name: material
+  palette:
+    - scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+    - scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+  font:
+    text: Inter
+    code: JetBrains Mono
+  features:
+    - navigation.instant
+    - navigation.instant.progress
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - navigation.path
+    - search.suggest
+    - search.highlight
+    - search.share
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+    - toc.follow
+    - header.autohide
+  logo: assets/logo.png
+  favicon: assets/logo.png
+  icon:
+    repo: fontawesome/brands/github
+
+extra_css:
+  - stylesheets/extra.css
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            show_source: true
+            show_root_heading: true
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+  - attr_list
+  - md_in_html
+  - toc:
+      permalink: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+nav:
+  - Home: index.md
+  - Getting Started:
+      - Installation: getting-started/installation.md
+      - Quickstart: getting-started/quickstart.md
+      - Run Modes: getting-started/run-modes.md
+      - Troubleshooting: getting-started/troubleshooting.md
+  - User Guide:
+      - Configuration: user-guide/configuration.md
+      - Benchmark Selection: user-guide/benchmark-selection.md
+      - Benchmark Packs: user-guide/benchmark-packs.md
+      - Run Artifacts: user-guide/run-artifacts.md
+      - Resuming Runs: user-guide/resume.md
+      - Common Workflows: user-guide/common-workflows.md
+  - Models:
+      - Overview: models/overview.md
+      - HuggingFace: models/huggingface.md
+      - vLLM: models/vllm.md
+      - OpenAI Moderation: models/openai-moderation.md
+      - OpenAI Compatible: models/openai-compatible.md
+      - Anthropic: models/anthropic.md
+      - HTTP Endpoint: models/http.md
+  - Datasets:
+      - Overview: datasets/overview.md
+      - Text Benchmarks: datasets/text.md
+      - Image Benchmarks: datasets/image.md
+      - Audio Benchmarks: datasets/audio.md
+      - Code Benchmarks: datasets/code.md
+      - Local Data: datasets/local.md
+  - CLI Reference: cli/reference.md
+  - Metrics: metrics/overview.md
+  - Developer Guide:
+      - Architecture: developer/architecture.md
+      - Adding a Dataset Adapter: developer/adding-datasets.md
+      - Adding a Model Adapter: developer/adding-models.md
+      - Plugins and Presets: developer/plugins-and-presets.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/Virtue-Research/guard-eval-harness

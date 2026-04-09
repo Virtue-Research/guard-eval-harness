@@ -1,0 +1,11 @@
+adapter: hf
+model_name: ibm-granite/granite-guardian-3.2-5b
+args:
+  task: text-generation
+  apply_chat_template: true
+  text_score_mapping:
+    "yes": 1.0
+    "no": 0.0
+  generation_kwargs:
+    max_new_tokens: 2
+    do_sample: false

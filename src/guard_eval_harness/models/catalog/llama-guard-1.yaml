@@ -1,0 +1,9 @@
+adapter: hf
+model_name: meta-llama/LlamaGuard-7b
+args:
+  task: text-generation
+  apply_chat_template: true
+  chat_template_profile: llama_guard
+  generation_kwargs:
+    max_new_tokens: 16
+    do_sample: false

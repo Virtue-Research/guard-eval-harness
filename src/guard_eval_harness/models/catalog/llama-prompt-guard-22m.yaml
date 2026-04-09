@@ -1,0 +1,9 @@
+adapter: hf
+model_name: meta-llama/Llama-Prompt-Guard-2-22M
+args:
+  device: -1
+  task: text-classification
+  max_length: 512
+  label_score_mapping:
+    label_0: 0.0
+    label_1: 1.0

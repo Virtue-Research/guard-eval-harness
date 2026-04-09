@@ -1,0 +1,27 @@
+version: 1
+run_name: openai-moderation-safe-vs-unsafe-image-edits
+threshold: 0.5
+model:
+  adapter: openai_moderation
+  model_name: omni-moderation-latest
+  args:
+    api_key_env: OPENAI_API_KEY
+    categories:
+      - sexual
+      - violence
+      - violence/graphic
+      - self-harm
+      - self-harm/intent
+      - self-harm/instructions
+datasets:
+  - name: safe_vs_unsafe_image_edits
+    adapter: safe_vs_unsafe_image_edits
+    split: train
+    options:
+      variant: batch1
+output:
+  run_dir: out/openai-moderation-safe-vs-unsafe-image-edits
+execution:
+  batch_size: 8
+  concurrency: 8
+  retries: 2
