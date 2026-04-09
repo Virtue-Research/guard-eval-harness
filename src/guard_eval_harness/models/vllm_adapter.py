@@ -8,6 +8,7 @@ For classification, uses vLLM's ``LLM.classify()`` API with
 from __future__ import annotations
 
 import importlib
+import os
 import logging
 import math
 import time

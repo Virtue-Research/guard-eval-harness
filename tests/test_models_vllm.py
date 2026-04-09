@@ -90,6 +90,10 @@ class VLLMAdapterTest(unittest.TestCase):
     def test_sampling_params_auto_constrains_to_text_mapping_choices(
         self,
     ) -> None:
+        try:
+            import vllm  # noqa: F401
+        except ImportError:
+            self.skipTest("vllm not installed")
         adapter = self._make_adapter(
             text_score_mapping={"safe": 0.0, "unsafe": 1.0},
         )
@@ -103,6 +107,10 @@ class VLLMAdapterTest(unittest.TestCase):
         )
 
     def test_sampling_params_accepts_guided_choice_alias(self) -> None:
+        try:
+            import vllm  # noqa: F401
+        except ImportError:
+            self.skipTest("vllm not installed")
         adapter = self._make_adapter(guided_choice=["yes", "no"])
 
         params = adapter._sampling_params()
@@ -386,6 +394,10 @@ class VLLMAdapterTest(unittest.TestCase):
     # ------------------------------------------------------------------
 
     def test_sampling_params_defaults(self) -> None:
+        try:
+            import vllm  # noqa: F401
+        except ImportError:
+            self.skipTest("vllm not installed")
         adapter = self._make_adapter()
         mock_cls = MagicMock()
         with patch.dict(
@@ -396,6 +408,10 @@ class VLLMAdapterTest(unittest.TestCase):
         mock_cls.assert_called_once_with(max_tokens=16, temperature=0.0)
 
     def test_sampling_params_custom(self) -> None:
+        try:
+            import vllm  # noqa: F401
+        except ImportError:
+            self.skipTest("vllm not installed")
         adapter = self._make_adapter(
             max_new_tokens=64,
             temperature=0.7,
