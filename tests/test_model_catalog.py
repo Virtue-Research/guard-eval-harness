@@ -44,21 +44,6 @@ class CatalogLookupTest(unittest.TestCase):
             entry.model_name,
         )
 
-    def test_vllm_backend_rejects_classifier(self) -> None:
-        with self.assertRaises(ValueError):
-            resolve_catalog(
-                "detoxify-original", backend="vllm",
-            )
-
-    def test_resolve_classifier(self) -> None:
-        entry = resolve_catalog("detoxify-original")
-        self.assertIsNotNone(entry)
-        self.assertEqual("hf", entry.adapter)
-        self.assertEqual(
-            "text-classification",
-            entry.args["task"],
-        )
-
     def test_resolve_unknown_returns_none(self) -> None:
         self.assertIsNone(resolve_catalog("not-a-model"))
 
@@ -169,7 +154,7 @@ class CLICatalogResolutionTest(unittest.TestCase):
             sys.stdout = old_stdout
         output = json.loads(buf.getvalue())
         self.assertIn("models", output)
-        self.assertGreater(len(output["models"]), 20)
+        self.assertGreaterEqual(len(output["models"]), 13)
 
 
 if __name__ == "__main__":

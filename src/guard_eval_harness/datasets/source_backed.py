@@ -114,18 +114,11 @@ def load_hf_rows(
     if data_dir is not None:
         kwargs["data_dir"] = data_dir
 
-    import warnings
-    with warnings.catch_warnings():
-        warnings.filterwarnings(
-            "ignore",
-            message=".*trust_remote_code.*",
-        )
-        dataset = load_dataset(
-            repo_id,
-            subset,
-            trust_remote_code=True,
-            **kwargs,
-        )
+    dataset = load_dataset(
+        repo_id,
+        subset,
+        **kwargs,
+    )
     if hasattr(dataset, "to_list"):
         return list(dataset.to_list())
     return [dict(row) for row in dataset]

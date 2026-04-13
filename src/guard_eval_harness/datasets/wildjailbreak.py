@@ -79,7 +79,6 @@ class WildJailbreakDataset(SourceBackedDatasetAdapter):
             split=hf_split,
             delimiter="\t",
             keep_default_na=False,
-            trust_remote_code=True,
         )
         rows = (
             list(ds.to_list())

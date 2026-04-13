@@ -118,7 +118,6 @@ class SafeVsUnsafeImageEditsDataset(MultimodalDatasetAdapter):
             repo_id,
             split=split,
             revision=revision,
-            trust_remote_code=True,
         )
         if hasattr(dataset, "__iter__"):
             return [dict(row) for row in dataset]

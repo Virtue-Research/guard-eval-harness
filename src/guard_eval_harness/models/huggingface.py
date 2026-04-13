@@ -37,6 +37,87 @@ from guard_eval_harness.schemas import (
 _log = logging.getLogger(__name__)
 
 
+class _Seq2SeqWrapper:
+    """Thin callable wrapping a Seq2SeqLM model to mimic a pipeline.
+
+    The ``text2text-generation`` pipeline was removed in transformers 5.x.
+    This wrapper loads the model via ``AutoModelForSeq2SeqLM`` and exposes
+    a ``__call__`` that matches the output format the HF adapter expects
+    for text-generation pipelines.
+    """
+
+    def __init__(
+        self,
+        model: Any,
+        tokenizer: Any,
+        device: Any,
+        default_max_length: int | None = None,
+    ) -> None:
+        self.model = model.to(device).eval()
+        self.tokenizer = tokenizer
+        self.device = device
+        self.default_max_length = default_max_length
+
+    # Pipeline-only kwargs that the text-generation/text2text pipelines
+    # accept but ``model.generate`` rejects. Silently dropped so configs
+    # that set e.g. ``pipeline_batch_size`` (which surfaces as
+    # ``batch_size`` in _run_backend) don't blow up the seq2seq path.
+    _PIPELINE_ONLY_KWARGS = frozenset({
+        "batch_size",
+        "return_full_text",
+        "return_tensors",
+        "return_text",
+        "clean_up_tokenization_spaces",
+    })
+
+    def __call__(
+        self,
+        inputs: str | list[str],
+        *,
+        truncation: bool = True,
+        max_length: int | None = None,
+        **kwargs: Any,
+    ) -> list[list[dict[str, str]]]:
+        import torch
+
+        if isinstance(inputs, str):
+            inputs = [inputs]
+        effective_max_length = (
+            max_length
+            if max_length is not None
+            else self.default_max_length
+        )
+        if effective_max_length is None:
+            effective_max_length = getattr(
+                self.tokenizer, "model_max_length", None
+            )
+            # Some tokenizers expose an unrealistic sentinel
+            # (e.g. int(1e30)) to mean "unbounded"; fall back to 512
+            # only when there's no meaningful limit anywhere.
+            if (
+                effective_max_length is None
+                or effective_max_length > 10**6
+            ):
+                effective_max_length = 512
+        enc = self.tokenizer(
+            inputs,
+            return_tensors="pt",
+            padding=True,
+            truncation=truncation,
+            max_length=effective_max_length,
+        ).to(self.device)
+        gen_kwargs = {
+            k: v for k, v in kwargs.items()
+            if k not in self._PIPELINE_ONLY_KWARGS
+        }
+        gen_kwargs.setdefault("max_new_tokens", 16)
+        gen_kwargs.setdefault("do_sample", False)
+        with torch.no_grad():
+            out = self.model.generate(**enc, **gen_kwargs)
+        decoded = self.tokenizer.batch_decode(out, skip_special_tokens=True)
+        return [[{"generated_text": t}] for t in decoded]
+
+
 @model_registry.register("hf")
 class HuggingFaceAdapter(ModelAdapter):
     """Transformers-backed safety scorer."""
@@ -328,6 +409,36 @@ class HuggingFaceAdapter(ModelAdapter):
                 _prev_verbosity = _tf_logging.get_verbosity()
                 _tf_logging.set_verbosity_error()
             device_map = self._configured_device_map()
+            # text2text-generation pipeline was removed in transformers 5.x;
+            # wrap the model + tokenizer in a thin callable so the rest of
+            # the adapter can call it like a pipeline. Handled before the
+            # subfolder branch so subfolder seq2seq configs also route
+            # through the wrapper instead of the removed pipeline.
+            if task == "text2text-generation":
+                torch = importlib.import_module("torch")
+                if "device" in self.config.args:
+                    seq2seq_device = self._resolve_device(torch)
+                else:
+                    idx = self._default_device()
+                    seq2seq_device = (
+                        torch.device("cpu") if idx < 0
+                        else torch.device(f"cuda:{idx}")
+                    )
+                _cfg_max_length = self.config.args.get("max_length")
+                self._backend = _Seq2SeqWrapper(
+                    model=self._load_model(transformers, task=task),
+                    tokenizer=self._get_tokenizer(),
+                    device=seq2seq_device,
+                    default_max_length=(
+                        _cfg_max_length
+                        if isinstance(_cfg_max_length, int)
+                        and _cfg_max_length > 0
+                        else None
+                    ),
+                )
+                if _tf_logging is not None and _prev_verbosity is not None:
+                    _tf_logging.set_verbosity(_prev_verbosity)
+                return self._backend
             if (
                 self._model_subfolder() is not None
                 or self._tokenizer_subfolder() is not None
