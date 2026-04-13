@@ -185,7 +185,7 @@ datasets:
 - name: xstest
   adapter: xstest
 output:
-  run_dir: /scratch/siavash/geh-clean/out/claude-haiku-4.5
+  run_dir: out/claude-haiku-4.5
   overwrite: true
 execution:
   batch_size: 500

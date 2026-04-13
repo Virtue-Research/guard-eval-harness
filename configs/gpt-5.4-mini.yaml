@@ -191,7 +191,7 @@ datasets:
 - name: xstest
   adapter: xstest
 output:
-  run_dir: /scratch/siavash/geh-clean/out/gpt-5.4-mini
+  run_dir: out/gpt-5.4-mini
   overwrite: true
 execution:
   batch_size: 500
