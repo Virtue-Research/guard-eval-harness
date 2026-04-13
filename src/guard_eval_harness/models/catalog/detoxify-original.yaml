@@ -1,6 +1,0 @@
-adapter: hf
-model_name: unitary/toxic-bert
-args:
-  device: -1
-  task: text-classification
-  label_score_aggregation: max
