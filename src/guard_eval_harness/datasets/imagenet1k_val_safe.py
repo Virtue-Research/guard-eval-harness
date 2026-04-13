@@ -136,7 +136,6 @@ class ImageNet1KValSafeDataset(MultimodalDatasetAdapter):
             _REPO,
             split=split,
             revision=_REVISION,
-            trust_remote_code=True,
         )
         if hasattr(dataset, "__iter__"):
             return [dict(row) for row in dataset]

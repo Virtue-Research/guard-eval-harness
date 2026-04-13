@@ -87,7 +87,6 @@ class SourceBackedMultimodalDatasetAdapter(MultimodalDatasetAdapter):
             split=split_name,
             revision=revision,
             data_dir=data_dir,
-            trust_remote_code=True,
         )
         if hasattr(dataset, "to_list"):
             return list(dataset.to_list())
