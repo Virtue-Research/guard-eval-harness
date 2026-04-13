@@ -9,7 +9,7 @@ model:
     apply_chat_template: true
     add_generation_prompt: true
     system_prompt: |
-      Task: Check if there is unsafe content in 'User' messages in conversations according our safety policy with the below categories.
+      Task: Check if there is unsafe content in '{metadata_target_role}' messages in conversations according our safety policy with the below categories.
 
       <BEGIN UNSAFE CONTENT CATEGORIES>
       S1: Violent Crimes.
@@ -28,7 +28,7 @@ model:
       S14: Code Interpreter Abuse.
       <END UNSAFE CONTENT CATEGORIES>
 
-      Provide your safety assessment for the User message(s) in the conversation that follows. Respond with exactly one word: 'safe' or 'unsafe'.
+      Provide your safety assessment for the {metadata_target_role} message(s) in the conversation that follows. Respond with exactly one word: 'safe' or 'unsafe'.
     generated_text_line_index: 0
     text_score_mapping:
       safe: 0.0
