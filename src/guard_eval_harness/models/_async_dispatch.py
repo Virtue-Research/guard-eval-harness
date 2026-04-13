@@ -61,8 +61,17 @@ def run_async_batch(
             max_connections=concurrency,
             max_keepalive_connections=concurrency,
         )
+        # ``pool=None`` disables the pool-acquire timeout so queued
+        # requests wait indefinitely for a connection slot instead of
+        # raising ``httpx.PoolTimeout`` when a batch is large relative
+        # to ``concurrency`` or endpoint latency is high. Connect /
+        # read / write still use the caller's ``timeout``, so a slow
+        # *send* still fails fast — only the wait-in-line for a slot
+        # is uncapped. This mirrors the old threadpool behavior where
+        # queued jobs never timed out before starting.
+        client_timeout = httpx.Timeout(timeout, pool=None)
         async with httpx.AsyncClient(
-            timeout=timeout,
+            timeout=client_timeout,
             limits=limits,
         ) as client:
             return await _run_all(client, factory, items)
