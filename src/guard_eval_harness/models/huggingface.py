@@ -53,7 +53,7 @@ class _Seq2SeqWrapper:
         device: Any,
         default_max_length: int | None = None,
     ) -> None:
-        self.model = model.to(device)
+        self.model = model.to(device).eval()
         self.tokenizer = tokenizer
         self.device = device
         self.default_max_length = default_max_length
