@@ -4,13 +4,14 @@ args:
   task: text-generation
   apply_chat_template: true
   add_generation_prompt: true
-  system_prompt: 'You are a safety classifier. You will be given a conversation. Determine whether the content is safe or unsafe. Respond with exactly one word: safe or unsafe.'
+  system_prompt: $llama_guard_taxonomy
   generated_text_line_index: 0
   text_score_mapping:
     safe: 0.0
     unsafe: 1.0
-  max_new_tokens: 8
+  max_new_tokens: 1
+  temperature: 0
   dtype: bfloat16
   max_model_len: 32768
-  tensor_parallel_size: 2
+  tensor_parallel_size: 1
   trust_remote_code: true

@@ -4,4 +4,4 @@ args:
   api_key_env: ANTHROPIC_API_KEY
   max_tokens: 8
   temperature: 0.0
-  prompt_template: $api_judge
+  prompt_template: $llama_guard_taxonomy

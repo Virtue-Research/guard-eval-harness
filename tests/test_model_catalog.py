@@ -57,7 +57,7 @@ class CatalogLookupTest(unittest.TestCase):
                 self.assertIsInstance(profile, ModelProfile)
                 self.assertIn(
                     profile.adapter,
-                    {"hf", "openai_compatible"},
+                    {"hf", "vllm", "openai_compatible", "anthropic"},
                 )
                 self.assertIsNotNone(profile.model_name)
 
