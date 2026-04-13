@@ -292,7 +292,7 @@ def main():
     parser.add_argument(
         "--run-root",
         type=Path,
-        default=REPO_ROOT / "out",
+        default=Path("out"),
         help="Base dir for each config's output.run_dir (default: ./out)",
     )
     args = parser.parse_args()
