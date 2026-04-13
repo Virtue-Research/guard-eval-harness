@@ -254,7 +254,7 @@ MODELS = [
         "model": {
             "adapter": "anthropic",
             "model_name": "claude-haiku-4-5-20251001",
-            "args": {"api_key_env": "ANTHROPIC_API_KEY", "concurrency": 500, "retries": 8, "retry_backoff": 2.0, "prompt_template": API_JUDGE_PROMPT},
+            "args": {"api_key_env": "ANTHROPIC_API_KEY", "max_tokens": 8, "temperature": 0.0, "concurrency": 500, "retries": 8, "retry_backoff": 2.0, "prompt_template": API_JUDGE_PROMPT},
         },
         "batch_size": 1,
         "concurrency": 500,
