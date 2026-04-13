@@ -1,42 +1,40 @@
-"""Shared async dispatch helpers for API model adapters.
-
-``httpx`` is an optional dependency (``.[api]`` extra) and is imported
-lazily inside :func:`run_async_batch` so that base installs can still
-import this module during registry discovery.
-"""
+"""Shared async dispatch helpers for API model adapters."""
 
 from __future__ import annotations
 
 import asyncio
 import concurrent.futures
-from typing import TYPE_CHECKING, Awaitable, Callable, Sequence, TypeVar
+from typing import Awaitable, Callable, Sequence, TypeVar
 
-if TYPE_CHECKING:
-    import httpx
+import httpx
 
 T = TypeVar("T")
 U = TypeVar("U")
 
 
 async def _run_all(
-    client: "httpx.AsyncClient",
-    factory: Callable[["httpx.AsyncClient", T], Awaitable[U]],
+    client: httpx.AsyncClient,
+    factory: Callable[[httpx.AsyncClient, T], Awaitable[U]],
     items: Sequence[T],
-    *,
-    concurrency: int,
 ) -> list[U | BaseException]:
-    sem = asyncio.Semaphore(concurrency)
-
-    async def _guarded(item: T) -> U:
-        async with sem:
-            return await factory(client, item)
-
-    tasks = [asyncio.create_task(_guarded(item)) for item in items]
+    # Concurrency is gated by the ``httpx.Limits`` on ``client``:
+    # ``client.post()`` awaits a connection slot from the pool before
+    # sending, so only ``max_connections`` requests are in flight at
+    # once. Crucially, the connection slot is released as soon as the
+    # response body is read (which happens inside the non-streaming
+    # ``post`` call), *before* any retry/backoff ``asyncio.sleep``
+    # runs. That means a task waiting in backoff is not holding a
+    # permit, and queued tasks can start immediately — the property
+    # an explicit ``asyncio.Semaphore`` wrapped around the whole
+    # factory call would break.
+    tasks = [
+        asyncio.create_task(factory(client, item)) for item in items
+    ]
     return await asyncio.gather(*tasks, return_exceptions=True)
 
 
 def run_async_batch(
-    factory: Callable[["httpx.AsyncClient", T], Awaitable[U]],
+    factory: Callable[[httpx.AsyncClient, T], Awaitable[U]],
     items: Sequence[T],
     *,
     concurrency: int,
@@ -55,7 +53,6 @@ def run_async_batch(
     """
     if not items:
         return []
-    import httpx  # Imported lazily; optional dependency.
 
     concurrency = max(1, concurrency)
 
@@ -68,12 +65,7 @@ def run_async_batch(
             timeout=timeout,
             limits=limits,
         ) as client:
-            return await _run_all(
-                client,
-                factory,
-                items,
-                concurrency=concurrency,
-            )
+            return await _run_all(client, factory, items)
 
     try:
         asyncio.get_running_loop()

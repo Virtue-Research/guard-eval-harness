@@ -4,12 +4,11 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import TYPE_CHECKING, Any, Mapping, Sequence
+from typing import Any, Mapping, Sequence
+
+import httpx
 
 from guard_eval_harness.models._async_dispatch import run_async_batch
-
-if TYPE_CHECKING:
-    import httpx
 from guard_eval_harness.models.base import ModelAdapter
 from guard_eval_harness.models.templates import (
     async_json_post_with_retry,
@@ -322,7 +321,7 @@ class AnthropicAdapter(ModelAdapter):
 
     async def _apredict_one(
         self,
-        client: "httpx.AsyncClient",
+        client: httpx.AsyncClient,
         sample: NormalizedSample,
         *,
         endpoint: str,
@@ -409,7 +408,7 @@ class AnthropicAdapter(ModelAdapter):
             return predictions
 
         async def _factory(
-            client: "httpx.AsyncClient",
+            client: httpx.AsyncClient,
             sample: NormalizedSample,
         ) -> NormalizedPrediction:
             return await self._apredict_one(

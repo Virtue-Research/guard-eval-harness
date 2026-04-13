@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import io
 import json
@@ -15,6 +16,8 @@ from typing import Any, Mapping, Sequence
 from urllib import error as urllib_error
 from urllib import parse as urllib_parse
 from urllib import request as urllib_request
+
+import httpx
 
 from guard_eval_harness.schemas import (
     MediaPart,
@@ -633,7 +636,7 @@ def _retry_wait(
 
 
 async def async_json_post_with_retry(
-    client: Any,
+    client: httpx.AsyncClient,
     url: str,
     payload: Mapping[str, Any],
     *,
@@ -648,10 +651,6 @@ async def async_json_post_with_retry(
     a single connection pool.  Retries on HTTP 429/5xx and transport
     errors, honoring ``Retry-After`` when present.
     """
-    import asyncio
-
-    import httpx
-
     request_headers = {"Content-Type": "application/json"}
     if headers:
         request_headers.update(headers)
