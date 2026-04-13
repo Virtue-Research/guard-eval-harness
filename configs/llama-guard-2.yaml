@@ -2,15 +2,15 @@ version: 1
 run_name: llama-guard-2
 threshold: 0.5
 model:
-  adapter: hf
+  adapter: vllm
   model_name: meta-llama/Meta-Llama-Guard-2-8B
   args:
+    gpu_memory_utilization: 0.45
+    temperature: 0
     task: text-generation
     apply_chat_template: true
     chat_template_profile: llama_guard
-    generation_kwargs:
-      max_new_tokens: 16
-      do_sample: false
+    max_new_tokens: 16
 datasets:
 - name: advbench_behaviors
   adapter: advbench_behaviors
@@ -163,9 +163,9 @@ datasets:
 - name: xstest
   adapter: xstest
 output:
-  run_dir: /scratch/siavash/geh-clean/out/llama-guard-2
+  run_dir: out/llama-guard-2
   overwrite: true
 execution:
-  batch_size: 64
+  batch_size: 512
   concurrency: 1
   retries: 0

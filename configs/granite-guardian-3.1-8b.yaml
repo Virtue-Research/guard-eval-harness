@@ -5,7 +5,7 @@ model:
   adapter: vllm
   model_name: ibm-granite/granite-guardian-3.1-8b
   args:
-    gpu_memory_utilization: 0.2
+    gpu_memory_utilization: 0.45
     temperature: 0
     task: text-generation
     apply_chat_template: true
@@ -165,7 +165,7 @@ datasets:
 - name: xstest
   adapter: xstest
 output:
-  run_dir: /scratch/siavash/geh-clean/out/granite-guardian-3.1-8b
+  run_dir: out/granite-guardian-3.1-8b
   overwrite: true
 execution:
   batch_size: 512

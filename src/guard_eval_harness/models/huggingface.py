@@ -46,10 +46,17 @@ class _Seq2SeqWrapper:
     for text-generation pipelines.
     """
 
-    def __init__(self, model: Any, tokenizer: Any, device: Any) -> None:
+    def __init__(
+        self,
+        model: Any,
+        tokenizer: Any,
+        device: Any,
+        default_max_length: int | None = None,
+    ) -> None:
         self.model = model.to(device)
         self.tokenizer = tokenizer
         self.device = device
+        self.default_max_length = default_max_length
 
     # Pipeline-only kwargs that the text-generation/text2text pipelines
     # accept but ``model.generate`` rejects. Silently dropped so configs
@@ -75,12 +82,29 @@ class _Seq2SeqWrapper:
 
         if isinstance(inputs, str):
             inputs = [inputs]
+        effective_max_length = (
+            max_length
+            if max_length is not None
+            else self.default_max_length
+        )
+        if effective_max_length is None:
+            effective_max_length = getattr(
+                self.tokenizer, "model_max_length", None
+            )
+            # Some tokenizers expose an unrealistic sentinel
+            # (e.g. int(1e30)) to mean "unbounded"; fall back to 512
+            # only when there's no meaningful limit anywhere.
+            if (
+                effective_max_length is None
+                or effective_max_length > 10**6
+            ):
+                effective_max_length = 512
         enc = self.tokenizer(
             inputs,
             return_tensors="pt",
             padding=True,
             truncation=truncation,
-            max_length=max_length or 512,
+            max_length=effective_max_length,
         ).to(self.device)
         gen_kwargs = {
             k: v for k, v in kwargs.items()
@@ -417,10 +441,17 @@ class HuggingFaceAdapter(ModelAdapter):
                         torch.device("cpu") if idx < 0
                         else torch.device(f"cuda:{idx}")
                     )
+                _cfg_max_length = self.config.args.get("max_length")
                 self._backend = _Seq2SeqWrapper(
                     model=self._load_model(transformers, task=task),
                     tokenizer=self._get_tokenizer(),
                     device=seq2seq_device,
+                    default_max_length=(
+                        _cfg_max_length
+                        if isinstance(_cfg_max_length, int)
+                        and _cfg_max_length > 0
+                        else None
+                    ),
                 )
                 if _tf_logging is not None and _prev_verbosity is not None:
                     _tf_logging.set_verbosity(_prev_verbosity)

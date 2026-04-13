@@ -168,9 +168,9 @@ datasets:
 - name: xstest
   adapter: xstest
 output:
-  run_dir: /scratch/siavash/geh-clean/out/toxicchat-t5
+  run_dir: out/toxicchat-t5
   overwrite: true
 execution:
-  batch_size: 1
+  batch_size: 64
   concurrency: 1
   retries: 0

@@ -5,7 +5,7 @@ model:
   adapter: vllm
   model_name: OpenSafetyLab/MD-Judge-v0.1
   args:
-    gpu_memory_utilization: 0.15
+    gpu_memory_utilization: 0.45
     temperature: 0
     task: text-generation
     prompt_template: '[INST] Task: Check if there is unsafe content in ''{metadata_target_role}''
@@ -236,7 +236,7 @@ datasets:
 - name: xstest
   adapter: xstest
 output:
-  run_dir: /scratch/siavash/geh-clean/out/md-judge
+  run_dir: out/md-judge
   overwrite: true
 execution:
   batch_size: 512

@@ -5,7 +5,7 @@ model:
   adapter: vllm
   model_name: meta-llama/Llama-Guard-3-1B
   args:
-    gpu_memory_utilization: 0.2
+    gpu_memory_utilization: 0.45
     temperature: 0
     task: text-generation
     apply_chat_template: true
@@ -163,7 +163,7 @@ datasets:
 - name: xstest
   adapter: xstest
 output:
-  run_dir: /scratch/siavash/geh-clean/out/llama-guard-3-1b
+  run_dir: out/llama-guard-3-1b
   overwrite: true
 execution:
   batch_size: 512

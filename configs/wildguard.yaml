@@ -5,7 +5,7 @@ model:
   adapter: vllm
   model_name: allenai/wildguard
   args:
-    gpu_memory_utilization: 0.15
+    gpu_memory_utilization: 0.45
     temperature: 0
     task: text-generation
     prompt_template: '<s><|user|>
@@ -189,7 +189,7 @@ datasets:
 - name: xstest
   adapter: xstest
 output:
-  run_dir: /scratch/siavash/geh-clean/out/wildguard
+  run_dir: out/wildguard
   overwrite: true
 execution:
   batch_size: 512

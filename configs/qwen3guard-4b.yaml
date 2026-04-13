@@ -5,12 +5,11 @@ model:
   adapter: vllm
   model_name: Qwen/Qwen3Guard-Gen-4B
   args:
+    gpu_memory_utilization: 0.45
+    temperature: 0
     task: text-generation
     apply_chat_template: true
     max_new_tokens: 8
-    temperature: 0
-    gpu_memory_utilization: 0.25
-    max_model_len: 32768
 datasets:
 - name: advbench_behaviors
   adapter: advbench_behaviors
@@ -163,7 +162,7 @@ datasets:
 - name: xstest
   adapter: xstest
 output:
-  run_dir: /scratch/siavash/geh-clean/out/qwen3guard-4b
+  run_dir: out/qwen3guard-4b
   overwrite: true
 execution:
   batch_size: 512

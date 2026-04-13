@@ -5,13 +5,13 @@ model:
   adapter: hf
   model_name: meta-llama/Prompt-Guard-86M
   args:
+    device: -1
     task: text-classification
     max_length: 512
     label_score_mapping:
       benign: 0.0
       injection: 1.0
       jailbreak: 1.0
-    device: -1
 datasets:
 - name: advbench_behaviors
   adapter: advbench_behaviors
@@ -164,9 +164,9 @@ datasets:
 - name: xstest
   adapter: xstest
 output:
-  run_dir: /scratch/siavash/geh-clean/out/prompt-guard-86m
+  run_dir: out/prompt-guard-86m
   overwrite: true
 execution:
-  batch_size: 256
+  batch_size: 64
   concurrency: 1
   retries: 0
