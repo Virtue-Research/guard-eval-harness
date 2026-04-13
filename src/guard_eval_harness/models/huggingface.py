@@ -409,28 +409,11 @@ class HuggingFaceAdapter(ModelAdapter):
                 _prev_verbosity = _tf_logging.get_verbosity()
                 _tf_logging.set_verbosity_error()
             device_map = self._configured_device_map()
-            if (
-                self._model_subfolder() is not None
-                or self._tokenizer_subfolder() is not None
-            ):
-                pipeline_kwargs = {
-                    "task": task,
-                    "model": self._load_model(transformers, task=task),
-                    "tokenizer": self._get_tokenizer(),
-                }
-                if device_map is None:
-                    pipeline_kwargs["device"] = (
-                        self.config.args["device"]
-                        if "device" in self.config.args
-                        else self._default_device()
-                    )
-                self._backend = transformers.pipeline(**pipeline_kwargs)
-                if _tf_logging is not None and _prev_verbosity is not None:
-                    _tf_logging.set_verbosity(_prev_verbosity)
-                return self._backend
             # text2text-generation pipeline was removed in transformers 5.x;
             # wrap the model + tokenizer in a thin callable so the rest of
-            # the adapter can call it like a pipeline.
+            # the adapter can call it like a pipeline. Handled before the
+            # subfolder branch so subfolder seq2seq configs also route
+            # through the wrapper instead of the removed pipeline.
             if task == "text2text-generation":
                 torch = importlib.import_module("torch")
                 if "device" in self.config.args:
@@ -453,6 +436,25 @@ class HuggingFaceAdapter(ModelAdapter):
                         else None
                     ),
                 )
+                if _tf_logging is not None and _prev_verbosity is not None:
+                    _tf_logging.set_verbosity(_prev_verbosity)
+                return self._backend
+            if (
+                self._model_subfolder() is not None
+                or self._tokenizer_subfolder() is not None
+            ):
+                pipeline_kwargs = {
+                    "task": task,
+                    "model": self._load_model(transformers, task=task),
+                    "tokenizer": self._get_tokenizer(),
+                }
+                if device_map is None:
+                    pipeline_kwargs["device"] = (
+                        self.config.args["device"]
+                        if "device" in self.config.args
+                        else self._default_device()
+                    )
+                self._backend = transformers.pipeline(**pipeline_kwargs)
                 if _tf_logging is not None and _prev_verbosity is not None:
                     _tf_logging.set_verbosity(_prev_verbosity)
                 return self._backend
