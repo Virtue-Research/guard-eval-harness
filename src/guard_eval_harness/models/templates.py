@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import asyncio
 import base64
+import io
 import json
 import logging
 import mimetypes
@@ -14,6 +16,8 @@ from typing import Any, Mapping, Sequence
 from urllib import error as urllib_error
 from urllib import parse as urllib_parse
 from urllib import request as urllib_request
+
+import httpx
 
 from guard_eval_harness.schemas import (
     MediaPart,
@@ -629,6 +633,100 @@ def _retry_wait(
         except ValueError:
             pass
     return backoff * (2**attempt)
+
+
+async def async_json_post_with_retry(
+    client: httpx.AsyncClient,
+    url: str,
+    payload: Mapping[str, Any],
+    *,
+    headers: Mapping[str, str] | None = None,
+    timeout: float = 30.0,
+    retries: int = 0,
+    backoff: float = 1.0,
+) -> Any:
+    """Async counterpart to ``json_post_with_retry``.
+
+    Uses an externally-managed ``httpx.AsyncClient`` so callers share
+    a single connection pool.  Retries on HTTP 429/5xx and transport
+    errors, honoring ``Retry-After`` when present.
+    """
+    request_headers = {"Content-Type": "application/json"}
+    if headers:
+        request_headers.update(headers)
+
+    # ``pool=None`` preserves the uncapped pool-acquire timeout set on
+    # the shared AsyncClient. Passing a bare float here would override
+    # the client-level ``httpx.Timeout`` and reintroduce a finite
+    # pool-acquire deadline, so queued requests in large batches could
+    # fail with ``httpx.PoolTimeout`` before ever hitting the wire.
+    request_timeout = httpx.Timeout(timeout, pool=None)
+
+    last_exc: Exception | None = None
+    for attempt in range(1 + retries):
+        try:
+            response = await client.post(
+                url,
+                json=dict(payload),
+                headers=request_headers,
+                timeout=request_timeout,
+            )
+        except (httpx.TransportError, httpx.TimeoutException) as exc:
+            last_exc = exc
+            if attempt >= retries:
+                raise
+            wait = backoff * (2**attempt)
+            _logger.warning(
+                "Connection error on %s (attempt %d/%d), retrying in %.1fs: %s",
+                url,
+                attempt + 1,
+                1 + retries,
+                wait,
+                exc,
+            )
+            await asyncio.sleep(wait)
+            continue
+
+        status = response.status_code
+        if status < 400:
+            body = response.text
+            if not body.strip():
+                return {}
+            return json.loads(body)
+
+        if status not in _RETRYABLE_HTTP_CODES or attempt >= retries:
+            # Surface a urllib-compatible HTTPError so callers that
+            # already catch it continue to work.
+            body_bytes = response.content
+            raise urllib_error.HTTPError(
+                url,
+                status,
+                response.reason_phrase or "",
+                dict(response.headers),  # type: ignore[arg-type]
+                io.BytesIO(body_bytes),
+            )
+
+        retry_after = response.headers.get("Retry-After")
+        wait: float
+        if retry_after is not None:
+            try:
+                wait = max(0.0, float(retry_after))
+            except ValueError:
+                wait = backoff * (2**attempt)
+        else:
+            wait = backoff * (2**attempt)
+        _logger.warning(
+            "HTTP %d from %s (attempt %d/%d), retrying in %.1fs",
+            status,
+            url,
+            attempt + 1,
+            1 + retries,
+            wait,
+        )
+        last_exc = Exception(f"HTTP {status}")
+        await asyncio.sleep(wait)
+
+    raise last_exc  # type: ignore[misc]
 
 
 def env_value(name: str | None, default: str | None = None) -> str | None:

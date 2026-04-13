@@ -36,6 +36,18 @@ def _sample(
 
 
 _MOCK_PATCH = "guard_eval_harness.models.openai_compatible.json_post_with_retry"
+_ASYNC_MOCK_PATCH = (
+    "guard_eval_harness.models.openai_compatible.async_json_post_with_retry"
+)
+
+
+def _as_async_side_effect(sync_side_effect):
+    """Wrap a sync side_effect into an async one matching the async helper."""
+
+    async def _wrapped(client, url, payload, **kwargs):
+        return sync_side_effect(url, payload, **kwargs)
+
+    return _wrapped
 
 
 class OpenAICompatibleAdapterTest(unittest.TestCase):
@@ -455,8 +467,8 @@ class ConcurrencyTest(unittest.TestCase):
             return {"score": 0.2}
 
         with patch(
-            _MOCK_PATCH,
-            side_effect=side_effect,
+            _ASYNC_MOCK_PATCH,
+            side_effect=_as_async_side_effect(side_effect),
         ) as mock_post:
             predictions = adapter.predict_batch(samples, threshold=0.5)
 
@@ -810,7 +822,10 @@ class BatchErrorHandlingTest(unittest.TestCase):
                 raise RuntimeError("API 500")
             return {"score": 0.3}
 
-        with patch(_MOCK_PATCH, side_effect=side_effect):
+        with patch(
+            _ASYNC_MOCK_PATCH,
+            side_effect=_as_async_side_effect(side_effect),
+        ):
             predictions = adapter.predict_batch(samples, threshold=0.5)
 
         self.assertEqual(

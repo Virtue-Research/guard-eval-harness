@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import logging
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, Mapping, Sequence
 
+import httpx
+
+from guard_eval_harness.models._async_dispatch import run_async_batch
 from guard_eval_harness.models.base import ModelAdapter
 from guard_eval_harness.models.templates import (
+    async_json_post_with_retry,
     env_value,
     extract_judge_categories,
     join_url,
@@ -27,7 +30,7 @@ from guard_eval_harness.schemas import (
     NormalizedSample,
 )
 
-_MAX_CONCURRENCY = 64
+_MAX_CONCURRENCY = 2000
 _log = logging.getLogger(__name__)
 
 
@@ -262,39 +265,21 @@ class OpenAICompatibleAdapter(ModelAdapter):
                 return value
         return ""
 
-    def _predict_one(
+    def _build_prediction(
         self,
         sample: NormalizedSample,
+        response: Any,
         *,
         endpoint: str,
-        headers: dict[str, str],
-        timeout: float,
-        retries: int,
-        backoff: float,
+        elapsed_ms: float,
         threshold: float,
     ) -> NormalizedPrediction:
-        """Run inference for a single sample with retry."""
-        payload = self._request_payload(sample)
-        started = time.perf_counter()
-        response = json_post_with_retry(
-            endpoint,
-            payload,
-            headers=headers,
-            timeout=timeout,
-            retries=retries,
-            backoff=backoff,
-        )
-        elapsed_ms = (time.perf_counter() - started) * 1000.0
         usage = self._extract_usage(response)
         response_payload = self._response_payload(response)
         score = resolve_score(
             response_payload,
             score_path=self.config.args.get("score_path"),
         )
-        # Extract predicted categories from response text.
-        # Try score_path-resolved value first (handles nested
-        # paths like "result.text"), then response_payload
-        # (honours response_path), then raw response.
         predicted_categories: tuple[str, ...] = ()
         score_path = self.config.args.get("score_path")
         response_text = ""
@@ -331,6 +316,69 @@ class OpenAICompatibleAdapter(ModelAdapter):
             latency_ms=elapsed_ms,
             predicted_categories=predicted_categories,
             metadata=metadata,
+        )
+
+    def _predict_one(
+        self,
+        sample: NormalizedSample,
+        *,
+        endpoint: str,
+        headers: dict[str, str],
+        timeout: float,
+        retries: int,
+        backoff: float,
+        threshold: float,
+    ) -> NormalizedPrediction:
+        """Run inference for a single sample with retry."""
+        payload = self._request_payload(sample)
+        started = time.perf_counter()
+        response = json_post_with_retry(
+            endpoint,
+            payload,
+            headers=headers,
+            timeout=timeout,
+            retries=retries,
+            backoff=backoff,
+        )
+        elapsed_ms = (time.perf_counter() - started) * 1000.0
+        return self._build_prediction(
+            sample,
+            response,
+            endpoint=endpoint,
+            elapsed_ms=elapsed_ms,
+            threshold=threshold,
+        )
+
+    async def _apredict_one(
+        self,
+        client: httpx.AsyncClient,
+        sample: NormalizedSample,
+        *,
+        endpoint: str,
+        headers: dict[str, str],
+        timeout: float,
+        retries: int,
+        backoff: float,
+        threshold: float,
+    ) -> NormalizedPrediction:
+        payload = self._request_payload(sample)
+        started = time.perf_counter()
+        response = await async_json_post_with_retry(
+            client,
+            endpoint,
+            payload,
+            headers=headers,
+            timeout=timeout,
+            retries=retries,
+            backoff=backoff,
+        )
+        elapsed_ms = (time.perf_counter() - started) * 1000.0
+        return self._build_prediction(
+            sample,
+            response,
+            endpoint=endpoint,
+            elapsed_ms=elapsed_ms,
+            threshold=threshold,
         )
 
     def predict_batch(
@@ -403,34 +451,43 @@ class OpenAICompatibleAdapter(ModelAdapter):
                 ) from last_exc
             return predictions
 
+        async def _factory(
+            client: httpx.AsyncClient,
+            sample: NormalizedSample,
+        ) -> NormalizedPrediction:
+            return await self._apredict_one(
+                client,
+                sample,
+                endpoint=endpoint,
+                headers=headers,
+                timeout=timeout,
+                retries=retries,
+                backoff=backoff,
+                threshold=threshold,
+            )
+
+        raw_results = run_async_batch(
+            _factory,
+            samples,
+            concurrency=concurrency,
+            timeout=timeout,
+        )
+
         index_map: dict[int, NormalizedPrediction] = {}
         failed: list[tuple[int, str, Exception]] = []
-        with ThreadPoolExecutor(max_workers=concurrency) as pool:
-            futures = {
-                pool.submit(
-                    self._predict_one,
-                    sample,
-                    endpoint=endpoint,
-                    headers=headers,
-                    timeout=timeout,
-                    retries=retries,
-                    backoff=backoff,
-                    threshold=threshold,
-                ): idx
-                for idx, sample in enumerate(samples)
-            }
-            for future in as_completed(futures):
-                idx = futures[future]
-                try:
-                    index_map[idx] = future.result()
-                except Exception as exc:
-                    sample_id = samples[idx].id
-                    _log.error(
-                        "prediction failed for sample %s: %s",
-                        sample_id,
-                        exc,
-                    )
-                    failed.append((idx, sample_id, exc))
+        for idx, result in enumerate(raw_results):
+            if isinstance(result, BaseException):
+                sample_id = samples[idx].id
+                _log.error(
+                    "prediction failed for sample %s: %s",
+                    sample_id,
+                    result,
+                )
+                failed.append(
+                    (idx, sample_id, result if isinstance(result, Exception) else Exception(str(result))),
+                )
+            else:
+                index_map[idx] = result
 
         if failed:
             ids = ", ".join(sid for _, sid, _ in failed)

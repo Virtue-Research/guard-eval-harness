@@ -6,14 +6,19 @@ import logging
 import time
 from typing import Any, Mapping, Sequence
 
+import httpx
+
+from guard_eval_harness.models._async_dispatch import run_async_batch
 from guard_eval_harness.models.base import ModelAdapter
 from guard_eval_harness.models.templates import (
+    async_json_post_with_retry,
     env_value,
     extract_judge_categories,
     json_post_with_retry,
     render_value,
     resolve_score,
     sample_context,
+    sample_has_media,
     sample_messages_openai,
 )
 from guard_eval_harness.registry import model_registry
@@ -22,8 +27,6 @@ from guard_eval_harness.schemas import (
     NormalizedPrediction,
     NormalizedSample,
 )
-
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
 _MAX_CONCURRENCY = 2000
 _log = logging.getLogger(__name__)
@@ -89,10 +92,43 @@ class AnthropicAdapter(ModelAdapter):
             headers.update(extra)
         return headers
 
+    def _multimodal_prompt_template_mode(self) -> str:
+        """Resolve how prompt templates should behave for image inputs."""
+        mode = self.config.args.get(
+            "prompt_template_multimodal_mode",
+            "error",
+        )
+        normalized = str(mode).strip().lower()
+        if normalized not in {"error", "text_only"}:
+            raise ValueError(
+                "prompt_template_multimodal_mode must be 'error' or 'text_only'"
+            )
+        return normalized
+
     def _request_payload(
         self, sample: NormalizedSample
     ) -> dict[str, Any]:
-        openai_messages = sample_messages_openai(sample)
+        context = sample_context(sample)
+        prompt_template = self.config.args.get("prompt_template")
+        if prompt_template:
+            # A rendered prompt template collapses the conversation to
+            # a single text turn, which would silently drop image
+            # blocks and other original turns from multimodal samples.
+            # Require an explicit opt-in to that behavior.
+            if (
+                sample_has_media(sample)
+                and self._multimodal_prompt_template_mode() != "text_only"
+            ):
+                raise ValueError(
+                    "prompt_template would drop image content; set "
+                    "prompt_template_multimodal_mode=text_only to opt in"
+                )
+            rendered = str(render_value(prompt_template, context))
+            openai_messages = [
+                {"role": "user", "content": rendered}
+            ]
+        else:
+            openai_messages = sample_messages_openai(sample)
 
         # Anthropic separates system from messages.
         # Accumulate all system turns into one block.
@@ -182,7 +218,6 @@ class AnthropicAdapter(ModelAdapter):
                 messages.append(
                     {"role": msg["role"], "content": content}
                 )
-        context = sample_context(sample)
         config_system = self.config.args.get("system_prompt")
         if config_system:
             rendered = str(
@@ -244,28 +279,15 @@ class AnthropicAdapter(ModelAdapter):
             )
         return result
 
-    def _predict_one(
+    def _build_prediction(
         self,
         sample: NormalizedSample,
+        response: Any,
         *,
         endpoint: str,
-        headers: dict[str, str],
-        timeout: float,
-        retries: int,
-        backoff: float,
+        elapsed_ms: float,
         threshold: float,
     ) -> NormalizedPrediction:
-        payload = self._request_payload(sample)
-        started = time.perf_counter()
-        response = json_post_with_retry(
-            endpoint,
-            payload,
-            headers=headers,
-            timeout=timeout,
-            retries=retries,
-            backoff=backoff,
-        )
-        elapsed_ms = (time.perf_counter() - started) * 1000.0
         usage = self._extract_usage(response)
         response_text = self._extract_response_text(response)
         score = resolve_score(response_text)
@@ -291,6 +313,68 @@ class AnthropicAdapter(ModelAdapter):
             latency_ms=elapsed_ms,
             predicted_categories=predicted_categories,
             metadata=metadata,
+        )
+
+    def _predict_one(
+        self,
+        sample: NormalizedSample,
+        *,
+        endpoint: str,
+        headers: dict[str, str],
+        timeout: float,
+        retries: int,
+        backoff: float,
+        threshold: float,
+    ) -> NormalizedPrediction:
+        payload = self._request_payload(sample)
+        started = time.perf_counter()
+        response = json_post_with_retry(
+            endpoint,
+            payload,
+            headers=headers,
+            timeout=timeout,
+            retries=retries,
+            backoff=backoff,
+        )
+        elapsed_ms = (time.perf_counter() - started) * 1000.0
+        return self._build_prediction(
+            sample,
+            response,
+            endpoint=endpoint,
+            elapsed_ms=elapsed_ms,
+            threshold=threshold,
+        )
+
+    async def _apredict_one(
+        self,
+        client: httpx.AsyncClient,
+        sample: NormalizedSample,
+        *,
+        endpoint: str,
+        headers: dict[str, str],
+        timeout: float,
+        retries: int,
+        backoff: float,
+        threshold: float,
+    ) -> NormalizedPrediction:
+        payload = self._request_payload(sample)
+        started = time.perf_counter()
+        response = await async_json_post_with_retry(
+            client,
+            endpoint,
+            payload,
+            headers=headers,
+            timeout=timeout,
+            retries=retries,
+            backoff=backoff,
+        )
+        elapsed_ms = (time.perf_counter() - started) * 1000.0
+        return self._build_prediction(
+            sample,
+            response,
+            endpoint=endpoint,
+            elapsed_ms=elapsed_ms,
+            threshold=threshold,
         )
 
     def predict_batch(
@@ -349,34 +433,43 @@ class AnthropicAdapter(ModelAdapter):
                         raise
             return predictions
 
+        async def _factory(
+            client: httpx.AsyncClient,
+            sample: NormalizedSample,
+        ) -> NormalizedPrediction:
+            return await self._apredict_one(
+                client,
+                sample,
+                endpoint=endpoint,
+                headers=headers,
+                timeout=timeout,
+                retries=retries,
+                backoff=backoff,
+                threshold=threshold,
+            )
+
+        raw_results = run_async_batch(
+            _factory,
+            samples,
+            concurrency=concurrency,
+            timeout=timeout,
+        )
+
         index_map: dict[int, NormalizedPrediction] = {}
         failed: list[tuple[int, str, Exception]] = []
-        with ThreadPoolExecutor(max_workers=concurrency) as pool:
-            futures = {
-                pool.submit(
-                    self._predict_one,
-                    sample,
-                    endpoint=endpoint,
-                    headers=headers,
-                    timeout=timeout,
-                    retries=retries,
-                    backoff=backoff,
-                    threshold=threshold,
-                ): idx
-                for idx, sample in enumerate(samples)
-            }
-            for future in as_completed(futures):
-                idx = futures[future]
-                try:
-                    index_map[idx] = future.result()
-                except Exception as exc:
-                    sample_id = samples[idx].id
-                    _log.error(
-                        "prediction failed for sample %s: %s",
-                        sample_id,
-                        exc,
-                    )
-                    failed.append((idx, sample_id, exc))
+        for idx, result in enumerate(raw_results):
+            if isinstance(result, BaseException):
+                sample_id = samples[idx].id
+                _log.error(
+                    "prediction failed for sample %s: %s",
+                    sample_id,
+                    result,
+                )
+                failed.append(
+                    (idx, sample_id, result if isinstance(result, Exception) else Exception(str(result))),
+                )
+            else:
+                index_map[idx] = result
 
         if failed and not drop_failed:
             _, sid, exc = failed[0]
