@@ -46,6 +46,9 @@ datasets:
 - name: aegis_ai_content_safety_dataset_2
   adapter: aegis_ai_content_safety_dataset_2
   split: test
+- name: agent_harm
+  adapter: agent_harm
+  split: test_public
 - name: anthropic_hh_rlhf
   adapter: anthropic_hh_rlhf
   split: test
@@ -104,6 +107,8 @@ datasets:
   split: test
 - name: i_cona
   adapter: i_cona
+- name: i_controversial
+  adapter: i_controversial
 - name: i_malicious_instructions
   adapter: i_malicious_instructions
 - name: i_physical_safety
