@@ -51,6 +51,18 @@ class _Seq2SeqWrapper:
         self.tokenizer = tokenizer
         self.device = device
 
+    # Pipeline-only kwargs that the text-generation/text2text pipelines
+    # accept but ``model.generate`` rejects. Silently dropped so configs
+    # that set e.g. ``pipeline_batch_size`` (which surfaces as
+    # ``batch_size`` in _run_backend) don't blow up the seq2seq path.
+    _PIPELINE_ONLY_KWARGS = frozenset({
+        "batch_size",
+        "return_full_text",
+        "return_tensors",
+        "return_text",
+        "clean_up_tokenization_spaces",
+    })
+
     def __call__(
         self,
         inputs: str | list[str],
@@ -70,10 +82,14 @@ class _Seq2SeqWrapper:
             truncation=truncation,
             max_length=max_length or 512,
         ).to(self.device)
-        kwargs.setdefault("max_new_tokens", 16)
-        kwargs.setdefault("do_sample", False)
+        gen_kwargs = {
+            k: v for k, v in kwargs.items()
+            if k not in self._PIPELINE_ONLY_KWARGS
+        }
+        gen_kwargs.setdefault("max_new_tokens", 16)
+        gen_kwargs.setdefault("do_sample", False)
         with torch.no_grad():
-            out = self.model.generate(**enc, **kwargs)
+            out = self.model.generate(**enc, **gen_kwargs)
         decoded = self.tokenizer.batch_decode(out, skip_special_tokens=True)
         return [[{"generated_text": t}] for t in decoded]
 
@@ -392,12 +408,19 @@ class HuggingFaceAdapter(ModelAdapter):
             # wrap the model + tokenizer in a thin callable so the rest of
             # the adapter can call it like a pipeline.
             if task == "text2text-generation":
+                torch = importlib.import_module("torch")
+                if "device" in self.config.args:
+                    seq2seq_device = self._resolve_device(torch)
+                else:
+                    idx = self._default_device()
+                    seq2seq_device = (
+                        torch.device("cpu") if idx < 0
+                        else torch.device(f"cuda:{idx}")
+                    )
                 self._backend = _Seq2SeqWrapper(
                     model=self._load_model(transformers, task=task),
                     tokenizer=self._get_tokenizer(),
-                    device=self._resolve_device(
-                        importlib.import_module("torch")
-                    ),
+                    device=seq2seq_device,
                 )
                 if _tf_logging is not None and _prev_verbosity is not None:
                     _tf_logging.set_verbosity(_prev_verbosity)
