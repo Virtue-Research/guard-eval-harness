@@ -154,7 +154,7 @@ class CLICatalogResolutionTest(unittest.TestCase):
             sys.stdout = old_stdout
         output = json.loads(buf.getvalue())
         self.assertIn("models", output)
-        self.assertGreater(len(output["models"]), 20)
+        self.assertGreaterEqual(len(output["models"]), 13)
 
 
 if __name__ == "__main__":

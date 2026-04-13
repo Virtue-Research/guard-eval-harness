@@ -55,11 +55,8 @@ class _Seq2SeqWrapper:
         self,
         inputs: str | list[str],
         *,
-        max_new_tokens: int = 16,
-        do_sample: bool = False,
         truncation: bool = True,
         max_length: int | None = None,
-        pad_token_id: int | None = None,
         **kwargs: Any,
     ) -> list[list[dict[str, str]]]:
         import torch
@@ -73,12 +70,10 @@ class _Seq2SeqWrapper:
             truncation=truncation,
             max_length=max_length or 512,
         ).to(self.device)
+        kwargs.setdefault("max_new_tokens", 16)
+        kwargs.setdefault("do_sample", False)
         with torch.no_grad():
-            out = self.model.generate(
-                **enc,
-                max_new_tokens=max_new_tokens,
-                do_sample=do_sample,
-            )
+            out = self.model.generate(**enc, **kwargs)
         decoded = self.tokenizer.batch_decode(out, skip_special_tokens=True)
         return [[{"generated_text": t}] for t in decoded]
 

@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """Generate YAML configs for all 17 leaderboard models x 57 datasets."""
 
+import argparse
 import yaml
 from pathlib import Path
 
-OUTDIR = Path("/scratch/siavash/geh-clean/configs")
-OUTDIR.mkdir(exist_ok=True)
+REPO_ROOT = Path(__file__).resolve().parent
+DEFAULT_OUTDIR = REPO_ROOT / "configs"
 
 # ── 57 datasets with correct splits ──────────────────────────────────
 DATASETS = [
@@ -261,7 +262,7 @@ MODELS = [
 ]
 
 
-def build_config(model_def: dict) -> dict:
+def build_config(model_def: dict, run_root: Path) -> dict:
     return {
         "version": 1,
         "run_name": model_def["slug"],
@@ -269,7 +270,7 @@ def build_config(model_def: dict) -> dict:
         "model": model_def["model"],
         "datasets": DATASETS,
         "output": {
-            "run_dir": f"/scratch/siavash/geh-clean/out/{model_def['slug']}",
+            "run_dir": str(run_root / model_def["slug"]),
             "overwrite": True,
         },
         "execution": {
@@ -281,13 +282,28 @@ def build_config(model_def: dict) -> dict:
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--outdir",
+        type=Path,
+        default=DEFAULT_OUTDIR,
+        help="Directory to write generated YAML configs (default: ./configs)",
+    )
+    parser.add_argument(
+        "--run-root",
+        type=Path,
+        default=REPO_ROOT / "out",
+        help="Base dir for each config's output.run_dir (default: ./out)",
+    )
+    args = parser.parse_args()
+    args.outdir.mkdir(parents=True, exist_ok=True)
     for model_def in MODELS:
-        config = build_config(model_def)
-        path = OUTDIR / f"{model_def['slug']}.yaml"
+        config = build_config(model_def, args.run_root)
+        path = args.outdir / f"{model_def['slug']}.yaml"
         with open(path, "w") as f:
             yaml.dump(config, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
         print(f"  wrote {path}")
-    print(f"\nGenerated {len(MODELS)} configs in {OUTDIR}")
+    print(f"\nGenerated {len(MODELS)} configs in {args.outdir}")
 
 
 if __name__ == "__main__":

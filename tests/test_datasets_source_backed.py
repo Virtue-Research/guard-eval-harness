@@ -48,7 +48,6 @@ class SourceBackedHelperTest(unittest.TestCase):
         mock_load_dataset.assert_called_once_with(
             "demo/repo",
             "demo",
-            trust_remote_code=True,
             split="train[10:15]",
             revision="abc123",
         )
