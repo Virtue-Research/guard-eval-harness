@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import Any, Mapping, Sequence
-
-import httpx
+from typing import TYPE_CHECKING, Any, Mapping, Sequence
 
 from guard_eval_harness.models._async_dispatch import run_async_batch
+
+if TYPE_CHECKING:
+    import httpx
 from guard_eval_harness.models.base import ModelAdapter
 from guard_eval_harness.models.templates import (
     async_json_post_with_retry,
@@ -94,7 +95,15 @@ class AnthropicAdapter(ModelAdapter):
     def _request_payload(
         self, sample: NormalizedSample
     ) -> dict[str, Any]:
-        openai_messages = sample_messages_openai(sample)
+        context = sample_context(sample)
+        prompt_template = self.config.args.get("prompt_template")
+        if prompt_template:
+            rendered = str(render_value(prompt_template, context))
+            openai_messages = [
+                {"role": "user", "content": rendered}
+            ]
+        else:
+            openai_messages = sample_messages_openai(sample)
 
         # Anthropic separates system from messages.
         # Accumulate all system turns into one block.
@@ -184,7 +193,6 @@ class AnthropicAdapter(ModelAdapter):
                 messages.append(
                     {"role": msg["role"], "content": content}
                 )
-        context = sample_context(sample)
         config_system = self.config.args.get("system_prompt")
         if config_system:
             rendered = str(
@@ -314,7 +322,7 @@ class AnthropicAdapter(ModelAdapter):
 
     async def _apredict_one(
         self,
-        client: httpx.AsyncClient,
+        client: "httpx.AsyncClient",
         sample: NormalizedSample,
         *,
         endpoint: str,
@@ -401,7 +409,7 @@ class AnthropicAdapter(ModelAdapter):
             return predictions
 
         async def _factory(
-            client: httpx.AsyncClient,
+            client: "httpx.AsyncClient",
             sample: NormalizedSample,
         ) -> NormalizedPrediction:
             return await self._apredict_one(
