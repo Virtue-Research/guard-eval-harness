@@ -88,6 +88,7 @@ _VLLM_PASSTHROUGH_ARGS = (
     "dtype",
     "revision",
     "enforce_eager",
+    "block_size",
 )
 
 
@@ -375,6 +376,10 @@ class VLLMAdapter(ModelAdapter):
             _, free_gib = self._auto_select_gpu()
             self._ensure_registry_patches()
             # Suppress noisy vLLM engine startup logs.
+            # VLLM_LOGGING_LEVEL propagates to engine-core subprocesses
+            # where Python-level logger settings do not reach.
+            import os as _os
+            _os.environ.setdefault("VLLM_LOGGING_LEVEL", "WARNING")
             import logging as _logging
             for _name in ("vllm", "vllm.config", "vllm.v1"):
                 _logging.getLogger(_name).setLevel(_logging.WARNING)
@@ -934,8 +939,9 @@ class VLLMAdapter(ModelAdapter):
                 if drop_failed:
                     _log.warning(
                         "Score resolution failed for sample %s; "
-                        "dropping from predictions",
+                        "generated_text[:200]=%r; dropping from predictions",
                         sample.id,
+                        generated_text[:200],
                     )
                     continue
                 raise

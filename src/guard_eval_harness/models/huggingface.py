@@ -37,6 +37,52 @@ from guard_eval_harness.schemas import (
 _log = logging.getLogger(__name__)
 
 
+class _Seq2SeqWrapper:
+    """Thin callable wrapping a Seq2SeqLM model to mimic a pipeline.
+
+    The ``text2text-generation`` pipeline was removed in transformers 5.x.
+    This wrapper loads the model via ``AutoModelForSeq2SeqLM`` and exposes
+    a ``__call__`` that matches the output format the HF adapter expects
+    for text-generation pipelines.
+    """
+
+    def __init__(self, model: Any, tokenizer: Any, device: Any) -> None:
+        self.model = model.to(device)
+        self.tokenizer = tokenizer
+        self.device = device
+
+    def __call__(
+        self,
+        inputs: str | list[str],
+        *,
+        max_new_tokens: int = 16,
+        do_sample: bool = False,
+        truncation: bool = True,
+        max_length: int | None = None,
+        pad_token_id: int | None = None,
+        **kwargs: Any,
+    ) -> list[list[dict[str, str]]]:
+        import torch
+
+        if isinstance(inputs, str):
+            inputs = [inputs]
+        enc = self.tokenizer(
+            inputs,
+            return_tensors="pt",
+            padding=True,
+            truncation=truncation,
+            max_length=max_length or 512,
+        ).to(self.device)
+        with torch.no_grad():
+            out = self.model.generate(
+                **enc,
+                max_new_tokens=max_new_tokens,
+                do_sample=do_sample,
+            )
+        decoded = self.tokenizer.batch_decode(out, skip_special_tokens=True)
+        return [[{"generated_text": t}] for t in decoded]
+
+
 @model_registry.register("hf")
 class HuggingFaceAdapter(ModelAdapter):
     """Transformers-backed safety scorer."""
@@ -344,6 +390,20 @@ class HuggingFaceAdapter(ModelAdapter):
                         else self._default_device()
                     )
                 self._backend = transformers.pipeline(**pipeline_kwargs)
+                if _tf_logging is not None and _prev_verbosity is not None:
+                    _tf_logging.set_verbosity(_prev_verbosity)
+                return self._backend
+            # text2text-generation pipeline was removed in transformers 5.x;
+            # wrap the model + tokenizer in a thin callable so the rest of
+            # the adapter can call it like a pipeline.
+            if task == "text2text-generation":
+                self._backend = _Seq2SeqWrapper(
+                    model=self._load_model(transformers, task=task),
+                    tokenizer=self._get_tokenizer(),
+                    device=self._resolve_device(
+                        importlib.import_module("torch")
+                    ),
+                )
                 if _tf_logging is not None and _prev_verbosity is not None:
                     _tf_logging.set_verbosity(_prev_verbosity)
                 return self._backend
