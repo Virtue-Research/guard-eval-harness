@@ -30,6 +30,7 @@ _TEMPLATE_MAP: dict[str, str] = {
     "$api_judge": _tpl.API_JUDGE_PROMPT,
     "$wildguard": _tpl.WILDGUARD_PROMPT,
     "$mistral_plus": _tpl.MISTRAL_PLUS_PROMPT,
+    "$llama_guard_taxonomy": _tpl.LLAMA_GUARD_TAXONOMY_PROMPT,
 }
 
 # Tasks that can run on vLLM (generative models only).
