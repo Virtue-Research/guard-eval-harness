@@ -179,6 +179,6 @@ output:
   run_dir: out/gpt-4o-mini
   overwrite: true
 execution:
-  batch_size: 1
+  batch_size: 500
   concurrency: 500
   retries: 0

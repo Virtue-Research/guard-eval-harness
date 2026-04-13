@@ -236,7 +236,7 @@ MODELS = [
             "model_name": "gpt-4o-mini",
             "args": {"root_url": "https://api.openai.com", "api_key_env": "OPENAI_API_KEY", "max_completion_tokens": 8, "temperature": 0.0, "concurrency": 500, "retries": 8, "retry_backoff": 2.0, "prompt_template": API_JUDGE_PROMPT},
         },
-        "batch_size": 1,
+        "batch_size": 500,
         "concurrency": 500,
     },
     {
@@ -246,7 +246,7 @@ MODELS = [
             "model_name": "gpt-5.4-mini",
             "args": {"root_url": "https://api.openai.com", "api_key_env": "OPENAI_API_KEY", "max_completion_tokens": 8, "temperature": 0.0, "concurrency": 500, "retries": 8, "retry_backoff": 2.0, "prompt_template": API_JUDGE_PROMPT},
         },
-        "batch_size": 1,
+        "batch_size": 500,
         "concurrency": 500,
     },
     {
@@ -256,7 +256,7 @@ MODELS = [
             "model_name": "claude-haiku-4-5-20251001",
             "args": {"api_key_env": "ANTHROPIC_API_KEY", "max_tokens": 8, "temperature": 0.0, "concurrency": 500, "retries": 8, "retry_backoff": 2.0, "prompt_template": API_JUDGE_PROMPT},
         },
-        "batch_size": 1,
+        "batch_size": 500,
         "concurrency": 500,
     },
 ]
