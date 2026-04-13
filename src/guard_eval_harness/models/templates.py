@@ -655,6 +655,13 @@ async def async_json_post_with_retry(
     if headers:
         request_headers.update(headers)
 
+    # ``pool=None`` preserves the uncapped pool-acquire timeout set on
+    # the shared AsyncClient. Passing a bare float here would override
+    # the client-level ``httpx.Timeout`` and reintroduce a finite
+    # pool-acquire deadline, so queued requests in large batches could
+    # fail with ``httpx.PoolTimeout`` before ever hitting the wire.
+    request_timeout = httpx.Timeout(timeout, pool=None)
+
     last_exc: Exception | None = None
     for attempt in range(1 + retries):
         try:
@@ -662,7 +669,7 @@ async def async_json_post_with_retry(
                 url,
                 json=dict(payload),
                 headers=request_headers,
-                timeout=timeout,
+                timeout=request_timeout,
             )
         except (httpx.TransportError, httpx.TimeoutException) as exc:
             last_exc = exc

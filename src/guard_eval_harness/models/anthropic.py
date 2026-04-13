@@ -18,6 +18,7 @@ from guard_eval_harness.models.templates import (
     render_value,
     resolve_score,
     sample_context,
+    sample_has_media,
     sample_messages_openai,
 )
 from guard_eval_harness.registry import model_registry
@@ -91,12 +92,37 @@ class AnthropicAdapter(ModelAdapter):
             headers.update(extra)
         return headers
 
+    def _multimodal_prompt_template_mode(self) -> str:
+        """Resolve how prompt templates should behave for image inputs."""
+        mode = self.config.args.get(
+            "prompt_template_multimodal_mode",
+            "error",
+        )
+        normalized = str(mode).strip().lower()
+        if normalized not in {"error", "text_only"}:
+            raise ValueError(
+                "prompt_template_multimodal_mode must be 'error' or 'text_only'"
+            )
+        return normalized
+
     def _request_payload(
         self, sample: NormalizedSample
     ) -> dict[str, Any]:
         context = sample_context(sample)
         prompt_template = self.config.args.get("prompt_template")
         if prompt_template:
+            # A rendered prompt template collapses the conversation to
+            # a single text turn, which would silently drop image
+            # blocks and other original turns from multimodal samples.
+            # Require an explicit opt-in to that behavior.
+            if (
+                sample_has_media(sample)
+                and self._multimodal_prompt_template_mode() != "text_only"
+            ):
+                raise ValueError(
+                    "prompt_template would drop image content; set "
+                    "prompt_template_multimodal_mode=text_only to opt in"
+                )
             rendered = str(render_value(prompt_template, context))
             openai_messages = [
                 {"role": "user", "content": rendered}
