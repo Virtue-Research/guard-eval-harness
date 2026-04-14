@@ -44,6 +44,27 @@ class CatalogLookupTest(unittest.TestCase):
             entry.model_name,
         )
 
+    def test_backend_override_rejects_classification_to_vllm(
+        self,
+    ) -> None:
+        with self.assertRaises(ValueError) as ctx:
+            resolve_catalog("prompt-guard-86m", backend="vllm")
+        self.assertIn("not supported by vLLM", str(ctx.exception))
+
+    def test_backend_override_rejects_api_entry_to_hf(
+        self,
+    ) -> None:
+        with self.assertRaises(ValueError) as ctx:
+            resolve_catalog("gpt-4o-mini", backend="hf")
+        self.assertIn("cannot be rehosted", str(ctx.exception))
+
+    def test_backend_override_rejects_api_entry_to_vllm(
+        self,
+    ) -> None:
+        with self.assertRaises(ValueError) as ctx:
+            resolve_catalog("claude-haiku-4.5", backend="vllm")
+        self.assertIn("cannot be rehosted", str(ctx.exception))
+
     def test_resolve_unknown_returns_none(self) -> None:
         self.assertIsNone(resolve_catalog("not-a-model"))
 
