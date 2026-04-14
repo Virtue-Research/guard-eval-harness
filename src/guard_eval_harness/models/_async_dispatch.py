@@ -16,20 +16,38 @@ async def _run_all(
     client: httpx.AsyncClient,
     factory: Callable[[httpx.AsyncClient, T], Awaitable[U]],
     items: Sequence[T],
+    *,
+    concurrency: int,
 ) -> list[U | BaseException]:
-    # Concurrency is gated by the ``httpx.Limits`` on ``client``:
-    # ``client.post()`` awaits a connection slot from the pool before
-    # sending, so only ``max_connections`` requests are in flight at
-    # once. Crucially, the connection slot is released as soon as the
-    # response body is read (which happens inside the non-streaming
-    # ``post`` call), *before* any retry/backoff ``asyncio.sleep``
-    # runs. That means a task waiting in backoff is not holding a
-    # permit, and queued tasks can start immediately — the property
-    # an explicit ``asyncio.Semaphore`` wrapped around the whole
-    # factory call would break.
-    tasks = [
-        asyncio.create_task(factory(client, item)) for item in items
-    ]
+    # Two layers of gating, both needed:
+    #
+    # 1. ``httpx.Limits(max_connections=concurrency)`` on the shared
+    #    ``AsyncClient`` bounds the number of in-flight TCP
+    #    connections, so only ``concurrency`` HTTP requests hit the
+    #    server at once.
+    #
+    # 2. The ``sem`` semaphore below bounds the whole factory call —
+    #    including the sync pre-``await`` work such as payload
+    #    building, message templating, and (for multimodal samples)
+    #    base64-encoding local image bytes. Without this, every task
+    #    runs its factory until the first ``await`` immediately, so
+    #    large batches build every payload in memory up-front before
+    #    a single request leaves the client. That regresses the old
+    #    ``ThreadPoolExecutor(max_workers=concurrency)`` behavior,
+    #    which bounded the entire per-sample pipeline (build →
+    #    POST → parse), not just the network leg.
+    #
+    # A task that enters backoff inside the factory keeps holding its
+    # permit until its retry loop completes — matching the thread-pool
+    # semantics where a retrying worker held its slot during
+    # ``time.sleep``.
+    sem = asyncio.Semaphore(concurrency)
+
+    async def _gated(item: T) -> U:
+        async with sem:
+            return await factory(client, item)
+
+    tasks = [asyncio.create_task(_gated(item)) for item in items]
     return await asyncio.gather(*tasks, return_exceptions=True)
 
 
@@ -74,7 +92,9 @@ def run_async_batch(
             timeout=client_timeout,
             limits=limits,
         ) as client:
-            return await _run_all(client, factory, items)
+            return await _run_all(
+                client, factory, items, concurrency=concurrency
+            )
 
     try:
         asyncio.get_running_loop()
