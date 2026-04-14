@@ -440,6 +440,14 @@ class HarnessCLI:
                 merged,
             )
 
+        if backend is not None:
+            self._parser.error(
+                f"--backend {backend} requires --model to be a "
+                f"catalog slug, but {args.model_adapter!r} is not "
+                "in the catalog. Either drop --backend or pass a "
+                "known slug from `geh list models`."
+            )
+
         return (
             args.model_adapter,
             args.model_name,
