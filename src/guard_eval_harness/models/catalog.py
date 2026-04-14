@@ -60,11 +60,23 @@ def _resolve_templates(obj: Any) -> Any:
 
 
 def _load_catalog() -> dict[str, ModelProfile]:
-    """Scan the catalog directory and build the lookup dict."""
+    """Scan the catalog directory and build the lookup dict.
+
+    Raises ``RuntimeError`` if ``catalog/`` is missing or contains no
+    loadable entries. That situation almost always means the package
+    was built without the catalog/*.yaml data files, which would make
+    ``geh list models`` and catalog-based ``--model`` resolution
+    silently return zero entries. Failing loudly at import time
+    surfaces the packaging bug instead of silently degrading the CLI.
+    """
     catalog: dict[str, ModelProfile] = {}
     if not _CATALOG_DIR.is_dir():
-        _log.warning("Model catalog directory not found: %s", _CATALOG_DIR)
-        return catalog
+        raise RuntimeError(
+            "Model catalog directory is missing: "
+            f"{_CATALOG_DIR}. This usually means the package was "
+            "built without the catalog/*.yaml data files — check "
+            "[tool.setuptools.package-data] in pyproject.toml."
+        )
     for path in sorted(_CATALOG_DIR.glob("*.yaml")):
         slug = path.stem
         try:
@@ -81,6 +93,13 @@ def _load_catalog() -> dict[str, ModelProfile]:
             )
         except Exception:
             _log.warning("Failed to load catalog entry: %s", path, exc_info=True)
+    if not catalog:
+        raise RuntimeError(
+            "Model catalog is empty: no *.yaml files were loaded from "
+            f"{_CATALOG_DIR}. This usually means the package was built "
+            "without the catalog/*.yaml data files — check "
+            "[tool.setuptools.package-data] in pyproject.toml."
+        )
     return catalog
 
 
@@ -108,6 +127,9 @@ def _to_vllm_args(hf_args: dict[str, Any]) -> dict[str, Any]:
     return vllm_args
 
 
+_BACKEND_OVERRIDE_SUPPORTED_SOURCES = {"hf"}
+
+
 def resolve_catalog(
     slug: str,
     *,
@@ -120,8 +142,10 @@ def resolve_catalog(
     slug:
         Human-friendly model name (e.g. ``llama-guard-3-8b``).
     backend:
-        Optional backend override (``hf`` or ``vllm``).  When set to
-        ``vllm``, the HF profile is translated to vLLM-compatible args.
+        Optional backend override (``hf`` or ``vllm``). Backend
+        overrides are only valid for HF catalog entries; API-backed
+        entries (anthropic, openai_compatible) cannot be rehosted on
+        a local inference engine by swapping adapter names.
 
     Returns
     -------
@@ -130,8 +154,9 @@ def resolve_catalog(
     Raises
     ------
     ValueError
-        If ``--backend vllm`` is requested for a model that only
-        supports classification (not generative inference).
+        If ``--backend`` is requested for an API-backed catalog entry,
+        or if ``--backend vllm`` is requested for an HF model whose
+        task is not supported by vLLM.
     """
     profile = MODEL_CATALOG.get(slug)
     if profile is None:
@@ -139,6 +164,13 @@ def resolve_catalog(
 
     if backend is None or backend == profile.adapter:
         return profile
+
+    if profile.adapter not in _BACKEND_OVERRIDE_SUPPORTED_SOURCES:
+        raise ValueError(
+            f"Model '{slug}' uses adapter '{profile.adapter}' and "
+            "cannot be rehosted via --backend. Remove --backend or "
+            "pick a local (hf) catalog entry."
+        )
 
     if backend == "vllm":
         task = profile.args.get("task", "text-classification")
@@ -156,13 +188,17 @@ def resolve_catalog(
             catalog_name=profile.catalog_name,
         )
 
-    # backend == "hf" but profile was something else — just override adapter
-    return ModelProfile(
-        name=profile.name,
-        adapter=backend,
-        model_name=profile.model_name,
-        args=dict(profile.args),
-        catalog_name=profile.catalog_name,
+    if backend == "hf":
+        return ModelProfile(
+            name=profile.name,
+            adapter="hf",
+            model_name=profile.model_name,
+            args=dict(profile.args),
+            catalog_name=profile.catalog_name,
+        )
+
+    raise ValueError(
+        f"Unsupported --backend '{backend}'. Use 'hf' or 'vllm'."
     )
 
 

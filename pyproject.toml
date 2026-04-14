@@ -59,10 +59,14 @@ geh = "guard_eval_harness.cli.main:main"
 
 [tool.setuptools]
 package-dir = { "" = "src" }
+include-package-data = true
 
 [tool.setuptools.packages.find]
 where = ["src"]
 include = ["guard_eval_harness*"]
+
+[tool.setuptools.package-data]
+"guard_eval_harness.models" = ["catalog/*.yaml"]
 
 [tool.ruff]
 line-length = 80
