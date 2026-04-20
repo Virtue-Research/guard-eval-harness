@@ -373,7 +373,16 @@ class VLLMAdapter(ModelAdapter):
 
     def _get_llm(self) -> Any:
         if self._llm is None:
-            _, free_gib = self._auto_select_gpu()
+            # Skip GPU auto-selection when the config requests multiple
+            # GPUs (tensor/pipeline/data parallelism). Pinning
+            # CUDA_VISIBLE_DEVICES to one card would starve vLLM of the
+            # devices it needs at engine init.
+            tp = int(self.config.args.get("tensor_parallel_size", 1) or 1)
+            pp = int(self.config.args.get("pipeline_parallel_size", 1) or 1)
+            dp = int(self.config.args.get("data_parallel_size", 1) or 1)
+            free_gib: float | None = None
+            if tp == 1 and pp == 1 and dp == 1:
+                _, free_gib = self._auto_select_gpu()
             self._ensure_registry_patches()
             # Suppress noisy vLLM engine startup logs.
             # VLLM_LOGGING_LEVEL propagates to engine-core subprocesses

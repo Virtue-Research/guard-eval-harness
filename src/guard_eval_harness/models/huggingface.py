@@ -53,7 +53,14 @@ class _Seq2SeqWrapper:
         device: Any,
         default_max_length: int | None = None,
     ) -> None:
-        self.model = model.to(device).eval()
+        # When ``device_map="auto"`` (or any accelerate dispatch) is used,
+        # the model is already sharded across devices and ``.to(device)``
+        # would raise. Respect the existing placement in that case and
+        # let accelerate route inputs through its forward hooks.
+        if getattr(model, "hf_device_map", None):
+            self.model = model.eval()
+        else:
+            self.model = model.to(device).eval()
         self.tokenizer = tokenizer
         self.device = device
         self.default_max_length = default_max_length
