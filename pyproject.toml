@@ -23,7 +23,7 @@ hf = [
   "accelerate>=0.30",
   "Pillow>=10.0",
   "sentencepiece>=0.2",
-  "torch>=2.1",
+  "torch>=2.6.0",
   "transformers>=4.41",
 ]
 audio = [
@@ -35,14 +35,14 @@ vllm = [
   # Do NOT pin torch here — let vLLM's dependency resolver handle it.
   # Note: vLLM 0.18.0 has a torch.compile bug (pytorch#176562) that
   # breaks CUDA graph capture; pin <0.18 until a fixed release ships.
-  "vllm>=0.8.0,<0.18",
+  "vllm>=0.14.1,<0.18",
   "transformers>=4.41",
 ]
 api = [
   "tenacity>=8.2",
 ]
 report = [
-  "jinja2>=3.1",
+  "jinja2>=3.1.6",
   "pandas>=2.2",
 ]
 sheets = [
