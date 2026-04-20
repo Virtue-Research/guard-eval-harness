@@ -381,6 +381,13 @@ class VLLMAdapter(ModelAdapter):
             pp = int(self.config.args.get("pipeline_parallel_size", 1) or 1)
             dp = int(self.config.args.get("data_parallel_size", 1) or 1)
             free_gib: float | None = None
+            # Snapshot CUDA_VISIBLE_DEVICES before any auto-select so
+            # we can restore it after engine init. vLLM captures the
+            # env into its engine subprocess at LLM() construction,
+            # so a later restore doesn't affect the running engine but
+            # does prevent a single-GPU pin from leaking into adapters
+            # created later in the same process.
+            _cvd_before = os.environ.get("CUDA_VISIBLE_DEVICES")
             if tp == 1 and pp == 1 and dp == 1:
                 _, free_gib = self._auto_select_gpu()
             self._ensure_registry_patches()
@@ -465,7 +472,15 @@ class VLLMAdapter(ModelAdapter):
             hf_overrides = self.config.args.get("hf_overrides")
             if hf_overrides is not None:
                 kwargs["hf_overrides"] = dict(hf_overrides)
-            self._llm = vllm.LLM(**kwargs)
+            try:
+                self._llm = vllm.LLM(**kwargs)
+            finally:
+                # Restore CUDA_VISIBLE_DEVICES so our auto-selected
+                # single-GPU pin doesn't leak into subsequent adapters.
+                if _cvd_before is None:
+                    os.environ.pop("CUDA_VISIBLE_DEVICES", None)
+                elif os.environ.get("CUDA_VISIBLE_DEVICES") != _cvd_before:
+                    os.environ["CUDA_VISIBLE_DEVICES"] = _cvd_before
         return self._llm
 
     # ------------------------------------------------------------------

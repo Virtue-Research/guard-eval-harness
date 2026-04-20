@@ -734,8 +734,6 @@ class HuggingFaceAdapter(ModelAdapter):
             kwargs.setdefault("do_sample", False)
             kwargs.setdefault("max_new_tokens", 16)
             kwargs.setdefault("truncation", True)
-            if "max_new_tokens" in kwargs:
-                kwargs.setdefault("max_length", None)
             if tokenizer is not None:
                 eos = getattr(tokenizer, "eos_token_id", None)
                 if eos is not None:
@@ -760,7 +758,12 @@ class HuggingFaceAdapter(ModelAdapter):
                             for p in prompts
                         ]
                 else:
-                    kwargs.setdefault("max_length", max_length)
+                    kwargs["max_length"] = max_length
+            elif "max_new_tokens" in kwargs:
+                # No user-supplied max_length; disable it so HF doesn't
+                # warn about both max_length and max_new_tokens being
+                # set with conflicting defaults.
+                kwargs.setdefault("max_length", None)
         try:
             import transformers as _tf
             _prev = _tf.utils.logging.get_verbosity()
