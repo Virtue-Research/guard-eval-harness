@@ -89,6 +89,8 @@ _VLLM_PASSTHROUGH_ARGS = (
     "revision",
     "enforce_eager",
     "block_size",
+    "max_num_seqs",
+    "max_num_batched_tokens",
 )
 
 

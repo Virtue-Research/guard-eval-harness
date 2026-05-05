@@ -69,6 +69,9 @@ class SourceBackedMultimodalDatasetAdapter(MultimodalDatasetAdapter):
         subset: str | None = None,
         revision: str | None = None,
         data_dir: str | None = None,
+        verification_mode: str | None = None,
+        image_decode: bool | None = None,
+        image_columns: tuple[str, ...] = ("image",),
     ) -> list[dict[str, Any]]:
         """Load one HF dataset split as plain dictionaries."""
         try:
@@ -81,13 +84,24 @@ class SourceBackedMultimodalDatasetAdapter(MultimodalDatasetAdapter):
         split_name = split
         if self.execution_limit is not None:
             split_name = f"{split}[:{self.execution_limit}]"
+        kwargs: dict[str, Any] = {
+            "split": split_name,
+            "revision": revision,
+            "data_dir": data_dir,
+        }
+        if verification_mode is not None:
+            kwargs["verification_mode"] = verification_mode
         dataset = datasets.load_dataset(
             repo_id,
             subset,
-            split=split_name,
-            revision=revision,
-            data_dir=data_dir,
+            **kwargs,
         )
+        if image_decode is not None:
+            image_feature = datasets.Image(decode=image_decode)
+            column_names = set(getattr(dataset, "column_names", ()))
+            for column in image_columns:
+                if column in column_names:
+                    dataset = dataset.cast_column(column, image_feature)
         if hasattr(dataset, "to_list"):
             return list(dataset.to_list())
         return [dict(row) for row in dataset]

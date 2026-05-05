@@ -9,6 +9,7 @@ from unittest.mock import patch
 
 from guard_eval_harness.config.models import ResolvedModelConfig
 from guard_eval_harness.models.openai_moderation import (
+    _MAX_CONCURRENCY,
     OpenAIModerationAdapter,
 )
 from guard_eval_harness.schemas import NormalizedSample
@@ -18,6 +19,9 @@ _MOCK_PATCH = "guard_eval_harness.models.openai_moderation.json_post_with_retry"
 
 class OpenAIModerationAdapterTest(unittest.TestCase):
     """Validate moderation request and response handling."""
+
+    def test_api_concurrency_cap_allows_benchmark_throughput(self) -> None:
+        self.assertGreaterEqual(_MAX_CONCURRENCY, 500)
 
     def test_predict_batch_builds_text_image_request(self) -> None:
         try:
