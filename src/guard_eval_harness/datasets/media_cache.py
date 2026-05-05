@@ -176,6 +176,51 @@ def resolve_pil_image(
     return final_path, digest
 
 
+def resolve_image_bytes(
+    payload: bytes | bytearray,
+    cache_dir: Path | None = None,
+) -> tuple[Path, str]:
+    """Persist encoded image bytes to the content-addressed cache."""
+    if not isinstance(payload, (bytes, bytearray)):
+        raise TypeError(
+            f"Expected image bytes, got {type(payload).__name__}"
+        )
+
+    cache = cache_dir or default_cache_dir()
+    cache.mkdir(parents=True, exist_ok=True)
+
+    suffix = _image_suffix(bytes(payload))
+    tmp_path = cache / f"_tmp_{uuid.uuid4().hex}{suffix}"
+    try:
+        tmp_path.write_bytes(bytes(payload))
+        digest = compute_sha256(tmp_path)
+        final_path = cache / f"{digest}{suffix}"
+        if not final_path.exists():
+            shutil.move(str(tmp_path), str(final_path))
+        else:
+            tmp_path.unlink(missing_ok=True)
+    except BaseException:
+        tmp_path.unlink(missing_ok=True)
+        raise
+    return final_path, digest
+
+
+def _image_suffix(payload: bytes) -> str:
+    if payload.startswith(b"\x89PNG\r\n\x1a\n"):
+        return ".png"
+    if payload.startswith(b"\xff\xd8\xff"):
+        return ".jpg"
+    if payload.startswith((b"GIF87a", b"GIF89a")):
+        return ".gif"
+    if payload.startswith(b"RIFF") and payload[8:12] == b"WEBP":
+        return ".webp"
+    if payload.startswith(b"BM"):
+        return ".bmp"
+    if payload.startswith((b"II*\x00", b"MM\x00*")):
+        return ".tiff"
+    return ".img"
+
+
 def resolve_local_image(
     path: Path,
     cache_dir: Path | None = None,

@@ -633,6 +633,7 @@ class VLLMAdapterTest(unittest.TestCase):
             tensor_parallel_size=2,
             gpu_memory_utilization=0.8,
             dtype="float16",
+            max_num_batched_tokens=8192,
         )
         mock_llm_cls = MagicMock()
         mock_vllm = MagicMock(LLM=mock_llm_cls)
@@ -644,6 +645,7 @@ class VLLMAdapterTest(unittest.TestCase):
         self.assertEqual(call_kwargs["tensor_parallel_size"], 2)
         self.assertEqual(call_kwargs["gpu_memory_utilization"], 0.8)
         self.assertEqual(call_kwargs["dtype"], "float16")
+        self.assertEqual(call_kwargs["max_num_batched_tokens"], 8192)
         self.assertTrue(call_kwargs["disable_log_stats"])
 
     def test_get_llm_caches(self) -> None:
