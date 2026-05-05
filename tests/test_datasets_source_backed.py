@@ -149,17 +149,23 @@ class SourceBackedHelperTest(unittest.TestCase):
 
     def test_new_hf_datasets_pin_immutable_revisions(self) -> None:
         from guard_eval_harness.datasets import aegis_ai_content_safety_dataset_2
+        from guard_eval_harness.datasets import ai_vs_real
         from guard_eval_harness.datasets import circleguardbench_public
         from guard_eval_harness.datasets import civil_comments
+        from guard_eval_harness.datasets import hateful_memes
         from guard_eval_harness.datasets import real_toxicity_prompts
+        from guard_eval_harness.datasets import self_harm_image_dataset
         from guard_eval_harness.datasets import wildguardmix
 
         revision_pattern = re.compile(r"^[0-9a-f]{40}$")
         for module in (
             aegis_ai_content_safety_dataset_2,
+            ai_vs_real,
             circleguardbench_public,
             civil_comments,
+            hateful_memes,
             real_toxicity_prompts,
+            self_harm_image_dataset,
             wildguardmix,
         ):
             revision = getattr(module, "_REVISION")

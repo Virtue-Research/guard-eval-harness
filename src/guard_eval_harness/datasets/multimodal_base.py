@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from collections.abc import Mapping as MappingABC
-from io import BytesIO
 import logging
 from collections.abc import Sequence
 from pathlib import Path
@@ -18,6 +17,7 @@ from guard_eval_harness.datasets.media_cache import (
     compute_sha256,
     default_cache_dir,
     image_dimensions,
+    resolve_image_bytes,
     resolve_local_audio,
     resolve_pil_image,
 )
@@ -110,16 +110,13 @@ class MultimodalDatasetAdapter(DatasetAdapter):
             local_path, digest = resolve_pil_image(source, cache_dir=cache_dir)
         elif isinstance(source, MappingABC):
             if source.get("bytes") is not None:
-                if "Image" not in locals():
-                    raise ImportError("Pillow is required for image support")
                 payload = source["bytes"]
                 if not isinstance(payload, (bytes, bytearray)):
                     raise TypeError("image bytes must be bytes or bytearray")
-                with Image.open(BytesIO(payload)) as image:
-                    local_path, digest = resolve_pil_image(
-                        image.copy(),
-                        cache_dir=cache_dir,
-                    )
+                local_path, digest = resolve_image_bytes(
+                    payload,
+                    cache_dir=cache_dir,
+                )
             elif source.get("path") is not None:
                 local_path = Path(str(source["path"])).expanduser()
                 if (
