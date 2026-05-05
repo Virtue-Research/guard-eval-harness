@@ -26,7 +26,7 @@ from guard_eval_harness.schemas import (
     NormalizedSample,
 )
 
-_MAX_CONCURRENCY = 64
+_MAX_CONCURRENCY = 1024
 _log = logging.getLogger(__name__)
 
 

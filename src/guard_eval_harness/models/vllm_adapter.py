@@ -75,6 +75,7 @@ Conversation context:
 {conversation_text}
 """
 _INTERNVL_CONTEXT_PLACEHOLDER = "{conversation_text}"
+_CONFIG_UNAVAILABLE = object()
 
 # vLLM constructor args that are forwarded from config.args verbatim.
 _VLLM_PASSTHROUGH_ARGS = (
@@ -91,6 +92,7 @@ _VLLM_PASSTHROUGH_ARGS = (
     "block_size",
     "max_num_seqs",
     "max_num_batched_tokens",
+    "enable_prefix_caching",
 )
 
 
@@ -120,6 +122,11 @@ def _pooler_returns_raw_logits(pooler_cfg: Mapping[str, Any]) -> bool:
         ):
             return True
     return False
+
+
+def _default_classification_pooler_config() -> dict[str, Any]:
+    """Default classification pooler matching HF logit postprocessing."""
+    return {"pooling_type": "LAST", "use_activation": False}
 
 
 def _apply_registry_patches(patches: Sequence[str]) -> None:
@@ -164,6 +171,7 @@ class VLLMAdapter(ModelAdapter):
             )
         self._llm: Any | None = None
         self._tokenizer: Any | None = None
+        self._hf_config: Any = None
         self._registry_patched = False
 
     # ------------------------------------------------------------------
@@ -205,6 +213,15 @@ class VLLMAdapter(ModelAdapter):
 
     def _is_classification(self) -> bool:
         return self._task() == "text-classification"
+
+    def _classification_pooler_config(self) -> dict[str, Any]:
+        """Resolve the PoolerConfig kwargs for classification runs."""
+        configured = self.config.args.get("pooler_config")
+        if configured is None:
+            return _default_classification_pooler_config()
+        if not isinstance(configured, Mapping):
+            raise ValueError("pooler_config must be a mapping")
+        return dict(configured)
 
     def _flow_name(self) -> str | None:
         """Resolve one optional multimodal flow name."""
@@ -270,6 +287,52 @@ class VLLMAdapter(ModelAdapter):
                 base,
             )
         return f"{base}/{subfolder}"
+
+    def _get_hf_config(self) -> Any | None:
+        """Load cached HF config metadata for classification postprocessing."""
+        if self._hf_config is _CONFIG_UNAVAILABLE:
+            return None
+        if self._hf_config is not None:
+            return self._hf_config
+
+        try:
+            transformers = importlib.import_module("transformers")
+            kwargs: dict[str, Any] = {
+                "trust_remote_code": bool(
+                    self.config.args.get("trust_remote_code", False)
+                ),
+                # vLLM has already loaded the model by the time scores
+                # are postprocessed, so the config should be local. Avoid
+                # any surprise hub traffic from the scoring loop.
+                "local_files_only": True,
+            }
+            revision = self.config.args.get("revision")
+            if revision is not None:
+                kwargs["revision"] = revision
+            subfolder = self.config.args.get(
+                "config_subfolder",
+                self.config.args.get("model_subfolder"),
+            )
+            if subfolder:
+                kwargs["subfolder"] = subfolder
+            config = transformers.AutoConfig.from_pretrained(
+                self._model_name(),
+                **kwargs,
+            )
+            hf_overrides = self.config.args.get("hf_overrides")
+            if isinstance(hf_overrides, Mapping):
+                for key, value in hf_overrides.items():
+                    setattr(config, str(key), value)
+            self._hf_config = config
+        except Exception as exc:
+            _log.debug(
+                "Failed to load HF config metadata for %s: %s",
+                self._model_name(),
+                exc,
+            )
+            self._hf_config = _CONFIG_UNAVAILABLE
+            return None
+        return self._hf_config
 
     def _get_tokenizer(self) -> Any:
         if self._tokenizer is None:
@@ -429,13 +492,9 @@ class VLLMAdapter(ModelAdapter):
                     PoolerConfig = importlib.import_module(
                         "vllm.model_executor.layers.pooler"
                     ).PoolerConfig
-                pooler_cfg = self.config.args.get("pooler_config")
-                if pooler_cfg is not None:
-                    kwargs["pooler_config"] = PoolerConfig(**pooler_cfg)
-                else:
-                    kwargs["pooler_config"] = PoolerConfig(
-                        pooling_type="LAST",
-                    )
+                kwargs["pooler_config"] = PoolerConfig(
+                    **self._classification_pooler_config()
+                )
             for key in _VLLM_PASSTHROUGH_ARGS:
                 value = self.config.args.get(key)
                 if value is not None:
@@ -503,6 +562,17 @@ class VLLMAdapter(ModelAdapter):
                     tokenizer=tokenizer,
                 )
             else:
+                user_prompt_template = self.config.args.get("user_prompt_template")
+                if user_prompt_template:
+                    if sample_has_media(sample):
+                        raise ValueError(
+                            "user_prompt_template would drop image/media content; "
+                            "remove user_prompt_template or use a text-only dataset"
+                        )
+                    rendered_user = render_template(
+                        str(user_prompt_template), sample_context(sample)
+                    )
+                    messages = [{"role": "user", "content": rendered_user}]
                 system_prompt = self._system_prompt(sample)
                 if system_prompt:
                     messages = [
@@ -810,12 +880,41 @@ class VLLMAdapter(ModelAdapter):
     # Score extraction: text-classification path
     # ------------------------------------------------------------------
 
-    def _activation_fn(self) -> str:
+    def _activation_fn(
+        self,
+        *,
+        label_count: int | None = None,
+        model_config: Any | None = None,
+    ) -> str:
         """Resolve the activation function for classification logits."""
         activation = self.config.args.get("activation")
+        if activation is None:
+            activation = self.config.args.get("function_to_apply")
         if activation is not None:
             return str(activation).lower()
-        return "sigmoid"
+
+        if self.config.args.get("label_score_aggregation") is not None:
+            return "sigmoid"
+
+        if model_config is None:
+            model_config = self._get_hf_config()
+        if getattr(model_config, "problem_type", None) == (
+            "multi_label_classification"
+        ):
+            return "sigmoid"
+
+        if label_count is None:
+            num_labels = getattr(model_config, "num_labels", None)
+            if isinstance(num_labels, int) and num_labels > 0:
+                label_count = num_labels
+            else:
+                id2label = getattr(model_config, "id2label", None)
+                if isinstance(id2label, Mapping) and id2label:
+                    label_count = len(id2label)
+
+        if label_count == 1:
+            return "sigmoid"
+        return "softmax"
 
     def _label_names(self, label_count: int) -> list[str]:
         """Resolve label names for classification outputs."""
@@ -891,7 +990,7 @@ class VLLMAdapter(ModelAdapter):
         import numpy as np
 
         values = np.asarray(probs, dtype=np.float32)
-        activation = self._activation_fn()
+        activation = self._activation_fn(label_count=len(values))
 
         if already_activated:
             scores = values.tolist()
@@ -1154,9 +1253,9 @@ class VLLMAdapter(ModelAdapter):
 
         for sample, output in zip(samples, outputs):
             probs = output.outputs.probs
-            # classify() returns activated probs by default, but
-            # custom pooler_config may disable the activation step.
-            pooler_cfg = self.config.args.get("pooler_config") or {}
+            # The default classification pooler disables activation so
+            # HF and vLLM share the same logit postprocessing path.
+            pooler_cfg = self._classification_pooler_config()
             returns_raw_logits = _pooler_returns_raw_logits(pooler_cfg)
             try:
                 score = self._unsafe_score_from_logits(

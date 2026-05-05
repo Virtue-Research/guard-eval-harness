@@ -235,7 +235,16 @@ class AnthropicAdapter(ModelAdapter):
             "messages": messages,
         }
         if system_text:
-            payload["system"] = system_text
+            if self.config.args.get("cache_system_prompt"):
+                payload["system"] = [
+                    {
+                        "type": "text",
+                        "text": system_text,
+                        "cache_control": {"type": "ephemeral"},
+                    }
+                ]
+            else:
+                payload["system"] = system_text
 
         temperature = self.config.args.get("temperature")
         if temperature is not None:
