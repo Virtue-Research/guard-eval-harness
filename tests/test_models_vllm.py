@@ -704,6 +704,60 @@ class VLLMAdapterTest(unittest.TestCase):
         call_kwargs = mock_llm_cls.call_args[1]
         self.assertNotIn("convert", call_kwargs)
 
+    def test_get_llm_classification_does_not_default_to_eager(self) -> None:
+        adapter = self._make_adapter(task="text-classification")
+        mock_llm_cls = MagicMock()
+        mock_vllm = MagicMock(LLM=mock_llm_cls)
+        with patch(
+            "guard_eval_harness.models.vllm_adapter.importlib.import_module",
+            side_effect=self._mock_import(mock_vllm),
+        ):
+            adapter._get_llm()
+        call_kwargs = mock_llm_cls.call_args[1]
+        self.assertNotIn("enforce_eager", call_kwargs)
+
+    def test_get_llm_classification_allows_eager_override(self) -> None:
+        adapter = self._make_adapter(
+            task="text-classification",
+            enforce_eager=False,
+        )
+        mock_llm_cls = MagicMock()
+        mock_vllm = MagicMock(LLM=mock_llm_cls)
+        with patch(
+            "guard_eval_harness.models.vllm_adapter.importlib.import_module",
+            side_effect=self._mock_import(mock_vllm),
+        ):
+            adapter._get_llm()
+        call_kwargs = mock_llm_cls.call_args[1]
+        self.assertIs(call_kwargs["enforce_eager"], False)
+
+    def test_get_llm_classification_does_not_default_max_num_seqs(self) -> None:
+        adapter = self._make_adapter(task="text-classification")
+        mock_llm_cls = MagicMock()
+        mock_vllm = MagicMock(LLM=mock_llm_cls)
+        with patch(
+            "guard_eval_harness.models.vllm_adapter.importlib.import_module",
+            side_effect=self._mock_import(mock_vllm),
+        ):
+            adapter._get_llm()
+        call_kwargs = mock_llm_cls.call_args[1]
+        self.assertNotIn("max_num_seqs", call_kwargs)
+
+    def test_get_llm_classification_allows_max_num_seqs_override(self) -> None:
+        adapter = self._make_adapter(
+            task="text-classification",
+            max_num_seqs=128,
+        )
+        mock_llm_cls = MagicMock()
+        mock_vllm = MagicMock(LLM=mock_llm_cls)
+        with patch(
+            "guard_eval_harness.models.vllm_adapter.importlib.import_module",
+            side_effect=self._mock_import(mock_vllm),
+        ):
+            adapter._get_llm()
+        call_kwargs = mock_llm_cls.call_args[1]
+        self.assertEqual(call_kwargs["max_num_seqs"], 128)
+
     def test_get_llm_no_convert_for_generation(self) -> None:
         adapter = self._make_adapter(task="text-generation")
         mock_llm_cls = MagicMock()
@@ -734,9 +788,69 @@ class VLLMAdapterTest(unittest.TestCase):
         self.assertTrue(caps.probability_scores)
         self.assertTrue(caps.batching)
 
+    def test_classification_pooler_defaults_to_raw_logits(self) -> None:
+        adapter = self._make_adapter(task="text-classification")
+
+        self.assertEqual(
+            adapter._classification_pooler_config(),
+            {"pooling_type": "LAST", "use_activation": False},
+        )
+
     # ------------------------------------------------------------------
     # Classification: score from logits
     # ------------------------------------------------------------------
+
+    def test_unsafe_score_from_logits_defaults_to_softmax_for_two_labels(
+        self,
+    ) -> None:
+        adapter = self._make_adapter(
+            task="text-classification",
+            label_names=["safe", "unsafe"],
+        )
+        # Match HF raw-sequence-classification: absent an explicit activation,
+        # two-label classifiers use softmax, not independent sigmoid scores.
+        score = adapter._unsafe_score_from_logits([2.0, -2.0])
+        self.assertAlmostEqual(score, 0.0180, places=3)
+
+    def test_unsafe_score_from_logits_defaults_to_sigmoid_for_one_label(
+        self,
+    ) -> None:
+        adapter = self._make_adapter(task="text-classification")
+        score = adapter._unsafe_score_from_logits([2.0])
+        self.assertAlmostEqual(score, 0.8807, places=3)
+
+    def test_unsafe_score_from_logits_defaults_to_sigmoid_for_multilabel(
+        self,
+    ) -> None:
+        adapter = self._make_adapter(
+            task="text-classification",
+            label_names=["hate", "violence", "safe"],
+            label_score_aggregation="max",
+        )
+        model_config = SimpleNamespace(
+            problem_type="multi_label_classification",
+            num_labels=3,
+        )
+
+        with patch.object(adapter, "_get_hf_config", return_value=model_config):
+            score = adapter._unsafe_score_from_logits([1.0, 2.0, -1.0])
+
+        self.assertAlmostEqual(score, 0.8808, places=3)
+
+    def test_unsafe_score_from_logits_aggregated_labels_use_sigmoid(
+        self,
+    ) -> None:
+        adapter = self._make_adapter(
+            task="text-classification",
+            label_names=["LABEL_0", "LABEL_1", "LABEL_2"],
+            label_score_aggregation="max",
+        )
+        model_config = SimpleNamespace(problem_type=None, num_labels=3)
+
+        with patch.object(adapter, "_get_hf_config", return_value=model_config):
+            score = adapter._unsafe_score_from_logits([1.0, 2.0, -1.0])
+
+        self.assertAlmostEqual(score, 0.8808, places=3)
 
     def test_unsafe_score_from_logits_sigmoid(self) -> None:
         adapter = self._make_adapter(
@@ -782,19 +896,18 @@ class VLLMAdapterTest(unittest.TestCase):
             activation="sigmoid",
         )
         fake_llm = MagicMock()
-        # classify() returns probabilities (already activated), not logits
+        # The default classification pooler returns raw logits, so the
+        # adapter applies the configured sigmoid activation.
         fake_llm.classify.return_value = [
-            SimpleNamespace(outputs=SimpleNamespace(probs=[0.95, 0.12])),
-            SimpleNamespace(outputs=SimpleNamespace(probs=[0.05, 0.12])),
+            SimpleNamespace(outputs=SimpleNamespace(probs=[3.0, -2.0])),
+            SimpleNamespace(outputs=SimpleNamespace(probs=[-3.0, -2.0])),
         ]
         with patch.object(adapter, "_get_llm", return_value=fake_llm):
             preds = adapter.predict_batch(
                 [_sample("s1"), _sample("s2")], threshold=0.5
             )
         self.assertEqual(len(preds), 2)
-        # prob 0.95 → unsafe
         self.assertTrue(preds[0].unsafe_label)
-        # max(0.05, 0.12) = 0.12 → safe
         self.assertFalse(preds[1].unsafe_label)
         self.assertEqual(preds[0].metadata["task"], "text-classification")
 
