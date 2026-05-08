@@ -13,7 +13,7 @@ you plan to use.
 ## Base Install
 
 ```bash
-git clone https://github.com/siavash/guard-eval-harness.git
+git clone https://github.com/Virtue-Research/guard-eval-harness.git
 cd guard-eval-harness
 pip install -e "."
 ```
