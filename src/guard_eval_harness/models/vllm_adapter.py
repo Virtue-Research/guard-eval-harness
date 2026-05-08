@@ -555,6 +555,7 @@ class VLLMAdapter(ModelAdapter):
             if uses_granite_guardian_chat_template(self.config):
                 messages = prepare_granite_guardian_chat_messages(
                     sample,
+                    self.config,
                 )
             elif uses_llama_guard_chat_template(self.config):
                 messages = prepare_llama_guard_chat_messages(

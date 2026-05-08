@@ -756,6 +756,38 @@ class HuggingFaceAdapterTest(unittest.TestCase):
             ],
         )
 
+    def test_prompt_for_sample_appends_granite_guardian_4_1_block(self) -> None:
+        config = ResolvedModelConfig(
+            adapter="hf",
+            model_name="ibm-granite/granite-guardian-4.1-8b",
+            args={
+                "apply_chat_template": True,
+                "granite_guardian_criteria": "Unsafe {metadata_target_role} text",
+            },
+        )
+        adapter = HuggingFaceAdapter.from_config(config)
+        sample = NormalizedSample(
+            id="sample-1",
+            dataset="demo",
+            split="test",
+            messages=[{"role": "user", "content": "Check this"}],
+            label={"unsafe": True},
+        )
+        tokenizer = SimpleNamespace(
+            apply_chat_template=unittest.mock.Mock(return_value="prompt"),
+        )
+
+        with patch.object(adapter, "_get_tokenizer", return_value=tokenizer):
+            prompt = adapter._prompt_for_sample(sample)
+
+        self.assertEqual(prompt, "prompt")
+        messages = tokenizer.apply_chat_template.call_args.args[0]
+        self.assertEqual(messages[0], {"role": "user", "content": "Check this"})
+        self.assertEqual(messages[1]["role"], "user")
+        self.assertIn("<guardian><no-think>", messages[1]["content"])
+        self.assertIn("### Criteria: Unsafe User text", messages[1]["content"])
+        self.assertIn("<score></score>", messages[1]["content"])
+
     def test_backend_uses_subfolder_model_and_tokenizer(self) -> None:
         config = ResolvedModelConfig(
             adapter="hf",
@@ -1495,6 +1527,10 @@ class HuggingFaceAdapterTest(unittest.TestCase):
         self.assertEqual(score_from_text("Safety: Safe"), 0.0)
         self.assertEqual(score_from_text("Safety: Controversial"), 0.5)
         self.assertEqual(score_from_text("Safety: Unsafe"), 1.0)
+
+    def test_score_parser_handles_granite_guardian_score_tags(self) -> None:
+        self.assertEqual(score_from_text("<think>\n</think><score>yes</score>"), 1.0)
+        self.assertEqual(score_from_text("<score> no </score>"), 0.0)
 
     def test_score_parser_prefers_numeric_values_over_keywords(self) -> None:
         self.assertEqual(score_from_text("unsafe score: 0.2"), 0.2)

@@ -116,6 +116,11 @@ def _to_vllm_args(hf_args: dict[str, Any]) -> dict[str, Any]:
         "prompt_template",
         "generated_text_line_index",
         "text_score_mapping",
+        "auto_choice_from_text_score_mapping",
+        "granite_guardian_append_criteria",
+        "granite_guardian_criteria",
+        "granite_guardian_think",
+        "trust_remote_code",
     ):
         if key in hf_args:
             vllm_args[key] = hf_args[key]
