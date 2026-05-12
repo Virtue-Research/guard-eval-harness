@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from guard_eval_harness.config.models import ResolvedModelConfig
-from guard_eval_harness.schemas import NormalizedSample
+from guard_eval_harness.schemas import PredictSample
 
 GRANITE_GUARDIAN_CHAT_TEMPLATE_PROFILE = "granite_guardian"
 
@@ -27,7 +27,7 @@ def uses_granite_guardian_chat_template(
 
 
 def prepare_granite_guardian_chat_messages(
-    sample: NormalizedSample,
+    sample: PredictSample,
 ) -> list[dict[str, Any]]:
     """Shape normalized messages for the Granite Guardian chat template.
 

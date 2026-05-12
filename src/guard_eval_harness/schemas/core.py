@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Any, Literal, Union
+from typing import Annotated, Any, Literal, Sequence, Union
 
 from pydantic import (
     BaseModel,
@@ -13,6 +13,7 @@ from pydantic import (
 )
 
 from guard_eval_harness.config.models import (
+    PREDICT_METADATA_FIELD_DENYLIST,
     ResolvedExecutionConfig,
     ResolvedModelConfig,
     ResolvedOutputConfig,
@@ -223,6 +224,57 @@ class UnsafeLabel(HarnessModel):
     unsafe: bool
 
 
+class PredictSample(HarnessModel):
+    """Model-facing sample view. Ground truth is structurally absent."""
+
+    id: str
+    dataset: str
+    split: str
+    messages: list[Message] = Field(min_length=1)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+    @field_validator("id", "dataset", "split")
+    @classmethod
+    def validate_identifier(cls, value: str) -> str:
+        """Reject empty identifiers."""
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("value must not be empty")
+        return cleaned
+
+    @field_validator("metadata")
+    @classmethod
+    def validate_metadata(cls, value: dict[str, Any]) -> dict[str, Any]:
+        """Reject generic label-shaped metadata at the model boundary."""
+        invalid = sorted(
+            key for key in value if key in PREDICT_METADATA_FIELD_DENYLIST
+        )
+        if invalid:
+            names = ", ".join(invalid)
+            raise ValueError(
+                "PredictSample metadata cannot include label-like fields: "
+                f"{names}"
+            )
+        return value
+
+
+class SampleGroundTruth(HarnessModel):
+    """Score-side view of one sample, joined to predictions by sample id."""
+
+    sample_id: str
+    label: UnsafeLabel
+    category_labels: tuple[str, ...] = ()
+
+    @field_validator("sample_id")
+    @classmethod
+    def validate_sample_id(cls, value: str) -> str:
+        """Reject empty sample identifiers."""
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("sample_id must not be empty")
+        return cleaned
+
+
 class NormalizedSample(HarnessModel):
     """Canonical normalized dataset row."""
 
@@ -242,6 +294,33 @@ class NormalizedSample(HarnessModel):
         if not cleaned:
             raise ValueError("value must not be empty")
         return cleaned
+
+    def to_predict_sample(
+        self,
+        *,
+        predict_metadata_fields: Sequence[str] = (),
+    ) -> PredictSample:
+        """Return the model-facing sample view with allowlisted metadata."""
+        metadata = {
+            key: self.metadata[key]
+            for key in predict_metadata_fields
+            if key in self.metadata
+        }
+        return PredictSample(
+            id=self.id,
+            dataset=self.dataset,
+            split=self.split,
+            messages=self.messages,
+            metadata=metadata,
+        )
+
+    def to_ground_truth(self) -> SampleGroundTruth:
+        """Return the score-side ground truth for metrics."""
+        return SampleGroundTruth(
+            sample_id=self.id,
+            label=self.label,
+            category_labels=self.category_labels,
+        )
 
 
 class NormalizedPrediction(HarnessModel):
@@ -322,6 +401,7 @@ class AdapterCapabilities(HarnessModel):
     token_accounting: bool
     supported_input_modalities: tuple[str, ...] = ("text",)
     supports_category_outputs: bool = False
+    requires_ground_truth: bool = False
     notes: tuple[str, ...] = ()
 
 

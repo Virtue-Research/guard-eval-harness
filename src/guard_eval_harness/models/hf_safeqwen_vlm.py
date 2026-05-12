@@ -17,7 +17,7 @@ from guard_eval_harness.registry import model_registry
 from guard_eval_harness.schemas import (
     AdapterCapabilities,
     NormalizedPrediction,
-    NormalizedSample,
+    PredictSample,
 )
 
 
@@ -229,7 +229,7 @@ class SafeQwenVLMAdapter(HuggingFaceAdapter):
 
     def predict_batch(
         self,
-        samples: Sequence[NormalizedSample],
+        samples: Sequence[PredictSample],
         *,
         threshold: float,
     ) -> list[NormalizedPrediction]:
@@ -241,7 +241,7 @@ class SafeQwenVLMAdapter(HuggingFaceAdapter):
         processor = self._get_processor()
         model, configured_device = self._get_vlm_model()
 
-        prepared_samples: list[NormalizedSample] = []
+        prepared_samples: list[PredictSample] = []
         prompts: list[str] = []
         all_images: list[list[Any]] = []
         drop_failed = self.allow_partial_predictions

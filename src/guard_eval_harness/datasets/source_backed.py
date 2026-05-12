@@ -154,7 +154,24 @@ class SourceBackedDatasetAdapter(DatasetAdapter):
                 (*config.metadata_fields, *cls.metadata_fields_to_preserve)
             )
         )
-        return cls(config.model_copy(update={"metadata_fields": merged_fields}))
+        builtin_predict_fields = tuple(
+            field
+            for field in cls.metadata_fields_to_preserve
+            if field in {"policy", "target_role"}
+        )
+        merged_predict_fields = tuple(
+            dict.fromkeys(
+                (*config.predict_metadata_fields, *builtin_predict_fields)
+            )
+        )
+        return cls(
+            config.model_copy(
+                update={
+                    "metadata_fields": merged_fields,
+                    "predict_metadata_fields": merged_predict_fields,
+                }
+            )
+        )
 
     def load(self) -> list[NormalizedSample]:
         """Load and normalize the configured split from its source."""

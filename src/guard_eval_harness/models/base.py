@@ -9,7 +9,7 @@ from guard_eval_harness.config.models import ResolvedModelConfig
 from guard_eval_harness.schemas import (
     AdapterCapabilities,
     NormalizedPrediction,
-    NormalizedSample,
+    PredictSample,
 )
 
 
@@ -37,11 +37,11 @@ class ModelAdapter(ABC):
     @abstractmethod
     def predict_batch(
         self,
-        samples: Sequence[NormalizedSample],
+        samples: Sequence[PredictSample],
         *,
         threshold: float,
     ) -> list[NormalizedPrediction]:
-        """Emit canonical predictions for a batch of normalized samples."""
+        """Emit canonical predictions for a batch of model-facing samples."""
 
 
 class PlaceholderAdapter(ModelAdapter):
@@ -64,7 +64,7 @@ class PlaceholderAdapter(ModelAdapter):
 
     def predict_batch(
         self,
-        samples: Sequence[NormalizedSample],
+        samples: Sequence[PredictSample],
         *,
         threshold: float,
     ) -> list[NormalizedPrediction]:

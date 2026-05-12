@@ -19,6 +19,7 @@ from typing import Any
 
 from guard_eval_harness import __version__
 from guard_eval_harness.config.models import (
+    ResolvedDatasetConfig,
     ResolvedModelConfig,
     ResolvedRunConfig,
 )
@@ -47,6 +48,7 @@ from guard_eval_harness.schemas import RunEnvironment, RunManifest
 from guard_eval_harness.schemas import (
     NormalizedPrediction,
     NormalizedSample,
+    PredictSample,
 )
 
 _log = logging.getLogger(__name__)
@@ -320,6 +322,23 @@ def _evaluated_samples(
     return evaluated_samples, missing_prediction_ids
 
 
+def _prepare_batch(
+    model: Any,
+    batch: Sequence[NormalizedSample],
+    *,
+    predict_metadata_fields: Sequence[str],
+) -> Sequence[NormalizedSample] | list[PredictSample]:
+    """Prepare the adapter-facing batch for prediction."""
+    if model.capabilities.requires_ground_truth:
+        return batch
+    return [
+        sample.to_predict_sample(
+            predict_metadata_fields=predict_metadata_fields,
+        )
+        for sample in batch
+    ]
+
+
 def _predict_in_fixed_batches(
     model: Any,
     samples: Sequence[NormalizedSample],
@@ -327,6 +346,7 @@ def _predict_in_fixed_batches(
     threshold: float,
     batch_size: int,
     dataset_name: str,
+    predict_metadata_fields: Sequence[str],
     progress_callback: ProgressCallback | None,
 ) -> list[NormalizedPrediction]:
     """Run prediction batches with a fixed batch size."""
@@ -344,7 +364,16 @@ def _predict_in_fixed_batches(
         start=1,
     ):
         batch = samples[start : start + batch_size]
-        predictions.extend(model.predict_batch(batch, threshold=threshold))
+        predictions.extend(
+            model.predict_batch(
+                _prepare_batch(
+                    model,
+                    batch,
+                    predict_metadata_fields=predict_metadata_fields,
+                ),
+                threshold=threshold,
+            )
+        )
         pbar.update(len(batch))
         if (
             batch_index == 1
@@ -376,7 +405,7 @@ def _predict_with_auto_batch_size(
     samples: Sequence[NormalizedSample],
     *,
     threshold: float,
-    dataset_name: str,
+    dataset_config: ResolvedDatasetConfig,
     progress_callback: ProgressCallback | None,
 ) -> list[NormalizedPrediction]:
     """Run prediction batches with adaptive backoff on capacity failures."""
@@ -385,11 +414,20 @@ def _predict_with_auto_batch_size(
 
     adapter_name = getattr(model.config, "adapter", "")
     if adapter_name in _AUTO_BATCH_REMOTE_ADAPTERS:
-        predictions = list(model.predict_batch(samples, threshold=threshold))
+        predictions = list(
+            model.predict_batch(
+                _prepare_batch(
+                    model,
+                    samples,
+                    predict_metadata_fields=dataset_config.predict_metadata_fields,
+                ),
+                threshold=threshold,
+            )
+        )
         _emit_progress(
             progress_callback,
             event="prediction_progress",
-            dataset_name=dataset_name,
+            dataset_name=dataset_config.name,
             completed_batches=1,
             total_batches=1,
             completed_samples=len(samples),
@@ -407,7 +445,16 @@ def _predict_with_auto_batch_size(
         batch_size = min(current_batch_size, len(samples) - start)
         batch = samples[start : start + batch_size]
         try:
-            predictions.extend(model.predict_batch(batch, threshold=threshold))
+            predictions.extend(
+                model.predict_batch(
+                    _prepare_batch(
+                        model,
+                        batch,
+                        predict_metadata_fields=dataset_config.predict_metadata_fields,
+                    ),
+                    threshold=threshold,
+                )
+            )
         except Exception as exc:
             if batch_size == 1 or not _is_retryable_auto_batch_error(exc):
                 raise
@@ -418,7 +465,7 @@ def _predict_with_auto_batch_size(
         _emit_progress(
             progress_callback,
             event="prediction_progress",
-            dataset_name=dataset_name,
+            dataset_name=dataset_config.name,
             completed_batches=completed_batches,
             total_batches=None,
             completed_samples=start,
@@ -434,7 +481,7 @@ def _execute_predictions(
     *,
     threshold: float,
     batch_size: int | str,
-    dataset_name: str,
+    dataset_config: ResolvedDatasetConfig,
     progress_callback: ProgressCallback | None,
 ) -> list[NormalizedPrediction]:
     """Run pending samples through the configured batching strategy."""
@@ -443,7 +490,7 @@ def _execute_predictions(
             model,
             samples,
             threshold=threshold,
-            dataset_name=dataset_name,
+            dataset_config=dataset_config,
             progress_callback=progress_callback,
         )
     return _predict_in_fixed_batches(
@@ -451,7 +498,8 @@ def _execute_predictions(
         samples,
         threshold=threshold,
         batch_size=batch_size,
-        dataset_name=dataset_name,
+        dataset_name=dataset_config.name,
+        predict_metadata_fields=dataset_config.predict_metadata_fields,
         progress_callback=progress_callback,
     )
 
@@ -513,6 +561,7 @@ def run_benchmark(
     ):
         dataset_cls = dataset_registry.get(dataset_config.adapter)
         dataset = dataset_cls.from_config(dataset_config)
+        dataset_config = dataset.config
         dataset_started_at = perf_counter()
         _emit_progress(
             progress_callback,
@@ -607,7 +656,7 @@ def run_benchmark(
             pending_samples,
             threshold=runtime_config.threshold,
             batch_size=runtime_config.execution.batch_size,
-            dataset_name=dataset_config.name,
+            dataset_config=dataset_config,
             progress_callback=progress_callback,
         )
         _emit_progress(

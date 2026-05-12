@@ -9,8 +9,11 @@ from unittest.mock import patch
 from guard_eval_harness.models.templates import (
     env_value,
     extract_path,
+    render_template,
     resolve_score,
+    sample_context,
 )
+from guard_eval_harness.schemas import Message, NormalizedSample, PredictSample
 
 
 class ExtractPathTest(unittest.TestCase):
@@ -77,6 +80,72 @@ class EnvValueTest(unittest.TestCase):
     def test_missing_env_var_uses_default(self) -> None:
         with patch.dict(os.environ, {}, clear=True):
             self.assertEqual(env_value("GEH_EMPTY", "fallback"), "fallback")
+
+
+class PolicySubstitutionTest(unittest.TestCase):
+    """Validate per-sample policy substitution in template rendering."""
+
+    def _sample(self, policy: object) -> PredictSample:
+        return NormalizedSample(
+            id="test-1",
+            dataset="test",
+            split="test",
+            messages=[Message(role="user", content="hello")],
+            label={"unsafe": False},
+            metadata={"policy": policy},
+        ).to_predict_sample(predict_metadata_fields=("policy",))
+
+    def test_string_policy_injected_into_template(self) -> None:
+        context = sample_context(self._sample("Refuse harmful content."))
+        rendered = render_template(
+            "Policy: {policy}\nText: {messages_text}", context
+        )
+        self.assertIn("Refuse harmful content.", rendered)
+        self.assertIn("user: hello", rendered)
+
+    def test_dict_policy_serialized_as_json(self) -> None:
+        context = sample_context(
+            self._sample({"name": "P1", "rules": ["no violence"]})
+        )
+        rendered = render_template("{policy}", context)
+        self.assertIn('"name": "P1"', rendered)
+        self.assertIn("no violence", rendered)
+
+    def test_missing_policy_renders_empty_string(self) -> None:
+        sample = NormalizedSample(
+            id="test-2",
+            dataset="test",
+            split="test",
+            messages=[Message(role="user", content="hi")],
+            label={"unsafe": False},
+            metadata={"policy": "hidden"},
+        ).to_predict_sample()
+        context = sample_context(sample)
+        self.assertEqual(render_template("[{policy}]", context), "[]")
+
+    def test_context_uses_only_predict_visible_metadata(self) -> None:
+        sample = NormalizedSample(
+            id="test-3",
+            dataset="test",
+            split="test",
+            messages=[Message(role="user", content="hi")],
+            label={"unsafe": True},
+            metadata={
+                "policy": "hidden",
+                "target_role": "assistant",
+                "category": "visible",
+            },
+        ).to_predict_sample(predict_metadata_fields=("category",))
+
+        context = sample_context(sample)
+
+        self.assertNotIn("label", context)
+        self.assertNotIn("unsafe", context)
+        self.assertEqual(context["raw_metadata"], {"category": "visible"})
+        self.assertEqual(context["metadata_json"], '{"category": "visible"}')
+        self.assertEqual(context["metadata_category"], "visible")
+        self.assertEqual(context["metadata_target_role"], "User")
+        self.assertNotIn("metadata_policy", context)
 
 
 if __name__ == "__main__":

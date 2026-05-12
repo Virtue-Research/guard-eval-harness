@@ -39,7 +39,7 @@ from guard_eval_harness.registry import model_registry
 from guard_eval_harness.schemas import (
     AdapterCapabilities,
     NormalizedPrediction,
-    NormalizedSample,
+    PredictSample,
 )
 
 _log = logging.getLogger(__name__)
@@ -548,7 +548,7 @@ class VLLMAdapter(ModelAdapter):
     # Prompt construction (mirrors HF adapter logic)
     # ------------------------------------------------------------------
 
-    def _prompt_for_sample(self, sample: NormalizedSample) -> str:
+    def _prompt_for_sample(self, sample: PredictSample) -> str:
         if bool(self.config.args.get("apply_chat_template", False)):
             tokenizer = self._get_tokenizer()
             messages = sample_messages(sample)
@@ -591,7 +591,7 @@ class VLLMAdapter(ModelAdapter):
             return render_template(str(template), sample_context(sample))
         return sample_to_text(sample)
 
-    def _system_prompt(self, sample: NormalizedSample) -> str | None:
+    def _system_prompt(self, sample: PredictSample) -> str | None:
         """Render one optional system prompt."""
         prompt = self.config.args.get("system_prompt")
         if prompt is None:
@@ -616,7 +616,7 @@ class VLLMAdapter(ModelAdapter):
 
     def _internvl_question_for_sample(
         self,
-        sample: NormalizedSample,
+        sample: PredictSample,
     ) -> str:
         """Render the moderation question passed into InternVL chat."""
         conversation_text = "\n".join(
@@ -639,7 +639,7 @@ class VLLMAdapter(ModelAdapter):
 
     def _message_content_for_vllm(
         self,
-        sample: NormalizedSample,
+        sample: PredictSample,
     ) -> list[dict[str, Any]]:
         """Convert one multimodal sample into vLLM chat messages."""
         flow_name = self._flow_name()
@@ -1035,7 +1035,7 @@ class VLLMAdapter(ModelAdapter):
 
     def _predict_generation(
         self,
-        samples: Sequence[NormalizedSample],
+        samples: Sequence[PredictSample],
         prompts: list[str],
         threshold: float,
     ) -> list[NormalizedPrediction]:
@@ -1106,7 +1106,7 @@ class VLLMAdapter(ModelAdapter):
 
     def _predict_multimodal_generation(
         self,
-        samples: Sequence[NormalizedSample],
+        samples: Sequence[PredictSample],
         threshold: float,
     ) -> list[NormalizedPrediction]:
         """Run multimodal generation through vLLM chat."""
@@ -1126,7 +1126,7 @@ class VLLMAdapter(ModelAdapter):
             self.config.args.get("continue_final_message", False)
         )
         drop_failed = self.allow_partial_predictions
-        prepared_samples: list[NormalizedSample] = []
+        prepared_samples: list[PredictSample] = []
         message_batches: list[list[dict[str, Any]]] = []
         for sample in samples:
             try:
@@ -1231,7 +1231,7 @@ class VLLMAdapter(ModelAdapter):
 
     def _predict_classification(
         self,
-        samples: Sequence[NormalizedSample],
+        samples: Sequence[PredictSample],
         prompts: list[str],
         threshold: float,
     ) -> list[NormalizedPrediction]:
@@ -1300,7 +1300,7 @@ class VLLMAdapter(ModelAdapter):
 
     def predict_batch(
         self,
-        samples: Sequence[NormalizedSample],
+        samples: Sequence[PredictSample],
         *,
         threshold: float,
     ) -> list[NormalizedPrediction]:

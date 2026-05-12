@@ -197,6 +197,77 @@ class LocalJsonlDatasetTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "invalid JSON messages field"):
                 dataset.load()
 
+    def test_metadata_fields_affect_ids_but_not_predict_metadata_by_default(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "metadata_ids.jsonl"
+            path.write_text(
+                "\n".join(
+                    [
+                        json.dumps(
+                            {
+                                "prompt": "same prompt",
+                                "unsafe": False,
+                                "type": "a",
+                            }
+                        ),
+                        json.dumps(
+                            {
+                                "prompt": "same prompt",
+                                "unsafe": False,
+                                "type": "b",
+                            }
+                        ),
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            dataset = LocalJsonlDataset(
+                self._build_config(
+                    path,
+                    id_field=None,
+                    metadata_fields=("type",),
+                )
+            )
+
+            samples = dataset.load()
+
+        self.assertEqual(len(samples), 2)
+        self.assertNotEqual(samples[0].id, samples[1].id)
+        self.assertEqual(samples[0].metadata["type"], "a")
+        self.assertEqual(samples[0].to_predict_sample().metadata, {})
+
+    def test_predict_metadata_fields_allow_benign_metadata(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "predict_metadata.jsonl"
+            path.write_text(
+                json.dumps(
+                    {
+                        "id": "sample-1",
+                        "prompt": "hello",
+                        "unsafe": False,
+                        "type": "routing",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            config = self._build_config(
+                path,
+                metadata_fields=("type",),
+                predict_metadata_fields=("type",),
+            )
+            dataset = LocalJsonlDataset(config)
+
+            sample = dataset.load()[0]
+
+        self.assertEqual(
+            sample.to_predict_sample(
+                predict_metadata_fields=config.predict_metadata_fields,
+            ).metadata,
+            {"type": "routing"},
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

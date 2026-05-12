@@ -21,7 +21,7 @@ from guard_eval_harness.registry import model_registry
 from guard_eval_harness.schemas import (
     AdapterCapabilities,
     NormalizedPrediction,
-    NormalizedSample,
+    PredictSample,
 )
 
 _MAX_CONCURRENCY = 750
@@ -88,7 +88,7 @@ class OpenAIModerationAdapter(ModelAdapter):
             headers.setdefault(header_name, f"{prefix} {token}".strip())
         return headers
 
-    def _request_payload(self, sample: NormalizedSample) -> dict[str, Any]:
+    def _request_payload(self, sample: PredictSample) -> dict[str, Any]:
         """Build one moderation request payload."""
         context = sample_context(sample)
         payload_template = self.config.args.get("payload_template")
@@ -227,7 +227,7 @@ class OpenAIModerationAdapter(ModelAdapter):
 
     def _predict_one(
         self,
-        sample: NormalizedSample,
+        sample: PredictSample,
         *,
         endpoint: str,
         headers: dict[str, str],
@@ -271,7 +271,7 @@ class OpenAIModerationAdapter(ModelAdapter):
 
     def predict_batch(
         self,
-        samples: Sequence[NormalizedSample],
+        samples: Sequence[PredictSample],
         *,
         threshold: float,
     ) -> list[NormalizedPrediction]:

@@ -12,6 +12,7 @@ from unittest.mock import patch
 
 from guard_eval_harness.config import load_config, load_config_from_path
 from guard_eval_harness.datasets.base import DatasetAdapter
+from guard_eval_harness.datasets.source_backed import SourceBackedDatasetAdapter
 from guard_eval_harness.execution import run_benchmark
 from guard_eval_harness.execution.artifacts import sha256_payload
 from guard_eval_harness.execution.runner import _resolve_runtime_config
@@ -23,6 +24,7 @@ from guard_eval_harness.schemas import (
     AdapterCapabilities,
     NormalizedPrediction,
     NormalizedSample,
+    PredictSample,
 )
 
 
@@ -38,6 +40,7 @@ class IntegrityTestAdapter(ModelAdapter):
             concurrency=False,
             cost_estimation=False,
             token_accounting=False,
+            requires_ground_truth=True,
             notes=("test-only",),
         )
 
@@ -135,6 +138,22 @@ class CodeMetricEligibleDataset(DatasetAdapter):
         )
 
 
+class BuiltinPredictMetadataDataset(SourceBackedDatasetAdapter):
+    """Source-backed dataset with built-in model-visible metadata."""
+
+    metadata_fields_to_preserve = ("target_role",)
+
+    def load_source_rows(self):
+        return [
+            {
+                "id": "builtin-predict-metadata-1",
+                "prompt": "hello",
+                "unsafe": False,
+                "target_role": "assistant",
+            }
+        ]
+
+
 class ExecutionEngineTestAdapter(ModelAdapter):
     """Adapter used to exercise resume and auto-batch behavior."""
 
@@ -158,12 +177,13 @@ class ExecutionEngineTestAdapter(ModelAdapter):
             concurrency=False,
             cost_estimation=False,
             token_accounting=False,
+            requires_ground_truth=True,
             notes=("test-only",),
         )
 
     def predict_batch(
         self,
-        samples: list[NormalizedSample],
+        samples: list[PredictSample],
         *,
         threshold: float,
     ) -> list[NormalizedPrediction]:
@@ -246,6 +266,57 @@ class CategoryEchoAdapter(ModelAdapter):
         return predictions
 
 
+class PredictViewObserverAdapter(ModelAdapter):
+    """Test-only production-style adapter that records predict samples."""
+
+    observed_samples: list[PredictSample] = []
+
+    @classmethod
+    def reset(cls) -> None:
+        """Clear observed samples."""
+        cls.observed_samples = []
+
+    @property
+    def capabilities(self) -> AdapterCapabilities:
+        return AdapterCapabilities(
+            adapter_name="predict_view_observer",
+            probability_scores=True,
+            batching=True,
+            concurrency=False,
+            cost_estimation=False,
+            token_accounting=False,
+            notes=("test-only",),
+        )
+
+    def predict_batch(
+        self,
+        samples: list[PredictSample],
+        *,
+        threshold: float,
+    ) -> list[NormalizedPrediction]:
+        self.__class__.observed_samples.extend(samples)
+        return [
+            NormalizedPrediction(
+                sample_id=sample.id,
+                unsafe_score=(
+                    0.9
+                    if "unsafe" in sample.messages[0].text_content
+                    else 0.1
+                ),
+                unsafe_label=(
+                    0.9
+                    if "unsafe" in sample.messages[0].text_content
+                    else 0.1
+                )
+                >= threshold,
+                threshold=threshold,
+                latency_ms=0.0,
+                metadata={"adapter": "predict_view_observer"},
+            )
+            for sample in samples
+        ]
+
+
 if "integrity_test" not in model_registry:
     model_registry.register("integrity_test", target=IntegrityTestAdapter)
 
@@ -261,6 +332,12 @@ if "code_metric_eligible" not in dataset_registry:
         target=CodeMetricEligibleDataset,
     )
 
+if "builtin_predict_metadata" not in dataset_registry:
+    dataset_registry.register(
+        "builtin_predict_metadata",
+        target=BuiltinPredictMetadataDataset,
+    )
+
 if "execution_engine_test" not in model_registry:
     model_registry.register(
         "execution_engine_test",
@@ -271,6 +348,12 @@ if "category_echo" not in model_registry:
     model_registry.register(
         "category_echo",
         target=CategoryEchoAdapter,
+    )
+
+if "predict_view_observer" not in model_registry:
+    model_registry.register(
+        "predict_view_observer",
+        target=PredictViewObserverAdapter,
     )
 
 
@@ -367,6 +450,100 @@ class RunnerIntegrationTest(unittest.TestCase):
             rebuilt = rebuild_summary(output_dir)
             self.assertEqual(rebuilt["datasets"][0]["name"], "mock_jsonl")
             self.assertTrue((output_dir / "report.html").exists())
+
+    def test_production_adapter_receives_predict_sample_allowlist(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            dataset_path = root / "samples.jsonl"
+            dataset_path.write_text(
+                "\n".join(
+                    [
+                        json.dumps(
+                            {
+                                "prompt": "hello",
+                                "verdict": "safe",
+                                "category": "benign",
+                            }
+                        ),
+                        json.dumps(
+                            {
+                                "prompt": "unsafe request",
+                                "verdict": "unsafe",
+                                "category": "policy",
+                            }
+                        ),
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            PredictViewObserverAdapter.reset()
+            config = load_config(
+                {
+                    "version": 1,
+                    "run_name": "predict-view",
+                    "model": {"adapter": "predict_view_observer"},
+                    "datasets": [
+                        {
+                            "name": "predict_view_jsonl",
+                            "adapter": "local_jsonl",
+                            "path": dataset_path.as_posix(),
+                            "id_field": None,
+                            "label_field": "verdict",
+                            "metadata_fields": ("category", "verdict"),
+                            "predict_metadata_fields": ("category",),
+                        }
+                    ],
+                    "output": {"run_dir": (root / "run").as_posix()},
+                },
+                base_dir=root.as_posix(),
+            )
+
+            run_benchmark(config)
+
+        observed = PredictViewObserverAdapter.observed_samples
+        self.assertEqual(len(observed), 2)
+        self.assertTrue(
+            all(isinstance(sample, PredictSample) for sample in observed)
+        )
+        self.assertTrue(all(not hasattr(sample, "label") for sample in observed))
+        self.assertEqual(
+            [sample.metadata for sample in observed],
+            [{"category": "benign"}, {"category": "policy"}],
+        )
+
+    def test_runner_uses_adapter_resolved_predict_metadata_fields(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            PredictViewObserverAdapter.reset()
+            config = load_config(
+                {
+                    "version": 1,
+                    "run_name": "builtin-predict-metadata",
+                    "model": {"adapter": "predict_view_observer"},
+                    "datasets": [
+                        {
+                            "name": "builtin_predict_metadata",
+                            "adapter": "builtin_predict_metadata",
+                        }
+                    ],
+                    "output": {"run_dir": (root / "run").as_posix()},
+                },
+                base_dir=root.as_posix(),
+            )
+
+            run_benchmark(config)
+
+        self.assertEqual(
+            [
+                sample.metadata
+                for sample in PredictViewObserverAdapter.observed_samples
+            ],
+            [{"target_role": "assistant"}],
+        )
 
     def test_runtime_config_exposes_model_name_to_dataset_options(self) -> None:
         config = load_config(

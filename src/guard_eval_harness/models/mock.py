@@ -26,6 +26,7 @@ class MockModelAdapter(ModelAdapter):
             concurrency=False,
             cost_estimation=False,
             token_accounting=False,
+            requires_ground_truth=True,
             notes=("deterministic", "test-friendly"),
         )
 

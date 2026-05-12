@@ -9,8 +9,10 @@ from guard_eval_harness.schemas.core import (
     Message,
     NormalizedPrediction,
     NormalizedSample,
+    PredictSample,
     RunEnvironment,
     RunManifest,
+    SampleGroundTruth,
     TextPart,
     UnsafeLabel,
 )
@@ -24,8 +26,10 @@ __all__ = [
     "Message",
     "NormalizedPrediction",
     "NormalizedSample",
+    "PredictSample",
     "RunEnvironment",
     "RunManifest",
+    "SampleGroundTruth",
     "TextPart",
     "UnsafeLabel",
 ]
