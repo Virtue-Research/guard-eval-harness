@@ -902,6 +902,67 @@ class BuiltInDatasetTest(unittest.TestCase):
         self.assertEqual(args[:2], ("allenai/wildjailbreak", "eval"))
         self.assertEqual(kwargs["split"], "train")
 
+    def test_wildjailbreak_does_not_preserve_data_type_label_source(self) -> None:
+        mock_load_dataset = unittest.mock.Mock(
+            return_value=SimpleNamespace(
+                to_list=lambda: [
+                    {
+                        "data_type": "vanilla_harmful",
+                        "adversarial": "",
+                        "vanilla": "Harmful prompt",
+                    }
+                ]
+            )
+        )
+        with patch.dict(
+            "sys.modules",
+            {"datasets": SimpleNamespace(load_dataset=mock_load_dataset)},
+        ):
+            dataset_cls = dataset_registry.get("wildjailbreak")
+            dataset = dataset_cls.from_config(
+                ResolvedDatasetConfig(
+                    name="wildjailbreak",
+                    adapter="wildjailbreak",
+                    split="train",
+                    metadata_fields=("data_type",),
+                )
+            )
+            samples = dataset.load()
+
+        self.assertTrue(samples[0].label.unsafe)
+        self.assertEqual(samples[0].metadata["data_type"], "vanilla_harmful")
+        self.assertNotIn("data_type", samples[0].to_predict_sample().metadata)
+
+    def test_dices_990_does_not_preserve_degree_label_source(self) -> None:
+        with patch(
+            "guard_eval_harness.datasets.dices_990.load_hf_rows",
+            return_value=[
+                {
+                    "degree_of_harm": 4,
+                    "context": "Should I do this?",
+                    "response": "Unsafe response",
+                }
+            ],
+        ):
+            dataset_cls = dataset_registry.get("dices_990")
+            dataset = dataset_cls.from_config(
+                ResolvedDatasetConfig(
+                    name="dices_990",
+                    adapter="dices_990",
+                    split="train",
+                    metadata_fields=("degree_of_harm",),
+                )
+            )
+            samples = dataset.load()
+
+        self.assertTrue(samples[0].label.unsafe)
+        self.assertEqual(samples[0].metadata["target_role"], "conversation")
+        self.assertEqual(samples[0].metadata["degree_of_harm"], "Moderate")
+        self.assertNotIn(
+            "degree_of_harm",
+            samples[0].to_predict_sample().metadata,
+        )
+
     def test_tdc_red_teaming(self) -> None:
         with patch(
             "guard_eval_harness.datasets.tdc_red_teaming.load_json_payload",

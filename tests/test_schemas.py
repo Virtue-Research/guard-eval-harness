@@ -613,6 +613,27 @@ class LabelLeakageRegressionTest(unittest.TestCase):
         )
         self.assertEqual(or_bench.metadata, {"category": "toxicity"})
 
+        dices = PredictSample(
+            id="s4",
+            dataset="dices_990",
+            split="train",
+            messages=[Message(role="user", content="hi")],
+            metadata={
+                "degree_of_harm": "Moderate",
+                "target_role": "conversation",
+            },
+        )
+        self.assertEqual(dices.metadata, {"target_role": "conversation"})
+
+        wildjailbreak = PredictSample(
+            id="s5",
+            dataset="wildjailbreak",
+            split="train",
+            messages=[Message(role="user", content="hi")],
+            metadata={"data_type": "vanilla_harmful", "source": "demo"},
+        )
+        self.assertEqual(wildjailbreak.metadata, {"source": "demo"})
+
 
 if __name__ == "__main__":
     unittest.main()

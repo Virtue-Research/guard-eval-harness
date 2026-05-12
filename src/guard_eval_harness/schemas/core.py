@@ -265,6 +265,7 @@ PREDICT_METADATA_BLOCKLIST_BY_DATASET: dict[str, frozenset[str]] = {
             "sexual_explicit",
         }
     ),
+    "dices_990": frozenset({"degree_of_harm"}),
     "hatexplain": frozenset(
         {"hate_speech_count", "offensive_language_count", "neither_count"}
     ),
@@ -297,21 +298,12 @@ PREDICT_METADATA_BLOCKLIST_BY_DATASET: dict[str, frozenset[str]] = {
             "response_refusal_label",
         }
     ),
+    "wildjailbreak": frozenset({"data_type"}),
     "xstest": frozenset({"type"}),
 }
 
-PREDICT_METADATA_AUDIT_BLOCKLIST: frozenset[str] = frozenset().union(
-    PREDICT_METADATA_BLOCKLIST,
-    {
-        # Historical dataset-specific answer columns that may appear in
-        # hand-built NormalizedSample metadata or stale sample caches.
-        "human_annotation",
-        "jailbreaking",
-        "source_role",
-        "safety_reason",
-        "data_type",
-        "degree_of_harm",
-    },
+PREDICT_METADATA_AUDIT_BLOCKLIST: frozenset[str] = (
+    PREDICT_METADATA_BLOCKLIST
 )
 
 
