@@ -27,7 +27,6 @@ class PKUSafeRLHFDataset(SourceBackedDatasetAdapter):
     license_name = "Apache 2.0"
     languages = ("en",)
     metadata_fields_to_preserve = (
-        "active_categories",
         "prompt_source",
         "response_source",
         "target_role",

@@ -1080,7 +1080,8 @@ class BuiltInDatasetTest(unittest.TestCase):
 
         self.assertEqual(len(samples), 2)
         self.assertFalse(samples[0].label.unsafe)
-        self.assertEqual(samples[1].metadata["active_categories"], ("violence",))
+        self.assertNotIn("active_categories", samples[1].metadata)
+        self.assertTrue(samples[1].label.unsafe)
 
     def test_convabuse(self) -> None:
         row_template = {
@@ -1193,7 +1194,7 @@ class BuiltInDatasetTest(unittest.TestCase):
         self.assertEqual(len(samples), 4)
         self.assertEqual(len({sample.id for sample in samples}), 4)
         self.assertEqual({sample.label.unsafe for sample in samples}, {False, True})
-        self.assertEqual(samples[0].metadata["active_categories"], ("Violence",))
+        self.assertNotIn("active_categories", samples[0].metadata)
 
     def test_openai_moderation_dataset_slice_is_still_available(self) -> None:
         dataset, samples = self._load_dataset("openai_moderation_dataset")

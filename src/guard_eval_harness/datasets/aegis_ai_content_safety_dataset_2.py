@@ -27,7 +27,6 @@ class AegisAIContentSafetyDataset2(SourceBackedDatasetAdapter):
     license_name = "CC BY 4.0"
     languages = ("en",)
     metadata_fields_to_preserve = (
-        "violated_categories",
         "prompt_label_source",
         "response_label_source",
         "response_was_empty",

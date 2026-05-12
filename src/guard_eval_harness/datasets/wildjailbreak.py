@@ -36,7 +36,7 @@ class WildJailbreakDataset(SourceBackedDatasetAdapter):
         "Jailbreak",
         "Over-Refusal",
     )
-    metadata_fields_to_preserve = ("data_type",)
+    metadata_fields_to_preserve = ()
     label_mapping_note = (
         "data_type values ending in '_harmful' map to "
         "unsafe; values ending in '_benign' map to safe. "

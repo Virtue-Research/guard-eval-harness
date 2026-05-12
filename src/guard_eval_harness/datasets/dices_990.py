@@ -40,7 +40,7 @@ class DICES990Dataset(SourceBackedDatasetAdapter):
     license_name = "CC BY 4.0"
     languages = ("en",)
     categories = ("dialog_safety",)
-    metadata_fields_to_preserve = ("degree_of_harm", "target_role")
+    metadata_fields_to_preserve = ("target_role",)
     label_mapping_note = (
         "degree_of_harm ClassLabel: 3=Extreme and 4=Moderate map "
         "to unsafe; 1=Benign maps to safe; 0 and 2 excluded"

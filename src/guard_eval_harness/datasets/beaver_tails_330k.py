@@ -44,7 +44,7 @@ class BeaverTailsDataset(SourceBackedDatasetAdapter):
         "Terrorism, Organized Crime",
         "Violence, Aiding and Abetting, Incitement",
     )
-    metadata_fields_to_preserve = ("active_categories", "target_role")
+    metadata_fields_to_preserve = ("target_role",)
     label_mapping_note = (
         "assistant responses are unsafe when BeaverTails marks the pair as not safe"
     )
