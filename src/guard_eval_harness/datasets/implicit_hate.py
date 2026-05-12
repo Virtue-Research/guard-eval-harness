@@ -24,7 +24,7 @@ class ImplicitHateDataset(SourceBackedDatasetAdapter):
         "Explicit Hate",
         "Implicit Hate",
     )
-    metadata_fields_to_preserve = ("class",)
+    metadata_fields_to_preserve = ()
     label_mapping_note = (
         "explicit_hate and implicit_hate map to unsafe; "
         "not_hate maps to safe"

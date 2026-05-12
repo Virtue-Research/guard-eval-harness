@@ -443,6 +443,9 @@ _LEAKY_METADATA_KEYS = (
     "sexual_explicit",
     "prompt_toxicity",
     "continuation_toxicity",
+    "class",
+    "prompt_verdict",
+    "default_answer_verdict",
     # openai moderation eval column names
     "S",
     "H",

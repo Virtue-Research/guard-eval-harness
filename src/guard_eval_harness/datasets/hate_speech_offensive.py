@@ -26,7 +26,6 @@ class HateSpeechOffensiveDataset(SourceBackedDatasetAdapter):
         "Offensive Language",
     )
     metadata_fields_to_preserve = (
-        "class",
         "hate_speech_count",
         "offensive_language_count",
         "neither_count",

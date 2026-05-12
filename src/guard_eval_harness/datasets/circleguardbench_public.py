@@ -33,8 +33,6 @@ class CircleGuardBenchPublicDataset(SourceBackedDatasetAdapter):
         "behavioral_policies",
         "low_level_harm_cluster_id",
         "prompt_hash",
-        "prompt_verdict",
-        "default_answer_verdict",
         "variant",
         "task",
         "target_role",
