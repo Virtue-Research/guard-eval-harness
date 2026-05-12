@@ -647,6 +647,21 @@ class LabelLeakageRegressionTest(unittest.TestCase):
         )
         self.assertEqual(olid.metadata, {"source": "demo"})
 
+        image_dir = PredictSample(
+            id="s7",
+            dataset="local_image_dir",
+            split="test",
+            messages=[Message(role="user", content="hi")],
+            metadata={
+                "label_directory": "unsafe",
+                "relative_image_path": "unsafe/a.png",
+            },
+        )
+        self.assertEqual(
+            image_dir.metadata,
+            {"relative_image_path": "unsafe/a.png"},
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

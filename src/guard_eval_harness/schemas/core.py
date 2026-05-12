@@ -280,6 +280,7 @@ PREDICT_METADATA_BLOCKLIST_BY_DATASET: dict[str, frozenset[str]] = {
             "identity_hate",
         }
     ),
+    "local_image_dir": frozenset({"label_directory"}),
     "measuring_hate_speech": frozenset({"hate_speech_score"}),
     "openai_moderation_eval": frozenset(
         {"S", "H", "V", "HR", "SH", "S3", "H2", "V2"}
@@ -304,7 +305,7 @@ PREDICT_METADATA_BLOCKLIST_BY_DATASET: dict[str, frozenset[str]] = {
 }
 
 PREDICT_METADATA_AUDIT_BLOCKLIST: frozenset[str] = (
-    PREDICT_METADATA_BLOCKLIST
+    PREDICT_METADATA_BLOCKLIST | frozenset({"label_directory"})
 )
 
 

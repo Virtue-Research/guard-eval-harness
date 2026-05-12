@@ -181,6 +181,12 @@ class LocalImageDirDatasetTest(unittest.TestCase):
         self.assertEqual(
             unsafe_samples[0].messages[0].text_content, "unsafe caption"
         )
+        for sample in samples:
+            self.assertNotIn("label_directory", sample.metadata)
+            self.assertNotIn(
+                "label_directory",
+                sample.to_predict_sample().metadata,
+            )
 
     def test_false_string_options_disable_recursion_and_sidecars(self) -> None:
         try:

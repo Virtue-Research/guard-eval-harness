@@ -81,7 +81,6 @@ class LocalImageDirDataset(MultimodalDatasetAdapter):
                             label=UnsafeLabel(unsafe=unsafe),
                             metadata={
                                 "relative_image_path": relative_path,
-                                "label_directory": directory.name,
                             },
                         )
                     )
