@@ -30,9 +30,6 @@ class WildGuardMixDataset(SourceBackedDatasetAdapter):
     metadata_fields_to_preserve = (
         "adversarial",
         "subcategory",
-        "prompt_harm_label",
-        "response_harm_label",
-        "response_refusal_label",
         "prompt_harm_agreement",
         "response_harm_agreement",
         "response_refusal_agreement",

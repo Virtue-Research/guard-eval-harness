@@ -27,7 +27,7 @@ class SelfHarmImageDataset(SourceBackedMultimodalDatasetAdapter):
     categories = ("blood/gore",)
     supported_splits = ("train",)
     version = _REVISION
-    metadata_fields_to_preserve = ("index", "image_fname", "label")
+    metadata_fields_to_preserve = ("index", "image_fname")
 
     def load(self) -> list[NormalizedSample]:
         """Load and normalize the configured split."""
@@ -84,7 +84,6 @@ class SelfHarmImageDataset(SourceBackedMultimodalDatasetAdapter):
                     metadata={
                         "index": row.get("index"),
                         "image_fname": row.get("image_fname"),
-                        "label": label,
                         "image_sha256": image_ref.sha256,
                     },
                 )

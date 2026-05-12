@@ -134,7 +134,6 @@ class NemotronContentSafetyAudioDataset(
         audio_ref = self.resolve_audio(audio_path)
         unsafe = self._coerce_label(row.get("prompt_label"))
         metadata = self._extract_metadata(row)
-        metadata["raw_label"] = row.get("prompt_label")
         if row.get("prompt"):
             metadata["reference_transcript"] = row["prompt"]
         if row.get("response"):

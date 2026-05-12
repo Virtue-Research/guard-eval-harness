@@ -410,5 +410,125 @@ class MultimodalSchemaTest(unittest.TestCase):
         self.assertFalse(caps.supports_category_outputs)
 
 
+# Keys that would render ground truth into prompts if a dataset loader
+# stashed them on ``NormalizedSample.metadata`` (which flows unchanged
+# into ``PredictSample.metadata`` and is exposed to prompt templates as
+# ``{metadata_<key>}``). Add to this list as new leak shapes appear.
+_LEAKY_METADATA_KEYS = (
+    "raw_label",
+    "label",
+    "label_name",
+    "binary_label",
+    "majority_label",
+    "safety_label",
+    "image_safety_label",
+    "image_safe",
+    "source_role",
+    "safety_reason",
+    "prompt_harm_label",
+    "response_harm_label",
+    "response_refusal_label",
+)
+
+
+class LabelLeakageRegressionTest(unittest.TestCase):
+    """Guard against ground-truth re-entering the predict-path sample."""
+
+    def test_no_dataset_loader_stores_label_shaped_metadata(self) -> None:
+        import ast
+        from pathlib import Path
+
+        loaders_dir = (
+            Path(__file__).resolve().parent.parent
+            / "src"
+            / "guard_eval_harness"
+            / "datasets"
+        )
+        leaky = set(_LEAKY_METADATA_KEYS)
+
+        def _flag_dict_keys(node: ast.Dict, path: Path) -> list[str]:
+            hits: list[str] = []
+            for key in node.keys:
+                if (
+                    isinstance(key, ast.Constant)
+                    and isinstance(key.value, str)
+                    and key.value in leaky
+                ):
+                    hits.append(f"{path.name}:{key.lineno}: {key.value}")
+            return hits
+
+        offenders: list[str] = []
+        for path in sorted(loaders_dir.rglob("*.py")):
+            tree = ast.parse(path.read_text(), filename=str(path))
+            for node in ast.walk(tree):
+                # Case 1: metadata={...} keyword argument anywhere
+                # (covers NormalizedSample(... metadata={...} ...) calls).
+                if isinstance(node, ast.keyword) and node.arg == "metadata":
+                    if isinstance(node.value, ast.Dict):
+                        offenders.extend(_flag_dict_keys(node.value, path))
+                # Case 2: metadata["key"] = ... explicit subscript assign.
+                elif isinstance(node, ast.Assign):
+                    for target in node.targets:
+                        if (
+                            isinstance(target, ast.Subscript)
+                            and isinstance(target.value, ast.Name)
+                            and target.value.id == "metadata"
+                            and isinstance(target.slice, ast.Constant)
+                            and isinstance(target.slice.value, str)
+                            and target.slice.value in leaky
+                        ):
+                            offenders.append(
+                                f"{path.name}:{target.lineno}: "
+                                f"{target.slice.value}"
+                            )
+                # Case 3: metadata_fields_to_preserve = (...) class attrs.
+                elif isinstance(node, ast.Assign):
+                    pass  # handled above
+                if (
+                    isinstance(node, ast.Assign)
+                    and len(node.targets) == 1
+                    and isinstance(node.targets[0], ast.Name)
+                    and node.targets[0].id == "metadata_fields_to_preserve"
+                    and isinstance(node.value, ast.Tuple)
+                ):
+                    for elt in node.value.elts:
+                        if (
+                            isinstance(elt, ast.Constant)
+                            and isinstance(elt.value, str)
+                            and elt.value in leaky
+                        ):
+                            offenders.append(
+                                f"{path.name}:{elt.lineno}: "
+                                f"metadata_fields_to_preserve {elt.value}"
+                            )
+        self.assertEqual(
+            offenders,
+            [],
+            msg=(
+                "Dataset loaders must not store ground-truth-shaped keys "
+                "in NormalizedSample.metadata; they propagate to "
+                "PredictSample.metadata and into prompt templates as "
+                "{metadata_<key>}. Found:\n" + "\n".join(offenders)
+            ),
+        )
+
+    def test_normalized_sample_to_predict_sample_drops_label_fields(self) -> None:
+        from guard_eval_harness.schemas import NormalizedSample
+
+        sample = NormalizedSample(
+            id="s",
+            dataset="d",
+            split="test",
+            messages=[Message(role="user", content="hi")],
+            label={"unsafe": True},
+            category_labels=("violence",),
+            metadata={"safe_field": "ok"},
+        )
+        predict = sample.to_predict_sample()
+        self.assertFalse(hasattr(predict, "label"))
+        self.assertFalse(hasattr(predict, "category_labels"))
+        self.assertEqual(predict.metadata, {"safe_field": "ok"})
+
+
 if __name__ == "__main__":
     unittest.main()

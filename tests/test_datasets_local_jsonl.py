@@ -66,7 +66,8 @@ class LocalJsonlDatasetTest(unittest.TestCase):
             self.assertEqual(samples[0].messages[0].role, "user")
             self.assertFalse(samples[0].label.unsafe)
             self.assertEqual(samples[0].metadata["category"], "benign")
-            self.assertEqual(samples[1].metadata["raw_label"], "true")
+            self.assertNotIn("raw_label", samples[1].metadata)
+            self.assertTrue(samples[1].label.unsafe)
 
     def test_loads_split_file_from_dataset_directory(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:

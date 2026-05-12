@@ -297,7 +297,6 @@ class DatasetAdapter(ABC):
 
         messages = self._messages_from_mapping(row)
         metadata = self._extract_metadata(row)
-        metadata["raw_label"] = label_value
 
         sample_id = row.get(self.config.id_field) if self.config.id_field else None
         if not sample_id:

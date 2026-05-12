@@ -130,7 +130,6 @@ class LocalAudioJsonlDataset(MultimodalDatasetAdapter):
         )
         messages = self._messages_for_row(row, audio_ref=audio_ref)
         metadata = self._extract_metadata(row)
-        metadata["raw_label"] = label_value
         metadata["audio_field"] = audio_field
         metadata["audio_value"] = row.get(audio_field)
 

@@ -206,8 +206,8 @@ class HoliSafeBenchLoadTest(unittest.TestCase):
         meta = samples[0].metadata
         self.assertEqual(meta["id"], 42)
         self.assertEqual(meta["type"], "USU")
-        self.assertEqual(meta["image_safety_label"], 8)
-        self.assertFalse(meta["image_safe"])
+        self.assertNotIn("image_safety_label", meta)
+        self.assertNotIn("image_safe", meta)
 
 
 if __name__ == "__main__":

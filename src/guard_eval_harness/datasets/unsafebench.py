@@ -24,7 +24,6 @@ class UnsafeBenchDataset(MultimodalDatasetAdapter):
     languages = ("en",)
     supported_splits = ("train",)
     metadata_fields_to_preserve = (
-        "safety_label",
         "category",
         "source",
         "text",
@@ -98,7 +97,6 @@ class UnsafeBenchDataset(MultimodalDatasetAdapter):
                     label=UnsafeLabel(unsafe=safety_label != "Safe"),
                     category_labels=(category,) if category else (),
                     metadata={
-                        "safety_label": safety_label,
                         "category": category,
                         "source": row.get("source"),
                         "text": row.get("text"),

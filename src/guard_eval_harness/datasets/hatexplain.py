@@ -55,7 +55,7 @@ class HateXplainDataset(SourceBackedDatasetAdapter):
     license_name = "CC BY 4.0"
     languages = ("en",)
     categories = ("hate", "offensive")
-    metadata_fields_to_preserve = ("majority_label",)
+    metadata_fields_to_preserve = ()
     label_mapping_note = (
         "majority-vote hatespeech or offensive maps to unsafe"
     )

@@ -29,7 +29,7 @@ class HatefulMemesDataset(SourceBackedMultimodalDatasetAdapter):
         "test_unseen",
     )
     version = _REVISION
-    metadata_fields_to_preserve = ("id", "text", "label")
+    metadata_fields_to_preserve = ("id", "text")
 
     def load(self) -> list[NormalizedSample]:
         """Load and normalize the configured split."""
@@ -108,7 +108,6 @@ class HatefulMemesDataset(SourceBackedMultimodalDatasetAdapter):
                     metadata={
                         "id": row.get("id"),
                         "text": text,
-                        "label": label,
                         "image_sha256": image_ref.sha256,
                     },
                 )

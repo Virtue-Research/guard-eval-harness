@@ -162,7 +162,6 @@ class SafeVsUnsafeImageEditsDataset(MultimodalDatasetAdapter):
                     metadata={
                         "caption": caption,
                         "pair_variant": variant,
-                        "source_role": "unsafe" if unsafe else "safe",
                     },
                 )
             )

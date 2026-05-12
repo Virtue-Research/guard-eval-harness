@@ -66,8 +66,6 @@ class HoliSafeBenchDataset(
         "category",
         "subcategory",
         "type",
-        "image_safe",
-        "image_safety_label",
     )
 
     def load(self) -> list[NormalizedSample]:
@@ -142,12 +140,6 @@ class HoliSafeBenchDataset(
                             "subcategory"
                         ),
                         "type": row.get("type"),
-                        "image_safe": row.get(
-                            "image_safe"
-                        ),
-                        "image_safety_label": row.get(
-                            "image_safety_label"
-                        ),
                     },
                 )
             )

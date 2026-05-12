@@ -41,7 +41,6 @@ class ProsocialDialogDataset(SourceBackedDatasetAdapter):
     languages = ("en",)
     categories = ("dialog_safety", "prosocial")
     metadata_fields_to_preserve = (
-        "safety_label",
         "target_role",
     )
     label_mapping_note = (

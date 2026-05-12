@@ -26,7 +26,7 @@ class AIVsRealDataset(SourceBackedMultimodalDatasetAdapter):
     categories = ("genai/deepfakes",)
     supported_splits = ("train",)
     version = _REVISION
-    metadata_fields_to_preserve = ("binary_label",)
+    metadata_fields_to_preserve = ()
 
     def load(self) -> list[NormalizedSample]:
         """Load and normalize the configured split."""
@@ -82,10 +82,6 @@ class AIVsRealDataset(SourceBackedMultimodalDatasetAdapter):
                     label=UnsafeLabel(unsafe=unsafe),
                     category_labels=("genai/deepfakes",) if unsafe else (),
                     metadata={
-                        "binary_label": binary_label,
-                        "label_name": "AI-generated"
-                        if unsafe
-                        else "Real",
                         "image_sha256": image_ref.sha256,
                     },
                 )

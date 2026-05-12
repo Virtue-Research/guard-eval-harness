@@ -287,7 +287,8 @@ class AIVsRealDatasetTest(unittest.TestCase):
         self.assertTrue(samples[0].label.unsafe)
         self.assertFalse(samples[1].label.unsafe)
         self.assertEqual(samples[0].category_labels, ("genai/deepfakes",))
-        self.assertEqual(samples[1].metadata["label_name"], "Real")
+        self.assertNotIn("label_name", samples[1].metadata)
+        self.assertNotIn("binary_label", samples[1].metadata)
 
 
 if __name__ == "__main__":

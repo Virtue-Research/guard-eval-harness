@@ -130,7 +130,6 @@ class LocalImageJsonlDataset(MultimodalDatasetAdapter):
         )
         messages = self._messages_for_row(row, image_ref=image_ref)
         metadata = self._extract_metadata(row)
-        metadata["raw_label"] = label_value
         metadata["image_field"] = image_field
         metadata["image_value"] = row.get(image_field)
 

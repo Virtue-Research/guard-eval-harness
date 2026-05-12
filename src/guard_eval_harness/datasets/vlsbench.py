@@ -40,7 +40,6 @@ class VLSBenchDataset(SourceBackedMultimodalDatasetAdapter):
         "sub_category",
         "source",
         "image_description",
-        "safety_reason",
     )
 
     def load(self) -> list[NormalizedSample]:
@@ -99,7 +98,6 @@ class VLSBenchDataset(SourceBackedMultimodalDatasetAdapter):
                         "sub_category": row.get("sub_category"),
                         "source": row.get("source"),
                         "image_description": row.get("image_description"),
-                        "safety_reason": row.get("safety_reason"),
                     },
                 )
             )
