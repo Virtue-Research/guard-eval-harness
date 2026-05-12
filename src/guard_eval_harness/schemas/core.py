@@ -230,6 +230,7 @@ PREDICT_METADATA_BLOCKLIST: frozenset[str] = frozenset(
         "label",
         "labels",
         "label_name",
+        "category_labels",
         "binary_label",
         "majority_label",
         "safety_label",

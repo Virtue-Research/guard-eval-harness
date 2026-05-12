@@ -9,7 +9,12 @@ from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
 
 from guard_eval_harness.config.models import ResolvedDatasetConfig
-from guard_eval_harness.schemas import DatasetMetadata, Message, NormalizedSample
+from guard_eval_harness.schemas import (
+    DatasetMetadata,
+    Message,
+    NormalizedSample,
+    PREDICT_METADATA_BLOCKLIST,
+)
 
 
 class DatasetAdapter(ABC):
@@ -244,7 +249,10 @@ class DatasetAdapter(ABC):
         """Select raw metadata fields to preserve."""
         metadata: dict[str, Any] = {}
         for field_name in self.config.metadata_fields:
-            if field_name in row:
+            if (
+                field_name in row
+                and field_name not in PREDICT_METADATA_BLOCKLIST
+            ):
                 metadata[field_name] = row[field_name]
         return metadata
 
