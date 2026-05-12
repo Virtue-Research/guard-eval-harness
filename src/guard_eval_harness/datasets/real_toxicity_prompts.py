@@ -25,8 +25,6 @@ class RealToxicityPromptsDataset(SourceBackedDatasetAdapter):
         "filename",
         "begin",
         "end",
-        "prompt_toxicity",
-        "continuation_toxicity",
     )
     label_mapping_note = (
         "prompts are unsafe when the provided prompt toxicity score is at least "

@@ -441,6 +441,8 @@ _LEAKY_METADATA_KEYS = (
     "identity_hate",
     "identity_attack",
     "sexual_explicit",
+    "prompt_toxicity",
+    "continuation_toxicity",
     # openai moderation eval column names
     "S",
     "H",
