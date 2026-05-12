@@ -131,6 +131,49 @@ class LocalJsonlDatasetTest(unittest.TestCase):
             )
             self.assertNotIn("verdict", samples[0].metadata)
 
+    def test_blocklisted_predict_metadata_still_participates_in_normalization(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            path = root / "samples.jsonl"
+            path.write_text(
+                "\n".join(
+                    [
+                        json.dumps(
+                            {
+                                "prompt": "Same prompt.",
+                                "unsafe": False,
+                                "type": "benign-a",
+                            }
+                        ),
+                        json.dumps(
+                            {
+                                "prompt": "Same prompt.",
+                                "unsafe": False,
+                                "type": "benign-b",
+                            }
+                        ),
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            dataset = LocalJsonlDataset(
+                self._build_config(
+                    path,
+                    id_field=None,
+                    metadata_fields=("type",),
+                )
+            )
+            samples = dataset.load()
+
+            self.assertEqual([sample.metadata["type"] for sample in samples], [
+                "benign-a",
+                "benign-b",
+            ])
+            self.assertNotEqual(samples[0].id, samples[1].id)
+
     def test_loads_split_file_from_dataset_directory(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)

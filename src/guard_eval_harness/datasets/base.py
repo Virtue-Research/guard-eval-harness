@@ -13,7 +13,6 @@ from guard_eval_harness.schemas import (
     DatasetMetadata,
     Message,
     NormalizedSample,
-    PREDICT_METADATA_BLOCKLIST,
 )
 
 
@@ -257,7 +256,7 @@ class DatasetAdapter(ABC):
         """Return whether a raw field is safe to expose as metadata."""
         return (
             field_name != self.config.label_field
-            and field_name not in PREDICT_METADATA_BLOCKLIST
+            and field_name != "category_labels"
         )
 
     def _coerce_label(self, raw_value: Any) -> bool:
