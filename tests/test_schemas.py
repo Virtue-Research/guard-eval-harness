@@ -19,6 +19,7 @@ from guard_eval_harness.schemas import (
     Message,
     NormalizedPrediction,
     NormalizedSample,
+    PREDICT_METADATA_AUDIT_BLOCKLIST,
     PREDICT_METADATA_BLOCKLIST,
     PredictSample,
     RunEnvironment,
@@ -425,7 +426,7 @@ class LabelLeakageRegressionTest(unittest.TestCase):
             / "guard_eval_harness"
             / "datasets"
         )
-        leaky = set(PREDICT_METADATA_BLOCKLIST)
+        leaky = set(PREDICT_METADATA_AUDIT_BLOCKLIST)
 
         def _flag_dict_keys(node: ast.Dict, path: Path) -> list[str]:
             hits: list[str] = []
@@ -521,10 +522,8 @@ class LabelLeakageRegressionTest(unittest.TestCase):
             metadata={
                 "safe_field": "ok",
                 "raw_label": 1,
-                "config": "harmless_benign",
                 "category_labels": ("violence",),
                 "binary_label": 0,
-                "active_categories": ("violence",),
             },
         )
         predict = sample.to_predict_sample()
@@ -545,6 +544,38 @@ class LabelLeakageRegressionTest(unittest.TestCase):
             | {"safe_field": "ok"},
         )
         self.assertEqual(predict.metadata, {"safe_field": "ok"})
+
+    def test_predict_sample_preserves_benign_broad_metadata(self) -> None:
+        predict = PredictSample(
+            id="s",
+            dataset="local_jsonl",
+            split="test",
+            messages=[Message(role="user", content="hi")],
+            metadata={"type": "routing", "config": "experiment-a"},
+        )
+        self.assertEqual(
+            predict.metadata,
+            {"type": "routing", "config": "experiment-a"},
+        )
+
+    def test_predict_sample_sanitizes_dataset_specific_metadata(self) -> None:
+        predict = PredictSample(
+            id="s",
+            dataset="agent_harm",
+            split="test",
+            messages=[Message(role="user", content="hi")],
+            metadata={"config": "harmless_benign", "name": "browse"},
+        )
+        self.assertEqual(predict.metadata, {"name": "browse"})
+
+        xstest = PredictSample(
+            id="s2",
+            dataset="xstest",
+            split="test",
+            messages=[Message(role="user", content="hi")],
+            metadata={"type": "contrast-harmful", "focus": "harm"},
+        )
+        self.assertEqual(xstest.metadata, {"focus": "harm"})
 
 
 if __name__ == "__main__":

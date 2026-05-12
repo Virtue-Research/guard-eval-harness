@@ -8,6 +8,7 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
+    ValidationInfo,
     field_validator,
     model_validator,
 )
@@ -241,63 +242,95 @@ PREDICT_METADATA_BLOCKLIST: frozenset[str] = frozenset(
         "is_safe",
         "is_unsafe",
         "toxicity",
+    }
+)
+
+PREDICT_METADATA_BLOCKLIST_BY_DATASET: dict[str, frozenset[str]] = {
+    "agent_harm": frozenset({"config"}),
+    "aegis_ai_content_safety_dataset_2": frozenset(
+        {"violated_categories"}
+    ),
+    "beaver_tails_330k": frozenset({"active_categories"}),
+    "circleguardbench_public": frozenset(
+        {"prompt_verdict", "default_answer_verdict"}
+    ),
+    "civil_comments": frozenset(
+        {
+            "toxicity",
+            "severe_toxicity",
+            "obscene",
+            "threat",
+            "insult",
+            "identity_attack",
+            "sexual_explicit",
+        }
+    ),
+    "hatexplain": frozenset(
+        {"hate_speech_count", "offensive_language_count", "neither_count"}
+    ),
+    "implicit_hate": frozenset({"class"}),
+    "jigsaw_toxicity": frozenset(
+        {
+            "toxic",
+            "severe_toxic",
+            "obscene",
+            "threat",
+            "insult",
+            "identity_hate",
+        }
+    ),
+    "measuring_hate_speech": frozenset({"hate_speech_score"}),
+    "openai_moderation_eval": frozenset(
+        {"S", "H", "V", "HR", "SH", "S3", "H2", "V2"}
+    ),
+    "pku_safe_rlhf": frozenset({"active_categories"}),
+    "real_toxicity_prompts": frozenset(
+        {"prompt_toxicity", "continuation_toxicity"}
+    ),
+    "social_bias_frames": frozenset({"offensiveYN"}),
+    "toxic_chat": frozenset({"human_annotation", "jailbreaking"}),
+    "wildguardmix": frozenset(
+        {
+            "prompt_harm_label",
+            "response_harm_label",
+            "response_refusal_label",
+        }
+    ),
+    "xstest": frozenset({"type"}),
+}
+
+PREDICT_METADATA_AUDIT_BLOCKLIST: frozenset[str] = frozenset().union(
+    PREDICT_METADATA_BLOCKLIST,
+    *PREDICT_METADATA_BLOCKLIST_BY_DATASET.values(),
+    {
+        # Historical dataset-specific answer columns that may appear in
+        # hand-built NormalizedSample metadata or stale sample caches.
         "human_annotation",
         "jailbreaking",
-        # Dataset-specific label/source columns that directly determine
-        # score-side UnsafeLabel or category_labels.
-        "config",
         "source_role",
         "safety_reason",
-        "prompt_harm_label",
-        "response_harm_label",
-        "response_refusal_label",
-        "toxic",
-        "severe_toxic",
-        "severe_toxicity",
-        "obscene",
-        "threat",
-        "insult",
-        "identity_hate",
-        "identity_attack",
-        "sexual_explicit",
-        "prompt_toxicity",
-        "continuation_toxicity",
-        "class",
-        "prompt_verdict",
-        "default_answer_verdict",
-        "hate_speech_score",
-        "offensiveYN",
-        "violated_categories",
-        "active_categories",
         "data_type",
         "degree_of_harm",
-        "type",
-        "hate_speech_count",
-        "offensive_language_count",
-        "neither_count",
-        # OpenAI moderation eval category columns.
-        "S",
-        "H",
-        "V",
-        "HR",
-        "SH",
-        "S3",
-        "H2",
-        "V2",
-    }
+    },
 )
 
 
 def sanitize_predict_metadata(
     metadata: dict[str, Any] | None,
+    dataset: str | None = None,
 ) -> dict[str, Any]:
     """Drop ground-truth-shaped metadata from predict-path samples."""
     if not metadata:
         return {}
+    blocklist = set(PREDICT_METADATA_BLOCKLIST)
+    if dataset is not None:
+        blocklist.update(
+            PREDICT_METADATA_BLOCKLIST_BY_DATASET.get(dataset, ())
+        )
     return {
         key: value
         for key, value in metadata.items()
-        if key not in PREDICT_METADATA_BLOCKLIST
+        if key not in blocklist
     }
 
 
@@ -320,8 +353,13 @@ class PredictSample(HarnessModel):
 
     @field_validator("metadata")
     @classmethod
-    def validate_metadata(cls, value: dict[str, Any]) -> dict[str, Any]:
-        return sanitize_predict_metadata(value)
+    def validate_metadata(
+        cls,
+        value: dict[str, Any],
+        info: ValidationInfo,
+    ) -> dict[str, Any]:
+        dataset = info.data.get("dataset") if info.data else None
+        return sanitize_predict_metadata(value, dataset=dataset)
 
 
 class SampleGroundTruth(HarnessModel):
@@ -366,7 +404,10 @@ class NormalizedSample(HarnessModel):
             dataset=self.dataset,
             split=self.split,
             messages=self.messages,
-            metadata=sanitize_predict_metadata(self.metadata),
+            metadata=sanitize_predict_metadata(
+                self.metadata,
+                dataset=self.dataset,
+            ),
         )
 
     def to_ground_truth(self) -> "SampleGroundTruth":
