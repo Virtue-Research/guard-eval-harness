@@ -65,7 +65,6 @@ class HoliSafeBenchDataset(
         "id",
         "category",
         "subcategory",
-        "type",
     )
 
     def load(self) -> list[NormalizedSample]:
@@ -139,7 +138,6 @@ class HoliSafeBenchDataset(
                         "subcategory": row.get(
                             "subcategory"
                         ),
-                        "type": row.get("type"),
                     },
                 )
             )

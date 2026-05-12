@@ -25,7 +25,7 @@ class XSTestDataset(SourceBackedDatasetAdapter):
     license_name = "CC BY 4.0"
     languages = ("en",)
     categories = ("generic",)
-    metadata_fields_to_preserve = ("type", "focus", "note")
+    metadata_fields_to_preserve = ("focus", "note")
     label_mapping_note = (
         "XSTest rows with a 'contrast' type are treated as unsafe"
     )

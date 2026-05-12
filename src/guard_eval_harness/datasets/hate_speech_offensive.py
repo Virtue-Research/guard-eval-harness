@@ -25,11 +25,7 @@ class HateSpeechOffensiveDataset(SourceBackedDatasetAdapter):
         "Hate Speech",
         "Offensive Language",
     )
-    metadata_fields_to_preserve = (
-        "hate_speech_count",
-        "offensive_language_count",
-        "neither_count",
-    )
+    metadata_fields_to_preserve = ()
     label_mapping_note = (
         "class 0 (hate speech) and class 1 (offensive language) "
         "map to unsafe; class 2 (neither) maps to safe"

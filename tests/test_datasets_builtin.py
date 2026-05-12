@@ -174,7 +174,7 @@ class BuiltInDatasetTest(unittest.TestCase):
             _, samples = self._load_dataset("xstest")
 
         self.assertEqual({sample.label.unsafe for sample in samples}, {False, True})
-        self.assertEqual(samples[0].metadata["type"], "contrast-harmful")
+        self.assertNotIn("type", samples[0].metadata)
 
     def test_i_cona(self) -> None:
         with patch(

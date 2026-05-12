@@ -452,6 +452,10 @@ _LEAKY_METADATA_KEYS = (
     "active_categories",
     "data_type",
     "degree_of_harm",
+    "type",
+    "hate_speech_count",
+    "offensive_language_count",
+    "neither_count",
     # openai moderation eval column names
     "S",
     "H",
