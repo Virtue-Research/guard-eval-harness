@@ -26,7 +26,8 @@ _DEFAULT_CACHE_DIR = (
 
 # Bump this when the cache format or normalization logic changes.
 # Any cached entries written with a different version are ignored.
-_CACHE_VERSION = "3"
+# v4: ground-truth-shaped keys removed from sample metadata.
+_CACHE_VERSION = "4"
 
 
 def sample_cache_base_dir() -> Path:
