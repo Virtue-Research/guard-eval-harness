@@ -24,7 +24,7 @@ class MeasuringHateSpeechDataset(SourceBackedDatasetAdapter):
     license_name = "CC BY 4.0"
     languages = ("en",)
     categories = ("Hate Speech",)
-    metadata_fields_to_preserve = ("hate_speech_score",)
+    metadata_fields_to_preserve = ()
     label_mapping_note = (
         "comments are unsafe when hate_speech_score > "
         f"{_HATE_SPEECH_THRESHOLD}; rows are deduplicated by "

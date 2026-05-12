@@ -33,7 +33,6 @@ class SocialBiasFramesDataset(SourceBackedDatasetAdapter):
         "Age",
     )
     metadata_fields_to_preserve = (
-        "offensiveYN",
         "targetCategory",
         "targetMinority",
         "dataSource",

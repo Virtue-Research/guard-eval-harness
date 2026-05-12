@@ -446,6 +446,8 @@ _LEAKY_METADATA_KEYS = (
     "class",
     "prompt_verdict",
     "default_answer_verdict",
+    "hate_speech_score",
+    "offensiveYN",
     # openai moderation eval column names
     "S",
     "H",
