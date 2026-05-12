@@ -21,7 +21,7 @@ class OlidDataset(SourceBackedDatasetAdapter):
     )
     languages = ("en",)
     categories = ("Offensive",)
-    metadata_fields_to_preserve = ("subtask_b", "subtask_c")
+    metadata_fields_to_preserve = ()
     label_mapping_note = (
         "subtask_a OFF maps to unsafe and NOT maps to safe"
     )

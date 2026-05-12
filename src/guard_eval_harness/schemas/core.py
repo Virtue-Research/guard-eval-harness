@@ -284,6 +284,7 @@ PREDICT_METADATA_BLOCKLIST_BY_DATASET: dict[str, frozenset[str]] = {
     "openai_moderation_eval": frozenset(
         {"S", "H", "V", "HR", "SH", "S3", "H2", "V2"}
     ),
+    "olid": frozenset({"subtask_b", "subtask_c"}),
     "or_bench": frozenset({"subset"}),
     "pku_safe_rlhf": frozenset({"active_categories"}),
     "real_toxicity_prompts": frozenset(

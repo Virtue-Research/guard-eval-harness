@@ -100,6 +100,47 @@ class LocalJsonlDatasetTest(unittest.TestCase):
             )
             self.assertNotIn("category_labels", samples[0].metadata)
 
+    def test_category_labels_participate_in_generated_ids(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            path = root / "samples.jsonl"
+            path.write_text(
+                "\n".join(
+                    [
+                        json.dumps(
+                            {
+                                "prompt": "Same prompt.",
+                                "unsafe": True,
+                                "category_labels": "violence",
+                            }
+                        ),
+                        json.dumps(
+                            {
+                                "prompt": "Same prompt.",
+                                "unsafe": True,
+                                "category_labels": "hate",
+                            }
+                        ),
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            dataset = LocalJsonlDataset(
+                self._build_config(
+                    path,
+                    id_field=None,
+                    metadata_fields=("category_labels",),
+                )
+            )
+            samples = dataset.load()
+
+            self.assertEqual(samples[0].category_labels, ("violence",))
+            self.assertEqual(samples[1].category_labels, ("hate",))
+            self.assertNotEqual(samples[0].id, samples[1].id)
+            self.assertNotIn("category_labels", samples[0].metadata)
+            self.assertNotIn("category_labels", samples[1].metadata)
+
     def test_configured_label_field_is_not_preserved_as_metadata(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)

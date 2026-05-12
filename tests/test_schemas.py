@@ -634,6 +634,19 @@ class LabelLeakageRegressionTest(unittest.TestCase):
         )
         self.assertEqual(wildjailbreak.metadata, {"source": "demo"})
 
+        olid = PredictSample(
+            id="s6",
+            dataset="olid",
+            split="train",
+            messages=[Message(role="user", content="hi")],
+            metadata={
+                "subtask_b": "TIN",
+                "subtask_c": "IND",
+                "source": "demo",
+            },
+        )
+        self.assertEqual(olid.metadata, {"source": "demo"})
+
 
 if __name__ == "__main__":
     unittest.main()

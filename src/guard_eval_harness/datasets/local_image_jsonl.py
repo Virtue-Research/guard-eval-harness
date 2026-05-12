@@ -132,6 +132,7 @@ class LocalImageJsonlDataset(MultimodalDatasetAdapter):
         metadata = self._extract_metadata(row)
         metadata["image_field"] = image_field
         metadata["image_value"] = row.get(image_field)
+        category_labels = self._category_labels(row)
 
         sample_id = (
             row.get(self.config.id_field) if self.config.id_field else None
@@ -145,11 +146,11 @@ class LocalImageJsonlDataset(MultimodalDatasetAdapter):
                     "label": label_value,
                     "image_sha256": image_ref.sha256,
                     "metadata": metadata,
+                    "category_labels": category_labels,
                 },
                 row_number,
             )
 
-        category_labels = self._category_labels(row)
         return NormalizedSample(
             id=str(sample_id),
             dataset=self.config.name,

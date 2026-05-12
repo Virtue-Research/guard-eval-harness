@@ -814,6 +814,25 @@ class BuiltInDatasetTest(unittest.TestCase):
         )
         self.assertTrue(samples[0].label.unsafe)
 
+    def test_olid_does_not_preserve_hierarchy_label_source(self) -> None:
+        with patch(
+            "guard_eval_harness.datasets.olid.load_hf_rows",
+            return_value=[
+                {
+                    "id": "olid-1",
+                    "tweet": "Offensive post",
+                    "subtask_a": "OFF",
+                    "subtask_b": "TIN",
+                    "subtask_c": "IND",
+                }
+            ],
+        ):
+            _, samples = self._load_dataset("olid", split="train")
+
+        self.assertTrue(samples[0].label.unsafe)
+        self.assertNotIn("subtask_b", samples[0].metadata)
+        self.assertNotIn("subtask_c", samples[0].metadata)
+
     def test_wildjailbreak_applies_limit_after_data_type_filtering(self) -> None:
         raw_rows = [
             {

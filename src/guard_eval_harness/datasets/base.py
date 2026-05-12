@@ -309,17 +309,6 @@ class DatasetAdapter(ABC):
         messages = self._messages_from_mapping(row)
         metadata = self._extract_metadata(row)
 
-        sample_id = row.get(self.config.id_field) if self.config.id_field else None
-        if not sample_id:
-            sample_id = self._make_sample_id(
-                {
-                    "messages": [message.model_dump(mode="json") for message in messages],
-                    "label": label_value,
-                    "metadata": metadata,
-                },
-                row_number=row_number,
-            )
-
         raw_categories = row.get("category_labels", ())
         if isinstance(raw_categories, str):
             category_labels = (
@@ -331,6 +320,18 @@ class DatasetAdapter(ABC):
             category_labels = tuple(str(c) for c in raw_categories)
         else:
             category_labels = ()
+
+        sample_id = row.get(self.config.id_field) if self.config.id_field else None
+        if not sample_id:
+            sample_id = self._make_sample_id(
+                {
+                    "messages": [message.model_dump(mode="json") for message in messages],
+                    "label": label_value,
+                    "metadata": metadata,
+                    "category_labels": category_labels,
+                },
+                row_number=row_number,
+            )
 
         return NormalizedSample(
             id=str(sample_id),
