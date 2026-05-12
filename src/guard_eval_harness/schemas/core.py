@@ -283,6 +283,7 @@ PREDICT_METADATA_BLOCKLIST_BY_DATASET: dict[str, frozenset[str]] = {
     "openai_moderation_eval": frozenset(
         {"S", "H", "V", "HR", "SH", "S3", "H2", "V2"}
     ),
+    "or_bench": frozenset({"subset"}),
     "pku_safe_rlhf": frozenset({"active_categories"}),
     "real_toxicity_prompts": frozenset(
         {"prompt_toxicity", "continuation_toxicity"}
@@ -301,7 +302,6 @@ PREDICT_METADATA_BLOCKLIST_BY_DATASET: dict[str, frozenset[str]] = {
 
 PREDICT_METADATA_AUDIT_BLOCKLIST: frozenset[str] = frozenset().union(
     PREDICT_METADATA_BLOCKLIST,
-    *PREDICT_METADATA_BLOCKLIST_BY_DATASET.values(),
     {
         # Historical dataset-specific answer columns that may appear in
         # hand-built NormalizedSample metadata or stale sample caches.

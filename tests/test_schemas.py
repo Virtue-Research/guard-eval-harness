@@ -21,6 +21,7 @@ from guard_eval_harness.schemas import (
     NormalizedSample,
     PREDICT_METADATA_AUDIT_BLOCKLIST,
     PREDICT_METADATA_BLOCKLIST,
+    PREDICT_METADATA_BLOCKLIST_BY_DATASET,
     PredictSample,
     RunEnvironment,
     RunManifest,
@@ -426,9 +427,28 @@ class LabelLeakageRegressionTest(unittest.TestCase):
             / "guard_eval_harness"
             / "datasets"
         )
-        leaky = set(PREDICT_METADATA_AUDIT_BLOCKLIST)
+        def _registered_aliases(tree: ast.AST) -> set[str]:
+            aliases: set[str] = set()
+            for node in ast.walk(tree):
+                if not isinstance(node, ast.ClassDef):
+                    continue
+                for decorator in node.decorator_list:
+                    if (
+                        isinstance(decorator, ast.Call)
+                        and isinstance(decorator.func, ast.Attribute)
+                        and decorator.func.attr == "register"
+                        and decorator.args
+                        and isinstance(decorator.args[0], ast.Constant)
+                        and isinstance(decorator.args[0].value, str)
+                    ):
+                        aliases.add(decorator.args[0].value)
+            return aliases
 
-        def _flag_dict_keys(node: ast.Dict, path: Path) -> list[str]:
+        def _flag_dict_keys(
+            node: ast.Dict,
+            path: Path,
+            leaky: set[str],
+        ) -> list[str]:
             hits: list[str] = []
             for key in node.keys:
                 if (
@@ -442,12 +462,19 @@ class LabelLeakageRegressionTest(unittest.TestCase):
         offenders: list[str] = []
         for path in sorted(loaders_dir.rglob("*.py")):
             tree = ast.parse(path.read_text(), filename=str(path))
+            leaky = set(PREDICT_METADATA_AUDIT_BLOCKLIST)
+            for alias in _registered_aliases(tree):
+                leaky.update(
+                    PREDICT_METADATA_BLOCKLIST_BY_DATASET.get(alias, ())
+                )
             for node in ast.walk(tree):
                 # Case 1: metadata={...} keyword argument anywhere
                 # (covers NormalizedSample(... metadata={...} ...) calls).
                 if isinstance(node, ast.keyword) and node.arg == "metadata":
                     if isinstance(node.value, ast.Dict):
-                        offenders.extend(_flag_dict_keys(node.value, path))
+                        offenders.extend(
+                            _flag_dict_keys(node.value, path, leaky)
+                        )
                 # Case 2: metadata["key"] = ... explicit subscript assign.
                 elif isinstance(node, ast.Assign):
                     for target in node.targets:
@@ -576,6 +603,15 @@ class LabelLeakageRegressionTest(unittest.TestCase):
             metadata={"type": "contrast-harmful", "focus": "harm"},
         )
         self.assertEqual(xstest.metadata, {"focus": "harm"})
+
+        or_bench = PredictSample(
+            id="s3",
+            dataset="or_bench",
+            split="train",
+            messages=[Message(role="user", content="hi")],
+            metadata={"subset": "or-bench-toxic", "category": "toxicity"},
+        )
+        self.assertEqual(or_bench.metadata, {"category": "toxicity"})
 
 
 if __name__ == "__main__":

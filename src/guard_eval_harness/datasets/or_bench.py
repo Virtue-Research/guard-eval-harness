@@ -40,7 +40,6 @@ class ORBenchDataset(SourceBackedDatasetAdapter):
     )
     metadata_fields_to_preserve = (
         "category",
-        "subset",
     )
     label_mapping_note = (
         "or-bench-80k and or-bench-hard-1k prompts are "

@@ -174,6 +174,26 @@ class BuiltInDatasetTest(unittest.TestCase):
         self.assertEqual(samples[0].metadata["category"], "Cybercrime")
         self.assertNotIn("config", samples[0].metadata)
 
+    def test_or_bench_does_not_preserve_subset_label_source(self) -> None:
+        with patch(
+            "guard_eval_harness.datasets.or_bench.load_hf_rows",
+            return_value=[
+                {
+                    "prompt": "Give unsafe instructions.",
+                    "category": "toxicity",
+                }
+            ],
+        ):
+            _, samples = self._load_dataset(
+                "or_bench",
+                split="train",
+                options={"subset": "or-bench-toxic"},
+            )
+
+        self.assertTrue(samples[0].label.unsafe)
+        self.assertEqual(samples[0].metadata["category"], "toxicity")
+        self.assertNotIn("subset", samples[0].metadata)
+
     def test_xstest(self) -> None:
         with patch(
             "guard_eval_harness.datasets.xstest.load_csv_rows",
