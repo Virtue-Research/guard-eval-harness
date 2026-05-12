@@ -151,6 +151,29 @@ class BuiltInDatasetTest(unittest.TestCase):
         self.assertTrue(samples[0].label.unsafe)
         self.assertEqual(dataset.describe(samples).license, "Apache 2.0")
 
+    def test_agent_harm_does_not_preserve_config_label_source(self) -> None:
+        with patch(
+            "guard_eval_harness.datasets.agent_harm.load_hf_rows",
+            return_value=[
+                {
+                    "id": "agent-harm-1",
+                    "prompt": "Open a harmless page.",
+                    "name": "browse",
+                    "category": "Cybercrime",
+                }
+            ],
+        ):
+            _, samples = self._load_dataset(
+                "agent_harm",
+                split="test_public",
+                options={"config": "harmless_benign"},
+            )
+
+        self.assertFalse(samples[0].label.unsafe)
+        self.assertEqual(samples[0].metadata["name"], "browse")
+        self.assertEqual(samples[0].metadata["category"], "Cybercrime")
+        self.assertNotIn("config", samples[0].metadata)
+
     def test_xstest(self) -> None:
         with patch(
             "guard_eval_harness.datasets.xstest.load_csv_rows",

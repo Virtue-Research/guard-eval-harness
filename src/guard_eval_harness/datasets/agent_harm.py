@@ -46,7 +46,6 @@ class AgentHarmDataset(SourceBackedDatasetAdapter):
     metadata_fields_to_preserve = (
         "name",
         "category",
-        "config",
     )
     label_mapping_note = (
         "harmful config rows are unsafe; harmless_benign "

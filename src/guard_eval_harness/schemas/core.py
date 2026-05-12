@@ -245,6 +245,7 @@ PREDICT_METADATA_BLOCKLIST: frozenset[str] = frozenset(
         "jailbreaking",
         # Dataset-specific label/source columns that directly determine
         # score-side UnsafeLabel or category_labels.
+        "config",
         "source_role",
         "safety_reason",
         "prompt_harm_label",

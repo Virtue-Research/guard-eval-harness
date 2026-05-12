@@ -521,6 +521,7 @@ class LabelLeakageRegressionTest(unittest.TestCase):
             metadata={
                 "safe_field": "ok",
                 "raw_label": 1,
+                "config": "harmless_benign",
                 "category_labels": ("violence",),
                 "binary_label": 0,
                 "active_categories": ("violence",),
