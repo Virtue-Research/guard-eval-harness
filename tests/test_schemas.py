@@ -415,6 +415,7 @@ class MultimodalSchemaTest(unittest.TestCase):
 # into ``PredictSample.metadata`` and is exposed to prompt templates as
 # ``{metadata_<key>}``). Add to this list as new leak shapes appear.
 _LEAKY_METADATA_KEYS = (
+    # generic
     "raw_label",
     "label",
     "label_name",
@@ -425,9 +426,30 @@ _LEAKY_METADATA_KEYS = (
     "image_safe",
     "source_role",
     "safety_reason",
+    # wildguardmix
     "prompt_harm_label",
     "response_harm_label",
     "response_refusal_label",
+    # jigsaw / civil comments per-category toxicity columns
+    "toxic",
+    "severe_toxic",
+    "toxicity",
+    "severe_toxicity",
+    "obscene",
+    "threat",
+    "insult",
+    "identity_hate",
+    "identity_attack",
+    "sexual_explicit",
+    # openai moderation eval column names
+    "S",
+    "H",
+    "V",
+    "HR",
+    "SH",
+    "S3",
+    "H2",
+    "V2",
 )
 
 
@@ -489,9 +511,26 @@ class LabelLeakageRegressionTest(unittest.TestCase):
                     and len(node.targets) == 1
                     and isinstance(node.targets[0], ast.Name)
                     and node.targets[0].id == "metadata_fields_to_preserve"
-                    and isinstance(node.value, ast.Tuple)
                 ):
-                    for elt in node.value.elts:
+                    # Resolve direct tuple / list literals.
+                    candidates: list[ast.AST] = []
+                    if isinstance(node.value, (ast.Tuple, ast.List)):
+                        candidates = list(node.value.elts)
+                    # Resolve `metadata_fields_to_preserve = SOME_NAME`
+                    # by looking up SOME_NAME at module scope.
+                    elif isinstance(node.value, ast.Name):
+                        target = node.value.id
+                        for top in ast.iter_child_nodes(tree):
+                            if (
+                                isinstance(top, ast.Assign)
+                                and len(top.targets) == 1
+                                and isinstance(top.targets[0], ast.Name)
+                                and top.targets[0].id == target
+                                and isinstance(top.value, (ast.Tuple, ast.List))
+                            ):
+                                candidates = list(top.value.elts)
+                                break
+                    for elt in candidates:
                         if (
                             isinstance(elt, ast.Constant)
                             and isinstance(elt.value, str)

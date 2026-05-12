@@ -38,7 +38,7 @@ class JigsawToxicityDataset(SourceBackedDatasetAdapter):
         "Insult",
         "Identity Hate",
     )
-    metadata_fields_to_preserve = _LABEL_COLUMNS
+    metadata_fields_to_preserve = ()
     label_mapping_note = (
         "a comment is unsafe if any of the six toxicity "
         "label columns is 1; test rows with label -1 are "

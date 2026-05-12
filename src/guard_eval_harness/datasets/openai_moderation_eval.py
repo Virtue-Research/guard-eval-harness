@@ -35,7 +35,7 @@ class OpenAIModerationEvalDataset(SourceBackedDatasetAdapter):
     license_name = "MIT"
     languages = ("en",)
     categories = tuple(_CATEGORY_LABELS.values())
-    metadata_fields_to_preserve = _CATEGORY_COLUMNS
+    metadata_fields_to_preserve = ()
     label_mapping_note = (
         "a prompt is unsafe if any moderation category column "
         "is 1; rows where all category columns are null are "

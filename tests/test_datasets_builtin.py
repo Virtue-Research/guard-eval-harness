@@ -486,7 +486,7 @@ class BuiltInDatasetTest(unittest.TestCase):
             _, samples = self._load_dataset("civil_comments", split="validation")
 
         self.assertEqual({sample.label.unsafe for sample in samples}, {False, True})
-        self.assertGreater(samples[1].metadata["toxicity"], 0.5)
+        self.assertNotIn("toxicity", samples[1].metadata)
 
     def test_real_toxicity_prompts(self) -> None:
         with patch(

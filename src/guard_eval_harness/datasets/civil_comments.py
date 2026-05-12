@@ -29,15 +29,7 @@ class CivilCommentsDataset(SourceBackedDatasetAdapter):
         "Identity Attack",
         "Sexual Explicit",
     )
-    metadata_fields_to_preserve = (
-        "toxicity",
-        "severe_toxicity",
-        "obscene",
-        "threat",
-        "insult",
-        "identity_attack",
-        "sexual_explicit",
-    )
+    metadata_fields_to_preserve = ()
     label_mapping_note = (
         "comments are unsafe when the Civil Comments toxicity score is at least "
         f"{_TOXICITY_THRESHOLD}"
