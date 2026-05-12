@@ -223,6 +223,82 @@ class UnsafeLabel(HarnessModel):
     unsafe: bool
 
 
+PREDICT_METADATA_BLOCKLIST: frozenset[str] = frozenset(
+    {
+        # Generic local-file and HF label columns.
+        "raw_label",
+        "label",
+        "labels",
+        "label_name",
+        "binary_label",
+        "majority_label",
+        "safety_label",
+        "image_safety_label",
+        "image_safe",
+        "safe",
+        "unsafe",
+        "is_safe",
+        "is_unsafe",
+        "toxicity",
+        "human_annotation",
+        "jailbreaking",
+        # Dataset-specific label/source columns that directly determine
+        # score-side UnsafeLabel or category_labels.
+        "source_role",
+        "safety_reason",
+        "prompt_harm_label",
+        "response_harm_label",
+        "response_refusal_label",
+        "toxic",
+        "severe_toxic",
+        "severe_toxicity",
+        "obscene",
+        "threat",
+        "insult",
+        "identity_hate",
+        "identity_attack",
+        "sexual_explicit",
+        "prompt_toxicity",
+        "continuation_toxicity",
+        "class",
+        "prompt_verdict",
+        "default_answer_verdict",
+        "hate_speech_score",
+        "offensiveYN",
+        "violated_categories",
+        "active_categories",
+        "data_type",
+        "degree_of_harm",
+        "type",
+        "hate_speech_count",
+        "offensive_language_count",
+        "neither_count",
+        # OpenAI moderation eval category columns.
+        "S",
+        "H",
+        "V",
+        "HR",
+        "SH",
+        "S3",
+        "H2",
+        "V2",
+    }
+)
+
+
+def sanitize_predict_metadata(
+    metadata: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Drop ground-truth-shaped metadata from predict-path samples."""
+    if not metadata:
+        return {}
+    return {
+        key: value
+        for key, value in metadata.items()
+        if key not in PREDICT_METADATA_BLOCKLIST
+    }
+
+
 class PredictSample(HarnessModel):
     """Predict-path view of a sample. No ground truth — what the model sees."""
 
@@ -239,6 +315,11 @@ class PredictSample(HarnessModel):
         if not cleaned:
             raise ValueError("value must not be empty")
         return cleaned
+
+    @field_validator("metadata")
+    @classmethod
+    def validate_metadata(cls, value: dict[str, Any]) -> dict[str, Any]:
+        return sanitize_predict_metadata(value)
 
 
 class SampleGroundTruth(HarnessModel):
@@ -283,7 +364,7 @@ class NormalizedSample(HarnessModel):
             dataset=self.dataset,
             split=self.split,
             messages=self.messages,
-            metadata=self.metadata,
+            metadata=sanitize_predict_metadata(self.metadata),
         )
 
     def to_ground_truth(self) -> "SampleGroundTruth":

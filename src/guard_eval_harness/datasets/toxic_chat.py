@@ -22,7 +22,7 @@ class ToxicChatDataset(SourceBackedDatasetAdapter):
     license_name = "CC BY-NC 4.0"
     languages = ("en",)
     categories = ("Offensive", "Hate", "Other")
-    metadata_fields_to_preserve = ("human_annotation", "jailbreaking")
+    metadata_fields_to_preserve = ()
     label_mapping_note = "toxicity is mapped directly to the unsafe label"
     supported_splits = ("train", "test")
 

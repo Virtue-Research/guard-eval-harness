@@ -9,12 +9,14 @@ from guard_eval_harness.schemas.core import (
     Message,
     NormalizedPrediction,
     NormalizedSample,
+    PREDICT_METADATA_BLOCKLIST,
     PredictSample,
     RunEnvironment,
     RunManifest,
     SampleGroundTruth,
     TextPart,
     UnsafeLabel,
+    sanitize_predict_metadata,
 )
 
 __all__ = [
@@ -26,10 +28,12 @@ __all__ = [
     "Message",
     "NormalizedPrediction",
     "NormalizedSample",
+    "PREDICT_METADATA_BLOCKLIST",
     "PredictSample",
     "RunEnvironment",
     "RunManifest",
     "SampleGroundTruth",
     "TextPart",
     "UnsafeLabel",
+    "sanitize_predict_metadata",
 ]

@@ -661,7 +661,8 @@ class BuiltInDatasetTest(unittest.TestCase):
             _, samples = self._load_dataset("toxic_chat")
 
         self.assertEqual({sample.label.unsafe for sample in samples}, {False, True})
-        self.assertEqual(samples[1].metadata["jailbreaking"], 1)
+        self.assertNotIn("human_annotation", samples[1].metadata)
+        self.assertNotIn("jailbreaking", samples[1].metadata)
 
     def test_malicious_instruct(self) -> None:
         with patch(

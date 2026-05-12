@@ -19,6 +19,8 @@ from guard_eval_harness.schemas import (
     Message,
     NormalizedPrediction,
     NormalizedSample,
+    PREDICT_METADATA_BLOCKLIST,
+    PredictSample,
     RunEnvironment,
     RunManifest,
     TextPart,
@@ -410,64 +412,6 @@ class MultimodalSchemaTest(unittest.TestCase):
         self.assertFalse(caps.supports_category_outputs)
 
 
-# Keys that would render ground truth into prompts if a dataset loader
-# stashed them on ``NormalizedSample.metadata`` (which flows unchanged
-# into ``PredictSample.metadata`` and is exposed to prompt templates as
-# ``{metadata_<key>}``). Add to this list as new leak shapes appear.
-_LEAKY_METADATA_KEYS = (
-    # generic
-    "raw_label",
-    "label",
-    "label_name",
-    "binary_label",
-    "majority_label",
-    "safety_label",
-    "image_safety_label",
-    "image_safe",
-    "source_role",
-    "safety_reason",
-    # wildguardmix
-    "prompt_harm_label",
-    "response_harm_label",
-    "response_refusal_label",
-    # jigsaw / civil comments per-category toxicity columns
-    "toxic",
-    "severe_toxic",
-    "toxicity",
-    "severe_toxicity",
-    "obscene",
-    "threat",
-    "insult",
-    "identity_hate",
-    "identity_attack",
-    "sexual_explicit",
-    "prompt_toxicity",
-    "continuation_toxicity",
-    "class",
-    "prompt_verdict",
-    "default_answer_verdict",
-    "hate_speech_score",
-    "offensiveYN",
-    "violated_categories",
-    "active_categories",
-    "data_type",
-    "degree_of_harm",
-    "type",
-    "hate_speech_count",
-    "offensive_language_count",
-    "neither_count",
-    # openai moderation eval column names
-    "S",
-    "H",
-    "V",
-    "HR",
-    "SH",
-    "S3",
-    "H2",
-    "V2",
-)
-
-
 class LabelLeakageRegressionTest(unittest.TestCase):
     """Guard against ground-truth re-entering the predict-path sample."""
 
@@ -481,7 +425,7 @@ class LabelLeakageRegressionTest(unittest.TestCase):
             / "guard_eval_harness"
             / "datasets"
         )
-        leaky = set(_LEAKY_METADATA_KEYS)
+        leaky = set(PREDICT_METADATA_BLOCKLIST)
 
         def _flag_dict_keys(node: ast.Dict, path: Path) -> list[str]:
             hits: list[str] = []
@@ -567,8 +511,6 @@ class LabelLeakageRegressionTest(unittest.TestCase):
         )
 
     def test_normalized_sample_to_predict_sample_drops_label_fields(self) -> None:
-        from guard_eval_harness.schemas import NormalizedSample
-
         sample = NormalizedSample(
             id="s",
             dataset="d",
@@ -576,11 +518,30 @@ class LabelLeakageRegressionTest(unittest.TestCase):
             messages=[Message(role="user", content="hi")],
             label={"unsafe": True},
             category_labels=("violence",),
-            metadata={"safe_field": "ok"},
+            metadata={
+                "safe_field": "ok",
+                "raw_label": 1,
+                "binary_label": 0,
+                "active_categories": ("violence",),
+            },
         )
         predict = sample.to_predict_sample()
         self.assertFalse(hasattr(predict, "label"))
         self.assertFalse(hasattr(predict, "category_labels"))
+        self.assertEqual(predict.metadata, {"safe_field": "ok"})
+
+    def test_predict_sample_sanitizes_direct_metadata_construction(self) -> None:
+        predict = PredictSample(
+            id="s",
+            dataset="d",
+            split="test",
+            messages=[Message(role="user", content="hi")],
+            metadata={
+                key: f"leaked-{key}"
+                for key in PREDICT_METADATA_BLOCKLIST
+            }
+            | {"safe_field": "ok"},
+        )
         self.assertEqual(predict.metadata, {"safe_field": "ok"})
 
 
