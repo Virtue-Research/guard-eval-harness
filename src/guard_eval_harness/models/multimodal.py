@@ -12,7 +12,7 @@ from guard_eval_harness.models.templates import score_from_text
 from guard_eval_harness.schemas import (
     MediaPart,
     Message,
-    NormalizedSample,
+    PredictSample,
     TextPart,
 )
 
@@ -84,7 +84,7 @@ def export_message_for_hf(
 
 
 def sample_to_hf_messages(
-    sample: NormalizedSample,
+    sample: PredictSample,
     *,
     image_mode: Literal["auto", "path", "url", "placeholder"] = "auto",
     ensure_text_block_for_images: bool = False,
@@ -100,7 +100,7 @@ def sample_to_hf_messages(
     ]
 
 
-def load_sample_images(sample: NormalizedSample) -> list[Any]:
+def load_sample_images(sample: PredictSample) -> list[Any]:
     """Load all sample images as detached RGB PIL images."""
     try:
         from PIL import Image  # type: ignore[import-untyped]

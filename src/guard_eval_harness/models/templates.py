@@ -22,7 +22,7 @@ import httpx
 from guard_eval_harness.schemas import (
     MediaPart,
     Message,
-    NormalizedSample,
+    PredictSample,
     TextPart,
 )
 
@@ -209,7 +209,7 @@ def _sniff_image_mime_type(payload: bytes) -> str | None:
     return None
 
 
-def sample_messages(sample: NormalizedSample) -> list[dict[str, Any]]:
+def sample_messages(sample: PredictSample) -> list[dict[str, Any]]:
     """Return a JSON-friendly message list for a normalized sample.
 
     For multimodal messages with ``list[ContentPart]`` content, the
@@ -233,7 +233,7 @@ def sample_messages(sample: NormalizedSample) -> list[dict[str, Any]]:
 
 
 def sample_messages_openai(
-    sample: NormalizedSample,
+    sample: PredictSample,
 ) -> list[dict[str, Any]]:
     """Return one sample's messages in OpenAI chat wire format."""
     result: list[dict[str, Any]] = []
@@ -262,7 +262,7 @@ def sample_messages_openai(
 
 
 def sample_openai_moderation_input(
-    sample: NormalizedSample,
+    sample: PredictSample,
     *,
     include_role_prefix: bool = True,
 ) -> list[dict[str, Any]]:
@@ -301,7 +301,7 @@ def sample_openai_moderation_input(
 
 
 def sample_has_media(
-    sample: NormalizedSample,
+    sample: PredictSample,
     *,
     modality: str = "image",
 ) -> bool:
@@ -319,12 +319,12 @@ def messages_to_text(messages: Sequence[Message]) -> str:
     return "\n".join(parts)
 
 
-def sample_to_text(sample: NormalizedSample) -> str:
+def sample_to_text(sample: PredictSample) -> str:
     """Render a normalized sample into a text prompt."""
     return messages_to_text(sample.messages)
 
 
-def sample_context(sample: NormalizedSample) -> dict[str, Any]:
+def sample_context(sample: PredictSample) -> dict[str, Any]:
     """Build a template context from a sample."""
     metadata = dict(sample.metadata)
     raw_target_role = metadata.get("target_role", "user")
@@ -345,8 +345,6 @@ def sample_context(sample: NormalizedSample) -> dict[str, Any]:
         "sample_id": sample.id,
         "dataset": sample.dataset,
         "split": sample.split,
-        "label": sample.label.model_dump(mode="json"),
-        "unsafe": sample.label.unsafe,
         "messages": sample_messages(sample),
         "messages_text": sample_to_text(sample),
         "raw_metadata": metadata,

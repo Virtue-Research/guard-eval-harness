@@ -38,6 +38,7 @@ class IntegrityTestAdapter(ModelAdapter):
             concurrency=False,
             cost_estimation=False,
             token_accounting=False,
+            requires_ground_truth=True,
             notes=("test-only",),
         )
 
@@ -158,6 +159,7 @@ class ExecutionEngineTestAdapter(ModelAdapter):
             concurrency=False,
             cost_estimation=False,
             token_accounting=False,
+            requires_ground_truth=True,
             notes=("test-only",),
         )
 

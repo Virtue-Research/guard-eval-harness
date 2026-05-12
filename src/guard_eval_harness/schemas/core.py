@@ -223,6 +223,40 @@ class UnsafeLabel(HarnessModel):
     unsafe: bool
 
 
+class PredictSample(HarnessModel):
+    """Predict-path view of a sample. No ground truth — what the model sees."""
+
+    id: str
+    dataset: str
+    split: str
+    messages: list[Message] = Field(min_length=1)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+    @field_validator("id", "dataset", "split")
+    @classmethod
+    def validate_identifier(cls, value: str) -> str:
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("value must not be empty")
+        return cleaned
+
+
+class SampleGroundTruth(HarnessModel):
+    """Score-path view of a sample. Joined to predictions by sample_id."""
+
+    sample_id: str
+    label: UnsafeLabel
+    category_labels: tuple[str, ...] = ()
+
+    @field_validator("sample_id")
+    @classmethod
+    def validate_sample_id(cls, value: str) -> str:
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("sample_id must not be empty")
+        return cleaned
+
+
 class NormalizedSample(HarnessModel):
     """Canonical normalized dataset row."""
 
@@ -242,6 +276,22 @@ class NormalizedSample(HarnessModel):
         if not cleaned:
             raise ValueError("value must not be empty")
         return cleaned
+
+    def to_predict_sample(self) -> "PredictSample":
+        return PredictSample(
+            id=self.id,
+            dataset=self.dataset,
+            split=self.split,
+            messages=self.messages,
+            metadata=self.metadata,
+        )
+
+    def to_ground_truth(self) -> "SampleGroundTruth":
+        return SampleGroundTruth(
+            sample_id=self.id,
+            label=self.label,
+            category_labels=self.category_labels,
+        )
 
 
 class NormalizedPrediction(HarnessModel):
@@ -322,6 +372,7 @@ class AdapterCapabilities(HarnessModel):
     token_accounting: bool
     supported_input_modalities: tuple[str, ...] = ("text",)
     supports_category_outputs: bool = False
+    requires_ground_truth: bool = False
     notes: tuple[str, ...] = ()
 
 

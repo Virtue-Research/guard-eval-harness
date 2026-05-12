@@ -16,7 +16,7 @@ from guard_eval_harness.registry import model_registry
 from guard_eval_harness.schemas import (
     AdapterCapabilities,
     NormalizedPrediction,
-    NormalizedSample,
+    PredictSample,
 )
 
 
@@ -170,7 +170,7 @@ class HuggingFaceShieldGemma2Adapter(HuggingFaceAdapter):
             self.config.args.get("include_policy_scores", False)
         )
 
-    def _image_for_sample(self, sample: NormalizedSample) -> Any:
+    def _image_for_sample(self, sample: PredictSample) -> Any:
         """Load exactly one image for one sample."""
         images = load_sample_images(sample)
         if len(images) != 1:
@@ -189,7 +189,7 @@ class HuggingFaceShieldGemma2Adapter(HuggingFaceAdapter):
 
     def predict_batch(
         self,
-        samples: Sequence[NormalizedSample],
+        samples: Sequence[PredictSample],
         *,
         threshold: float,
     ) -> list[NormalizedPrediction]:
@@ -203,7 +203,7 @@ class HuggingFaceShieldGemma2Adapter(HuggingFaceAdapter):
         policies = self._resolved_policies(processor)
         custom_policies = self._custom_policies()
 
-        prepared_samples: list[NormalizedSample] = []
+        prepared_samples: list[PredictSample] = []
         images: list[Any] = []
         drop_failed = self.allow_partial_predictions
         for sample in samples:

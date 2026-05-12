@@ -47,6 +47,7 @@ from guard_eval_harness.schemas import RunEnvironment, RunManifest
 from guard_eval_harness.schemas import (
     NormalizedPrediction,
     NormalizedSample,
+    PredictSample,
 )
 
 _log = logging.getLogger(__name__)
@@ -320,6 +321,21 @@ def _evaluated_samples(
     return evaluated_samples, missing_prediction_ids
 
 
+def _prepare_batch(
+    model: Any,
+    batch: Sequence[NormalizedSample],
+) -> Sequence[NormalizedSample] | list[PredictSample]:
+    """Strip ground-truth labels before passing samples to the model.
+
+    Adapters that declare ``requires_ground_truth=True`` (only the mock today)
+    receive the full ``NormalizedSample``; every production adapter sees a
+    label-free ``PredictSample`` view.
+    """
+    if model.capabilities.requires_ground_truth:
+        return batch
+    return [sample.to_predict_sample() for sample in batch]
+
+
 def _predict_in_fixed_batches(
     model: Any,
     samples: Sequence[NormalizedSample],
@@ -344,7 +360,9 @@ def _predict_in_fixed_batches(
         start=1,
     ):
         batch = samples[start : start + batch_size]
-        predictions.extend(model.predict_batch(batch, threshold=threshold))
+        predictions.extend(
+            model.predict_batch(_prepare_batch(model, batch), threshold=threshold)
+        )
         pbar.update(len(batch))
         if (
             batch_index == 1
@@ -385,7 +403,11 @@ def _predict_with_auto_batch_size(
 
     adapter_name = getattr(model.config, "adapter", "")
     if adapter_name in _AUTO_BATCH_REMOTE_ADAPTERS:
-        predictions = list(model.predict_batch(samples, threshold=threshold))
+        predictions = list(
+            model.predict_batch(
+                _prepare_batch(model, samples), threshold=threshold
+            )
+        )
         _emit_progress(
             progress_callback,
             event="prediction_progress",
@@ -407,7 +429,11 @@ def _predict_with_auto_batch_size(
         batch_size = min(current_batch_size, len(samples) - start)
         batch = samples[start : start + batch_size]
         try:
-            predictions.extend(model.predict_batch(batch, threshold=threshold))
+            predictions.extend(
+                model.predict_batch(
+                    _prepare_batch(model, batch), threshold=threshold
+                )
+            )
         except Exception as exc:
             if batch_size == 1 or not _is_retryable_auto_batch_error(exc):
                 raise
