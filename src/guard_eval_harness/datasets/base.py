@@ -249,12 +249,16 @@ class DatasetAdapter(ABC):
         """Select raw metadata fields to preserve."""
         metadata: dict[str, Any] = {}
         for field_name in self.config.metadata_fields:
-            if (
-                field_name in row
-                and field_name not in PREDICT_METADATA_BLOCKLIST
-            ):
+            if field_name in row and self._preserve_metadata_field(field_name):
                 metadata[field_name] = row[field_name]
         return metadata
+
+    def _preserve_metadata_field(self, field_name: str) -> bool:
+        """Return whether a raw field is safe to expose as metadata."""
+        return (
+            field_name != self.config.label_field
+            and field_name not in PREDICT_METADATA_BLOCKLIST
+        )
 
     def _coerce_label(self, raw_value: Any) -> bool:
         """Collapse label values into binary unsafe semantics."""

@@ -32,7 +32,6 @@ from guard_eval_harness.schemas import (
     MediaRef,
     Message,
     NormalizedSample,
-    PREDICT_METADATA_BLOCKLIST,
     TextPart,
     UnsafeLabel,
 )
@@ -199,7 +198,7 @@ class MultimodalDatasetAdapter(DatasetAdapter):
         sample_id = self._make_sample_id(row, row_number)
         metadata = dict(extra_metadata or {})
         for field in self.config.metadata_fields:
-            if field in row and field not in PREDICT_METADATA_BLOCKLIST:
+            if field in row and self._preserve_metadata_field(field):
                 metadata[field] = row[field]
         return NormalizedSample(
             id=sample_id,
