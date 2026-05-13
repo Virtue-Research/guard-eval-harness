@@ -32,7 +32,24 @@ class SourceBackedMultimodalDatasetAdapter(MultimodalDatasetAdapter):
                 (*config.metadata_fields, *cls.metadata_fields_to_preserve)
             )
         )
-        return cls(config.model_copy(update={"metadata_fields": merged_fields}))
+        builtin_predict_fields = tuple(
+            field
+            for field in cls.metadata_fields_to_preserve
+            if field in {"policy", "target_role"}
+        )
+        merged_predict_fields = tuple(
+            dict.fromkeys(
+                (*config.predict_metadata_fields, *builtin_predict_fields)
+            )
+        )
+        return cls(
+            config.model_copy(
+                update={
+                    "metadata_fields": merged_fields,
+                    "predict_metadata_fields": merged_predict_fields,
+                }
+            )
+        )
 
     def _ensure_supported_split(self) -> None:
         """Reject unsupported split names early."""

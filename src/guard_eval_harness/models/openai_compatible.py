@@ -27,7 +27,7 @@ from guard_eval_harness.registry import model_registry
 from guard_eval_harness.schemas import (
     AdapterCapabilities,
     NormalizedPrediction,
-    NormalizedSample,
+    PredictSample,
 )
 
 _MAX_CONCURRENCY = 2000
@@ -118,7 +118,7 @@ class OpenAICompatibleAdapter(ModelAdapter):
             headers.setdefault(header_name, f"{prefix} {token}".strip())
         return headers
 
-    def _request_payload(self, sample: NormalizedSample) -> dict[str, Any]:
+    def _request_payload(self, sample: PredictSample) -> dict[str, Any]:
         context = sample_context(sample)
         payload_template = self.config.args.get("payload_template")
         if payload_template is not None:
@@ -267,7 +267,7 @@ class OpenAICompatibleAdapter(ModelAdapter):
 
     def _build_prediction(
         self,
-        sample: NormalizedSample,
+        sample: PredictSample,
         response: Any,
         *,
         endpoint: str,
@@ -320,7 +320,7 @@ class OpenAICompatibleAdapter(ModelAdapter):
 
     def _predict_one(
         self,
-        sample: NormalizedSample,
+        sample: PredictSample,
         *,
         endpoint: str,
         headers: dict[str, str],
@@ -352,7 +352,7 @@ class OpenAICompatibleAdapter(ModelAdapter):
     async def _apredict_one(
         self,
         client: httpx.AsyncClient,
-        sample: NormalizedSample,
+        sample: PredictSample,
         *,
         endpoint: str,
         headers: dict[str, str],
@@ -383,7 +383,7 @@ class OpenAICompatibleAdapter(ModelAdapter):
 
     def predict_batch(
         self,
-        samples: Sequence[NormalizedSample],
+        samples: Sequence[PredictSample],
         *,
         threshold: float,
     ) -> list[NormalizedPrediction]:
@@ -453,7 +453,7 @@ class OpenAICompatibleAdapter(ModelAdapter):
 
         async def _factory(
             client: httpx.AsyncClient,
-            sample: NormalizedSample,
+            sample: PredictSample,
         ) -> NormalizedPrediction:
             return await self._apredict_one(
                 client,

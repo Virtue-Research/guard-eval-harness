@@ -30,7 +30,7 @@ from guard_eval_harness.registry import model_registry
 from guard_eval_harness.schemas import (
     AdapterCapabilities,
     NormalizedPrediction,
-    NormalizedSample,
+    PredictSample,
 )
 
 
@@ -182,7 +182,7 @@ class HuggingFaceAdapter(ModelAdapter):
             return self._model_subfolder()
         return str(subfolder)
 
-    def _prompt_for_sample(self, sample: NormalizedSample) -> str:
+    def _prompt_for_sample(self, sample: PredictSample) -> str:
         if bool(self.config.args.get("apply_chat_template", False)):
             tokenizer = self._get_tokenizer()
             messages = sample_messages(sample)
@@ -1075,7 +1075,7 @@ class HuggingFaceAdapter(ModelAdapter):
 
     def predict_batch(
         self,
-        samples: Sequence[NormalizedSample],
+        samples: Sequence[PredictSample],
         *,
         threshold: float,
     ) -> list[NormalizedPrediction]:

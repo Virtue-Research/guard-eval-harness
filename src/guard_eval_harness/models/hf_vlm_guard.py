@@ -23,7 +23,7 @@ from guard_eval_harness.registry import model_registry
 from guard_eval_harness.schemas import (
     AdapterCapabilities,
     NormalizedPrediction,
-    NormalizedSample,
+    PredictSample,
 )
 
 
@@ -567,7 +567,7 @@ class HuggingFaceVLMGuardAdapter(HuggingFaceAdapter):
 
     def _internvl_question_for_sample(
         self,
-        sample: NormalizedSample,
+        sample: PredictSample,
     ) -> str:
         """Render the moderation question passed into InternVL chat."""
         conversation_text = "\n".join(
@@ -590,8 +590,8 @@ class HuggingFaceVLMGuardAdapter(HuggingFaceAdapter):
 
     def _prepare_internvl_batch(
         self,
-        samples: Sequence[NormalizedSample],
-    ) -> tuple[Sequence[NormalizedSample], Any, list[int], list[str]]:
+        samples: Sequence[PredictSample],
+    ) -> tuple[Sequence[PredictSample], Any, list[int], list[str]]:
         """Convert samples into InternVL pixel values and prompt strings."""
         torch = importlib.import_module("torch")
         input_size = int(self.config.args.get("image_size", 448))
@@ -600,7 +600,7 @@ class HuggingFaceVLMGuardAdapter(HuggingFaceAdapter):
         use_thumbnail = bool(self.config.args.get("use_thumbnail", True))
         transform = _internvl_build_transform(input_size)
 
-        prepared_samples: list[NormalizedSample] = []
+        prepared_samples: list[PredictSample] = []
         pixel_batches: list[Any] = []
         num_patches_list: list[int] = []
         questions: list[str] = []
@@ -646,7 +646,7 @@ class HuggingFaceVLMGuardAdapter(HuggingFaceAdapter):
 
     def _predict_llama_guard_4(
         self,
-        samples: Sequence[NormalizedSample],
+        samples: Sequence[PredictSample],
         *,
         threshold: float,
     ) -> list[NormalizedPrediction]:
@@ -699,7 +699,7 @@ class HuggingFaceVLMGuardAdapter(HuggingFaceAdapter):
 
     def _predict_prompt_plus_images(
         self,
-        samples: Sequence[NormalizedSample],
+        samples: Sequence[PredictSample],
         *,
         threshold: float,
     ) -> list[NormalizedPrediction]:
@@ -713,7 +713,7 @@ class HuggingFaceVLMGuardAdapter(HuggingFaceAdapter):
         flow_name = self._flow_name()
         conversations: list[list[dict[str, Any]]] = []
         images: list[Any] = []
-        prepared_samples: list[NormalizedSample] = []
+        prepared_samples: list[PredictSample] = []
 
         single_image_flows = {
             "llama_guard_3_vision",
@@ -786,7 +786,7 @@ class HuggingFaceVLMGuardAdapter(HuggingFaceAdapter):
 
     def _messages_for_sample(
         self,
-        sample: NormalizedSample,
+        sample: PredictSample,
         *,
         flow_name: str,
     ) -> list[dict[str, Any]]:
@@ -838,7 +838,7 @@ class HuggingFaceVLMGuardAdapter(HuggingFaceAdapter):
 
     def _guardreasoner_vl_messages(
         self,
-        sample: NormalizedSample,
+        sample: PredictSample,
     ) -> list[dict[str, Any]]:
         """Build GuardReasoner-VL messages for one sample."""
         system_text = str(
@@ -890,7 +890,7 @@ class HuggingFaceVLMGuardAdapter(HuggingFaceAdapter):
 
     def _predictions_from_texts(
         self,
-        samples: Sequence[NormalizedSample],
+        samples: Sequence[PredictSample],
         texts: Sequence[str],
         *,
         threshold: float,
@@ -933,7 +933,7 @@ class HuggingFaceVLMGuardAdapter(HuggingFaceAdapter):
 
     def _predict_internvl_chat(
         self,
-        samples: Sequence[NormalizedSample],
+        samples: Sequence[PredictSample],
         *,
         threshold: float,
     ) -> list[NormalizedPrediction]:
@@ -1004,7 +1004,7 @@ class HuggingFaceVLMGuardAdapter(HuggingFaceAdapter):
 
     def predict_batch(
         self,
-        samples: Sequence[NormalizedSample],
+        samples: Sequence[PredictSample],
         *,
         threshold: float,
     ) -> list[NormalizedPrediction]:

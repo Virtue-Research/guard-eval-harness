@@ -25,7 +25,7 @@ from guard_eval_harness.registry import model_registry
 from guard_eval_harness.schemas import (
     AdapterCapabilities,
     NormalizedPrediction,
-    NormalizedSample,
+    PredictSample,
 )
 
 _log = logging.getLogger(__name__)
@@ -132,7 +132,7 @@ class HuggingFaceGemma4VLMAdapter(HuggingFaceAdapter):
             self._model.eval()
         return self._model, self._model_device
 
-    def _system_prompt(self, sample: NormalizedSample) -> str:
+    def _system_prompt(self, sample: PredictSample) -> str:
         """Resolve the system prompt for a sample."""
         default = (
             "You are a safety classifier. "
@@ -145,7 +145,7 @@ class HuggingFaceGemma4VLMAdapter(HuggingFaceAdapter):
 
     def _build_chat_messages(
         self,
-        sample: NormalizedSample,
+        sample: PredictSample,
         images: list[Any],
     ) -> list[dict[str, Any]]:
         """Build chat messages in the format Gemma 4 expects."""
@@ -175,7 +175,7 @@ class HuggingFaceGemma4VLMAdapter(HuggingFaceAdapter):
 
     def predict_batch(
         self,
-        samples: Sequence[NormalizedSample],
+        samples: Sequence[PredictSample],
         *,
         threshold: float,
     ) -> list[NormalizedPrediction]:

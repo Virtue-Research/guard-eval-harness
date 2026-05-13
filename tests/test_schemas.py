@@ -19,8 +19,10 @@ from guard_eval_harness.schemas import (
     Message,
     NormalizedPrediction,
     NormalizedSample,
+    PredictSample,
     RunEnvironment,
     RunManifest,
+    SampleGroundTruth,
     TextPart,
 )
 
@@ -339,6 +341,76 @@ class MultimodalSchemaTest(unittest.TestCase):
         )
         self.assertEqual(sample.category_labels, ())
 
+    def test_normalized_sample_to_predict_sample_default_denies_metadata(
+        self,
+    ) -> None:
+        sample = NormalizedSample(
+            id="s1",
+            dataset="demo",
+            split="test",
+            messages=[{"role": "user", "content": "Hello"}],
+            label={"unsafe": True},
+            category_labels=("violence",),
+            metadata={
+                "category": "policy",
+                "raw_label": "unsafe",
+            },
+        )
+
+        predict = sample.to_predict_sample()
+
+        self.assertIsInstance(predict, PredictSample)
+        self.assertFalse(hasattr(predict, "label"))
+        self.assertFalse(hasattr(predict, "category_labels"))
+        self.assertEqual(predict.metadata, {})
+
+    def test_normalized_sample_to_predict_sample_uses_allowlist(self) -> None:
+        sample = NormalizedSample(
+            id="s1",
+            dataset="demo",
+            split="test",
+            messages=[{"role": "user", "content": "Hello"}],
+            label={"unsafe": False},
+            metadata={
+                "category": "benign",
+                "source": "local",
+                "raw_label": "safe",
+            },
+        )
+
+        predict = sample.to_predict_sample(
+            predict_metadata_fields=("source", "missing"),
+        )
+
+        self.assertEqual(predict.metadata, {"source": "local"})
+
+    def test_predict_sample_rejects_label_like_metadata(self) -> None:
+        with self.assertRaises(ValidationError):
+            PredictSample(
+                id="s1",
+                dataset="demo",
+                split="test",
+                messages=[{"role": "user", "content": "Hello"}],
+                metadata={"raw_label": "unsafe"},
+            )
+
+    def test_normalized_sample_to_ground_truth(self) -> None:
+        sample = NormalizedSample(
+            id="s1",
+            dataset="demo",
+            split="test",
+            messages=[{"role": "user", "content": "Hello"}],
+            label={"unsafe": True},
+            category_labels=("violence",),
+        )
+
+        truth = sample.to_ground_truth()
+
+        self.assertIsInstance(truth, SampleGroundTruth)
+        self.assertTrue(truth.label.unsafe)
+        self.assertEqual(truth.sample_id, "s1")
+        self.assertEqual(truth.category_labels, ("violence",))
+
     def test_prediction_category_sidecars(self) -> None:
         pred = NormalizedPrediction(
             sample_id="s1",
@@ -408,6 +480,7 @@ class MultimodalSchemaTest(unittest.TestCase):
             caps.supported_input_modalities, ("text",)
         )
         self.assertFalse(caps.supports_category_outputs)
+        self.assertFalse(caps.requires_ground_truth)
 
 
 if __name__ == "__main__":

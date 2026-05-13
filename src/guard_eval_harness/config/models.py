@@ -14,6 +14,26 @@ class ConfigModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+PREDICT_METADATA_FIELD_DENYLIST: frozenset[str] = frozenset(
+    {
+        "raw_label",
+        "label",
+        "labels",
+        "label_name",
+        "category_labels",
+        "binary_label",
+        "majority_label",
+        "safety_label",
+        "image_safety_label",
+        "image_safe",
+        "safe",
+        "unsafe",
+        "is_safe",
+        "is_unsafe",
+    }
+)
+
+
 class ResolvedDatasetConfig(ConfigModel):
     """Resolved dataset configuration."""
 
@@ -27,6 +47,7 @@ class ResolvedDatasetConfig(ConfigModel):
     response_field: str | None = None
     label_field: str = "unsafe"
     metadata_fields: tuple[str, ...] = ()
+    predict_metadata_fields: tuple[str, ...] = ()
     version: str | None = None
     source_uri: str | None = None
     license: str | None = None
@@ -48,6 +69,40 @@ class ResolvedDatasetConfig(ConfigModel):
         if value is None:
             return None
         return Path(value).expanduser().as_posix()
+
+    @field_validator("metadata_fields", "predict_metadata_fields")
+    @classmethod
+    def validate_metadata_fields(
+        cls,
+        value: tuple[str, ...],
+    ) -> tuple[str, ...]:
+        """Normalize metadata field lists and reject empty field names."""
+        cleaned: list[str] = []
+        for item in value:
+            field_name = str(item).strip()
+            if not field_name:
+                raise ValueError("metadata field names must not be empty")
+            cleaned.append(field_name)
+        return tuple(dict.fromkeys(cleaned))
+
+    @model_validator(mode="after")
+    def validate_predict_metadata_fields(self) -> "ResolvedDatasetConfig":
+        """Reject fields that would expose score-side labels to models."""
+        invalid = [
+            field
+            for field in self.predict_metadata_fields
+            if (
+                field == self.label_field
+                or field in PREDICT_METADATA_FIELD_DENYLIST
+            )
+        ]
+        if invalid:
+            names = ", ".join(sorted(invalid))
+            raise ValueError(
+                "predict_metadata_fields cannot include label-like fields: "
+                f"{names}"
+            )
+        return self
 
 
 class ResolvedModelConfig(ConfigModel):

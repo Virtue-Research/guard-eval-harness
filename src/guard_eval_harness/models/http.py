@@ -23,7 +23,7 @@ from guard_eval_harness.registry import model_registry
 from guard_eval_harness.schemas import (
     AdapterCapabilities,
     NormalizedPrediction,
-    NormalizedSample,
+    PredictSample,
 )
 
 _MAX_CONCURRENCY = 1024
@@ -116,7 +116,7 @@ class HttpAdapter(ModelAdapter):
             headers.setdefault(header_name, f"{prefix} {token}".strip())
         return headers
 
-    def _request_payload(self, sample: NormalizedSample) -> Mapping[str, Any]:
+    def _request_payload(self, sample: PredictSample) -> Mapping[str, Any]:
         context = sample_context(sample)
         payload_template = self.config.args.get("payload_template")
         if payload_template is not None:
@@ -162,7 +162,7 @@ class HttpAdapter(ModelAdapter):
 
     def _predict_one(
         self,
-        sample: NormalizedSample,
+        sample: PredictSample,
         *,
         endpoint: str,
         headers: Mapping[str, str],
@@ -232,7 +232,7 @@ class HttpAdapter(ModelAdapter):
 
     def predict_batch(
         self,
-        samples: Sequence[NormalizedSample],
+        samples: Sequence[PredictSample],
         *,
         threshold: float,
     ) -> list[NormalizedPrediction]:

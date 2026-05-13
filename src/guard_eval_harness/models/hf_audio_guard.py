@@ -29,7 +29,7 @@ from guard_eval_harness.schemas import (
     AdapterCapabilities,
     MediaRef,
     NormalizedPrediction,
-    NormalizedSample,
+    PredictSample,
 )
 
 
@@ -216,7 +216,7 @@ class HuggingFaceAudioGuardAdapter(HuggingFaceAdapter):
             self._audio_model.eval()
         return self._audio_model, self._audio_device
 
-    def _prompt_for_sample(self, sample: NormalizedSample) -> str:
+    def _prompt_for_sample(self, sample: PredictSample) -> str:
         """Render the instruction prompt for one sample."""
         context = sample_context(sample)
         context["conversation_text"] = sample_to_text(sample)
@@ -225,7 +225,7 @@ class HuggingFaceAudioGuardAdapter(HuggingFaceAdapter):
             return render_template(str(template), context)
         return render_template(_DEFAULT_AUDIO_PROMPT_TEMPLATE, context)
 
-    def _audio_ref_for_sample(self, sample: NormalizedSample) -> MediaRef:
+    def _audio_ref_for_sample(self, sample: PredictSample) -> MediaRef:
         """Return the single required audio ref for one sample."""
         audio_refs = [
             audio_ref
@@ -303,7 +303,7 @@ class HuggingFaceAudioGuardAdapter(HuggingFaceAdapter):
 
     def _prediction_from_output(
         self,
-        sample: NormalizedSample,
+        sample: PredictSample,
         raw_output: str,
         *,
         threshold: float,
@@ -370,7 +370,7 @@ class HuggingFaceAudioGuardAdapter(HuggingFaceAdapter):
 
     def _predict_qwen2_audio(
         self,
-        sample: NormalizedSample,
+        sample: PredictSample,
         *,
         threshold: float,
     ) -> NormalizedPrediction:
@@ -444,7 +444,7 @@ class HuggingFaceAudioGuardAdapter(HuggingFaceAdapter):
 
     def _predict_audio_flamingo_3(
         self,
-        sample: NormalizedSample,
+        sample: PredictSample,
         *,
         threshold: float,
     ) -> NormalizedPrediction:
@@ -498,7 +498,7 @@ class HuggingFaceAudioGuardAdapter(HuggingFaceAdapter):
 
     def _predict_phi4_multimodal(
         self,
-        sample: NormalizedSample,
+        sample: PredictSample,
         *,
         threshold: float,
     ) -> NormalizedPrediction:
@@ -542,7 +542,7 @@ class HuggingFaceAudioGuardAdapter(HuggingFaceAdapter):
 
     def _predict_qwen2_5_omni(
         self,
-        sample: NormalizedSample,
+        sample: PredictSample,
         *,
         threshold: float,
     ) -> NormalizedPrediction:
@@ -611,7 +611,7 @@ class HuggingFaceAudioGuardAdapter(HuggingFaceAdapter):
 
     def predict_batch(
         self,
-        samples: Sequence[NormalizedSample],
+        samples: Sequence[PredictSample],
         *,
         threshold: float,
     ) -> list[NormalizedPrediction]:

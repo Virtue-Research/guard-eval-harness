@@ -25,7 +25,7 @@ from guard_eval_harness.registry import model_registry
 from guard_eval_harness.schemas import (
     AdapterCapabilities,
     NormalizedPrediction,
-    NormalizedSample,
+    PredictSample,
 )
 
 _MAX_CONCURRENCY = 2000
@@ -106,7 +106,7 @@ class AnthropicAdapter(ModelAdapter):
         return normalized
 
     def _request_payload(
-        self, sample: NormalizedSample
+        self, sample: PredictSample
     ) -> dict[str, Any]:
         context = sample_context(sample)
         prompt_template = self.config.args.get("prompt_template")
@@ -290,7 +290,7 @@ class AnthropicAdapter(ModelAdapter):
 
     def _build_prediction(
         self,
-        sample: NormalizedSample,
+        sample: PredictSample,
         response: Any,
         *,
         endpoint: str,
@@ -326,7 +326,7 @@ class AnthropicAdapter(ModelAdapter):
 
     def _predict_one(
         self,
-        sample: NormalizedSample,
+        sample: PredictSample,
         *,
         endpoint: str,
         headers: dict[str, str],
@@ -357,7 +357,7 @@ class AnthropicAdapter(ModelAdapter):
     async def _apredict_one(
         self,
         client: httpx.AsyncClient,
-        sample: NormalizedSample,
+        sample: PredictSample,
         *,
         endpoint: str,
         headers: dict[str, str],
@@ -388,7 +388,7 @@ class AnthropicAdapter(ModelAdapter):
 
     def predict_batch(
         self,
-        samples: Sequence[NormalizedSample],
+        samples: Sequence[PredictSample],
         *,
         threshold: float,
     ) -> list[NormalizedPrediction]:
@@ -444,7 +444,7 @@ class AnthropicAdapter(ModelAdapter):
 
         async def _factory(
             client: httpx.AsyncClient,
-            sample: NormalizedSample,
+            sample: PredictSample,
         ) -> NormalizedPrediction:
             return await self._apredict_one(
                 client,

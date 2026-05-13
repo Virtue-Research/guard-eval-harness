@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from guard_eval_harness.config.models import ResolvedModelConfig
-from guard_eval_harness.schemas import NormalizedSample
+from guard_eval_harness.schemas import PredictSample
 
 LLAMA_GUARD_CHAT_TEMPLATE_PROFILE = "llama_guard"
 
@@ -26,7 +26,7 @@ def uses_llama_guard_chat_template(config: ResolvedModelConfig) -> bool:
 
 
 def prepare_llama_guard_chat_messages(
-    sample: NormalizedSample,
+    sample: PredictSample,
     *,
     tokenizer: Any,
 ) -> list[dict[str, Any]]:

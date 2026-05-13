@@ -12,7 +12,7 @@ from guard_eval_harness.registry import model_registry
 from guard_eval_harness.schemas import (
     AdapterCapabilities,
     NormalizedPrediction,
-    NormalizedSample,
+    PredictSample,
 )
 
 
@@ -168,7 +168,7 @@ class HuggingFaceImageClassifierAdapter(HuggingFaceAdapter):
         )
         return any(token in normalized for token in unsafe_labels)
 
-    def _image_for_sample(self, sample: NormalizedSample) -> Any:
+    def _image_for_sample(self, sample: PredictSample) -> Any:
         """Load the first image for one sample as a PIL image."""
         image_refs = [
             image_ref
@@ -263,7 +263,7 @@ class HuggingFaceImageClassifierAdapter(HuggingFaceAdapter):
 
     def predict_batch(
         self,
-        samples: Sequence[NormalizedSample],
+        samples: Sequence[PredictSample],
         *,
         threshold: float,
     ) -> list[NormalizedPrediction]:
@@ -274,7 +274,7 @@ class HuggingFaceImageClassifierAdapter(HuggingFaceAdapter):
         torch = importlib.import_module("torch")
         processor = self._get_image_processor()
         model, device = self._get_image_model()
-        prepared_samples: list[NormalizedSample] = []
+        prepared_samples: list[PredictSample] = []
         images: list[Any] = []
         drop_failed = self.allow_partial_predictions
         for sample in samples:

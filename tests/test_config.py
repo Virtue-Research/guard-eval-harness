@@ -133,6 +133,52 @@ class ConfigLoadingTest(unittest.TestCase):
 
         self.assertEqual(config.execution.batch_size, 4)
 
+    def test_load_config_accepts_predict_metadata_fields(self) -> None:
+        config = load_config(
+            {
+                "run_name": "predict-metadata",
+                "model": {"adapter": "mock"},
+                "datasets": [
+                    {
+                        "name": "demo",
+                        "adapter": "local_jsonl",
+                        "metadata_fields": ["category", "category"],
+                        "predict_metadata_fields": ["category"],
+                    }
+                ],
+                "output": {"run_dir": "runs/demo"},
+            },
+            base_dir="/tmp/project",
+        )
+
+        self.assertEqual(config.datasets[0].metadata_fields, ("category",))
+        self.assertEqual(
+            config.datasets[0].predict_metadata_fields,
+            ("category",),
+        )
+
+    def test_rejects_label_like_predict_metadata_fields(self) -> None:
+        with self.assertRaisesRegex(Exception, "label-like fields"):
+            load_config(
+                {
+                    "run_name": "bad-predict-metadata",
+                    "model": {"adapter": "mock"},
+                    "datasets": [
+                        {
+                            "name": "demo",
+                            "adapter": "local_jsonl",
+                            "label_field": "verdict",
+                            "predict_metadata_fields": [
+                                "category_labels",
+                                "verdict",
+                            ],
+                        }
+                    ],
+                    "output": {"run_dir": "/tmp/demo"},
+                },
+                base_dir="/tmp",
+            )
+
     def test_rejects_invalid_auto_batch_syntax(self) -> None:
         with self.assertRaisesRegex(Exception, "batch_size"):
             load_config(
