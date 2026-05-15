@@ -48,14 +48,19 @@ class ModelProfile:
     catalog_name: str | None = None
 
 
-def _resolve_templates(obj: Any) -> Any:
-    """Recursively replace ``$template_name`` strings."""
+def resolve_templates(obj: Any) -> Any:
+    """Recursively replace ``$template_name`` strings anywhere in a payload.
+
+    Public because the config loader applies this to user-supplied YAML so
+    that ``prompt_template: $llama_guard_taxonomy`` works in raw configs,
+    not only in shipped catalog entries.
+    """
     if isinstance(obj, str) and obj in _TEMPLATE_MAP:
         return _TEMPLATE_MAP[obj]
     if isinstance(obj, dict):
-        return {k: _resolve_templates(v) for k, v in obj.items()}
+        return {k: resolve_templates(v) for k, v in obj.items()}
     if isinstance(obj, list):
-        return [_resolve_templates(v) for v in obj]
+        return [resolve_templates(v) for v in obj]
     return obj
 
 
@@ -83,7 +88,7 @@ def _load_catalog() -> dict[str, ModelProfile]:
             raw = yaml.safe_load(path.read_text(encoding="utf-8"))
             if not isinstance(raw, dict):
                 continue
-            args = _resolve_templates(raw.get("args", {}))
+            args = resolve_templates(raw.get("args", {}))
             catalog[slug] = ModelProfile(
                 name=slug,
                 adapter=raw["adapter"],

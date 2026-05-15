@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 from pathlib import Path
 from typing import Any
 
@@ -15,17 +16,54 @@ from guard_eval_harness.config.models import (
     ResolvedOutputConfig,
     ResolvedRunConfig,
 )
+from guard_eval_harness.models.catalog import resolve_templates
+
+# Matches the ${VAR} or $VAR sigils left behind when os.path.expandvars
+# encounters an unset environment variable. We collect these so we can
+# surface a single clear error instead of a downstream FileNotFoundError
+# whose path contains an unresolved ``${...}`` substring.
+_UNRESOLVED_ENV_RE = re.compile(
+    r"\$\{[A-Za-z_][A-Za-z0-9_]*\}|\$[A-Za-z_][A-Za-z0-9_]*"
+)
 
 
-def _expand_env(value: Any) -> Any:
-    """Recursively expand environment variables in config payloads."""
+def _expand_strings(value: Any, *, unresolved: set[str]) -> Any:
+    """Expand named templates and env vars; record unresolved ${VAR} sigils.
+
+    Named templates (``$llama_guard_taxonomy`` and friends) are substituted
+    via :func:`resolve_templates` so raw user YAMLs get the same expansion
+    that catalog-shipped configs already enjoy. Environment variables go
+    through :func:`os.path.expandvars`; any sigils that survive expansion
+    are collected in ``unresolved`` so the caller can raise a single,
+    clear error.
+    """
     if isinstance(value, dict):
-        return {key: _expand_env(item) for key, item in value.items()}
+        return {k: _expand_strings(v, unresolved=unresolved) for k, v in value.items()}
     if isinstance(value, list):
-        return [_expand_env(item) for item in value]
+        return [_expand_strings(v, unresolved=unresolved) for v in value]
     if isinstance(value, str):
-        return os.path.expandvars(value)
+        templated = resolve_templates(value)
+        if templated is not value:
+            return templated
+        expanded = os.path.expandvars(value)
+        for match in _UNRESOLVED_ENV_RE.findall(expanded):
+            unresolved.add(match.lstrip("$").strip("{}"))
+        return expanded
     return value
+
+
+def _apply_expansions(payload: Any) -> Any:
+    """Expand strings in ``payload`` and raise on unresolved env vars."""
+    unresolved: set[str] = set()
+    expanded = _expand_strings(payload, unresolved=unresolved)
+    if unresolved:
+        names = ", ".join(sorted(unresolved))
+        raise ValueError(
+            "config references unset environment variable(s): "
+            f"{names}. Set them in your shell (or .env file) before "
+            "running, or replace the placeholder with a literal value."
+        )
+    return expanded
 
 
 def _resolve_relative_path(
@@ -80,7 +118,7 @@ def _build_config(payload: dict[str, Any], *, base_dir: Path) -> ResolvedRunConf
 
 def load_config(payload: dict[str, Any], *, base_dir: str | Path = ".") -> ResolvedRunConfig:
     """Resolve a config payload into stable config models."""
-    expanded = _expand_env(payload)
+    expanded = _apply_expansions(payload)
     return _build_config(expanded, base_dir=Path(base_dir))
 
 
@@ -97,7 +135,7 @@ def load_config_from_path(
     if not isinstance(raw_payload, dict):
         raise ValueError("config root must be a mapping")
 
-    payload = _expand_env(raw_payload)
+    payload = _apply_expansions(raw_payload)
     if output_dir is not None:
         payload.setdefault("output", {})
         payload["output"]["run_dir"] = output_dir

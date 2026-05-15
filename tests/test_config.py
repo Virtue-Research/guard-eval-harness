@@ -195,5 +195,78 @@ class ConfigLoadingTest(unittest.TestCase):
             )
 
 
+class ExpansionTest(unittest.TestCase):
+    """Validate named-template and env-var expansion in raw configs."""
+
+    def test_named_template_resolves_in_raw_config(self) -> None:
+        """``prompt_template: $llama_guard_taxonomy`` must expand in user YAMLs."""
+        config = load_config(
+            {
+                "run_name": "tpl",
+                "model": {
+                    "adapter": "openai_compatible",
+                    "model_name": "gpt-4o-mini",
+                    "args": {"prompt_template": "$llama_guard_taxonomy"},
+                },
+                "datasets": [{"name": "demo", "adapter": "xstest"}],
+                "output": {"run_dir": "/tmp/tpl"},
+            },
+            base_dir="/tmp",
+        )
+        rendered = config.model.args["prompt_template"]
+        self.assertNotIn("$llama_guard_taxonomy", rendered)
+        # The shipped taxonomy describes "safe" / "unsafe" categories.
+        self.assertIn("unsafe", rendered.lower())
+
+    def test_unset_env_var_raises_clear_error(self) -> None:
+        """Unset ``${VAR}`` must error fast with the variable name."""
+        os.environ.pop("GEH_TEST_MISSING_VAR", None)
+        with self.assertRaisesRegex(
+            ValueError, r"GEH_TEST_MISSING_VAR"
+        ):
+            load_config(
+                {
+                    "run_name": "envfail",
+                    "model": {"adapter": "mock"},
+                    "datasets": [
+                        {
+                            "name": "demo",
+                            "adapter": "local_jsonl",
+                            "path": "${GEH_TEST_MISSING_VAR}",
+                        }
+                    ],
+                    "output": {"run_dir": "/tmp/envfail"},
+                },
+                base_dir="/tmp",
+            )
+
+    def test_set_env_var_expands(self) -> None:
+        """Set ``${VAR}`` substitutes the value and the run loads."""
+        os.environ["GEH_TEST_SET_VAR"] = "demo.jsonl"
+        try:
+            config = load_config(
+                {
+                    "run_name": "envok",
+                    "model": {"adapter": "mock"},
+                    "datasets": [
+                        {
+                            "name": "demo",
+                            "adapter": "local_jsonl",
+                            "path": "${GEH_TEST_SET_VAR}",
+                        }
+                    ],
+                    "output": {"run_dir": "/tmp/envok"},
+                },
+                base_dir="/tmp",
+            )
+        finally:
+            os.environ.pop("GEH_TEST_SET_VAR", None)
+        self.assertTrue(
+            config.datasets[0].path.endswith("demo.jsonl"),
+            config.datasets[0].path,
+        )
+        self.assertNotIn("$", config.datasets[0].path)
+
+
 if __name__ == "__main__":
     unittest.main()
