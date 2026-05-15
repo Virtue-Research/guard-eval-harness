@@ -5,8 +5,11 @@ from __future__ import annotations
 import argparse
 import itertools
 import json
+import os
 from pathlib import Path
+import sys
 from typing import Any, Sequence
+from urllib.error import HTTPError, URLError
 
 from guard_eval_harness.benchmarks.packs import (
     build_pack_run_payload,
@@ -70,6 +73,14 @@ class HarnessCLI:
                 "a resolved config snapshot, summary JSON, and "
                 "one dataset\n"
                 "folder per benchmarked dataset."
+            ),
+        )
+        self._parser.add_argument(
+            "--debug",
+            action="store_true",
+            help=(
+                "Show full Python tracebacks and verbose dependency logs "
+                "for debugging."
             ),
         )
         self._parser.set_defaults(func=self._print_help)
@@ -378,7 +389,15 @@ class HarnessCLI:
     ) -> int:
         """Parse args and dispatch a command."""
         args = self.parse_args(argv)
-        return int(args.func(args))
+        if args.debug:
+            os.environ["GEH_DEBUG"] = "1"
+        try:
+            return int(args.func(args))
+        except _USER_FACING_EXCEPTIONS as exc:
+            if args.debug:
+                raise
+            print(f"Error: {_format_user_error(exc)}", file=sys.stderr)
+            return 1
 
     def _run(self, args: argparse.Namespace) -> int:
         if args.pack:
@@ -842,3 +861,29 @@ def main(argv: Sequence[str] | None = None) -> int:
     logging.getLogger("huggingface_hub").setLevel(logging.ERROR)
     logging.getLogger("datasets").setLevel(logging.ERROR)
     return HarnessCLI().execute(argv)
+
+
+_USER_FACING_EXCEPTIONS = (
+    FileExistsError,
+    FileNotFoundError,
+    KeyError,
+    ValueError,
+    HTTPError,
+    URLError,
+)
+
+
+def _format_user_error(exc: BaseException) -> str:
+    """Format expected user errors without traceback noise."""
+    if isinstance(exc, KeyError) and exc.args:
+        return str(exc.args[0])
+    if isinstance(exc, HTTPError):
+        if exc.code in {401, 403}:
+            return (
+                f"HTTP {exc.code} from {exc.url}: authentication failed. "
+                "Check the configured API key environment variable."
+            )
+        return f"HTTP {exc.code} from {exc.url}: {exc.reason}"
+    if isinstance(exc, URLError):
+        return f"connection error: {exc.reason}"
+    return str(exc)
