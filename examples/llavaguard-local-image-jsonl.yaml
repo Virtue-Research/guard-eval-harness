@@ -13,7 +13,7 @@ model:
 datasets:
   - name: local_image_jsonl
     adapter: local_image_jsonl
-    path: ${LOCAL_IMAGE_JSONL_PATH}
+    path: datasets/local_images.jsonl
     split: test
 output:
   run_dir: out/llavaguard-local-image-jsonl

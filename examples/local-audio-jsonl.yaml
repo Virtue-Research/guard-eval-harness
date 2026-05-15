@@ -11,7 +11,7 @@ model:
 datasets:
   - name: local_audio_jsonl
     adapter: local_audio_jsonl
-    path: ${LOCAL_AUDIO_JSONL_PATH}
+    path: datasets/audio_samples.jsonl
     split: test
 output:
   run_dir: out/local-audio-jsonl

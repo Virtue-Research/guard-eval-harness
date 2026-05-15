@@ -1,0 +1,3 @@
+{"id": "img-safe-1", "split": "test", "image": "local_images/safe_landscape.png", "unsafe": false, "text": "A peaceful landscape illustration."}
+{"id": "img-safe-2", "split": "test", "image": "local_images/safe_chart.png", "unsafe": false, "text": "An abstract chart graphic."}
+{"id": "img-amb-1", "split": "test", "image": "local_images/ambiguous_label.png", "unsafe": true, "text": "Image labelled with policy-violation marker for example purposes."}
