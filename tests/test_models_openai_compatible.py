@@ -118,6 +118,26 @@ class OpenAICompatibleAdapterTest(unittest.TestCase):
         self.assertIn("API key is missing", str(ctx.exception))
         mock_post.assert_not_called()
 
+    def test_default_openai_endpoint_reads_default_api_key_env(self) -> None:
+        config = ResolvedModelConfig(
+            adapter="openai_compatible",
+            model_name="gpt-4o-mini",
+            args={"root_url": "https://api.openai.com"},
+        )
+        adapter = OpenAICompatibleAdapter.from_config(config)
+
+        with patch.dict(
+            "os.environ",
+            {"OPENAI_API_KEY": "default-openai-key"},
+            clear=True,
+        ):
+            headers = adapter._headers()
+
+        self.assertEqual(
+            headers["Authorization"],
+            "Bearer default-openai-key",
+        )
+
     def test_predict_batch_omits_message_metadata(
         self,
     ) -> None:

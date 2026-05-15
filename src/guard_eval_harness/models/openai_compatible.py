@@ -108,10 +108,14 @@ class OpenAICompatibleAdapter(ModelAdapter):
 
     def _headers(self) -> dict[str, str]:
         headers = dict(self.config.args.get("headers", {}))
-        token = env_value(
-            self.config.args.get("api_key_env"),
-            self.config.args.get("api_key"),
-        )
+        api_key_env = self.config.args.get("api_key_env")
+        api_key = self.config.args.get("api_key")
+        if api_key_env is None and api_key is not None:
+            token = str(api_key)
+        else:
+            if api_key_env is None and self._requires_api_key():
+                api_key_env = self._api_key_env_name()
+            token = env_value(api_key_env, api_key)
         if token:
             prefix = str(self.config.args.get("auth_prefix", "Bearer"))
             header_name = str(
