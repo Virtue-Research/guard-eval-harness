@@ -175,6 +175,79 @@ class CliCommandTest(unittest.TestCase):
             "dataset empty_dataset loaded zero samples",
             result.stderr,
         )
+        self.assertNotIn("Traceback", result.stderr)
+
+    def test_user_errors_hide_tracebacks_by_default(self) -> None:
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "guard_eval_harness",
+                "validate",
+                "--config",
+                "/tmp/does-not-exist-geh.yaml",
+            ],
+            cwd=self.root,
+            capture_output=True,
+            text=True,
+            check=False,
+            env=self.env,
+        )
+
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("Error:", result.stderr)
+        self.assertIn("does-not-exist-geh.yaml", result.stderr)
+        self.assertNotIn("Traceback", result.stderr)
+
+    def test_debug_preserves_tracebacks(self) -> None:
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "guard_eval_harness",
+                "--debug",
+                "validate",
+                "--config",
+                "/tmp/does-not-exist-geh.yaml",
+            ],
+            cwd=self.root,
+            capture_output=True,
+            text=True,
+            check=False,
+            env=self.env,
+        )
+
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("Traceback", result.stderr)
+        self.assertIn("FileNotFoundError", result.stderr)
+
+    def test_unknown_dataset_error_is_clean(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "guard_eval_harness",
+                    "run",
+                    "--dataset",
+                    "does_not_exist",
+                    "--model",
+                    "mock",
+                    "--limit",
+                    "1",
+                    "--output-dir",
+                    (Path(tmpdir) / "run").as_posix(),
+                ],
+                cwd=self.root,
+                capture_output=True,
+                text=True,
+                check=False,
+                env=self.env,
+            )
+
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("Error: Unknown dataset 'does_not_exist'", result.stderr)
+        self.assertNotIn("Traceback", result.stderr)
 
     def test_csv_export_includes_safety_metrics(self) -> None:
         config_path = self.root / "examples" / "run-mock-jsonl.yaml"

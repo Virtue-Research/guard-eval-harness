@@ -12,6 +12,7 @@ import os
 import logging
 import math
 import time
+import warnings
 from importlib.util import find_spec
 from typing import Any, Mapping, Sequence
 
@@ -93,7 +94,51 @@ _VLLM_PASSTHROUGH_ARGS = (
     "max_num_seqs",
     "max_num_batched_tokens",
     "enable_prefix_caching",
+    "use_tqdm_on_load",
 )
+
+_VLLM_NOISY_WARNING_MODULES = (
+    r"nvidia_cutlass_dsl(\..*)?",
+    r"xgrammar(\..*)?",
+    r"cuda(\..*)?",
+    r"tvm_ffi(\..*)?",
+)
+
+
+def _debug_enabled() -> bool:
+    """Return whether verbose dependency output should be preserved."""
+    return os.environ.get("GEH_DEBUG", "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _configure_vllm_quiet_mode() -> None:
+    """Suppress known non-actionable vLLM dependency noise."""
+    if _debug_enabled():
+        return
+    os.environ.setdefault("VLLM_LOGGING_LEVEL", "ERROR")
+    os.environ.setdefault("FLASHINFER_LOGGING_LEVEL", "ERROR")
+    for module_pattern in _VLLM_NOISY_WARNING_MODULES:
+        warnings.filterwarnings(
+            "ignore",
+            category=Warning,
+            module=module_pattern,
+        )
+    for logger_name in (
+        "vllm",
+        "vllm.config",
+        "vllm.v1",
+        "flashinfer",
+        "flashinfer.jit",
+        "nvidia_cutlass_dsl",
+        "xgrammar",
+        "cuda",
+        "tvm_ffi",
+    ):
+        logging.getLogger(logger_name).setLevel(logging.ERROR)
 
 
 def _bool_arg(value: Any, *, arg_name: str) -> bool:
@@ -456,14 +501,10 @@ class VLLMAdapter(ModelAdapter):
             if tp == 1 and pp == 1 and dp == 1:
                 _, free_gib = self._auto_select_gpu()
             self._ensure_registry_patches()
-            # Suppress noisy vLLM engine startup logs.
+            # Suppress known non-actionable vLLM dependency chatter.
             # VLLM_LOGGING_LEVEL propagates to engine-core subprocesses
             # where Python-level logger settings do not reach.
-            import os as _os
-            _os.environ.setdefault("VLLM_LOGGING_LEVEL", "WARNING")
-            import logging as _logging
-            for _name in ("vllm", "vllm.config", "vllm.v1"):
-                _logging.getLogger(_name).setLevel(_logging.WARNING)
+            _configure_vllm_quiet_mode()
             vllm = importlib.import_module("vllm")
             model_path = self._resolved_model_path()
             kwargs: dict[str, Any] = {
@@ -499,6 +540,8 @@ class VLLMAdapter(ModelAdapter):
                 value = self.config.args.get(key)
                 if value is not None:
                     kwargs[key] = value
+            if not _debug_enabled():
+                kwargs.setdefault("use_tqdm_on_load", False)
             if "gpu_memory_utilization" not in kwargs and free_gib is not None:
                 # vLLM defaults to 0.9 which assumes exclusive GPU
                 # access.  Compute a safe ratio from actual free memory.

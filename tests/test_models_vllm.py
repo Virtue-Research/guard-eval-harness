@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import logging
+import os
 import tempfile
 import unittest
+import warnings
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
@@ -68,6 +71,39 @@ class VLLMAdapterTest(unittest.TestCase):
             with self.assertRaises(ModuleNotFoundError) as ctx:
                 VLLMAdapter(config)
             self.assertIn("guard-eval-harness[vllm]", str(ctx.exception))
+
+    def test_quiet_mode_sets_vllm_logging_to_error(self) -> None:
+        from guard_eval_harness.models.vllm_adapter import (
+            _configure_vllm_quiet_mode,
+        )
+
+        with patch.dict(os.environ, {"GEH_DEBUG": ""}, clear=False):
+            os.environ.pop("VLLM_LOGGING_LEVEL", None)
+            _configure_vllm_quiet_mode()
+
+        self.assertEqual("ERROR", os.environ["VLLM_LOGGING_LEVEL"])
+        self.assertEqual("ERROR", os.environ["FLASHINFER_LOGGING_LEVEL"])
+        self.assertEqual(logging.ERROR, logging.getLogger("vllm").level)
+        self.assertTrue(
+            any(
+                entry[0] == "ignore"
+                and getattr(entry[3], "pattern", "") == "nvidia_cutlass_dsl(\\..*)?"
+                for entry in warnings.filters
+            )
+        )
+
+    def test_debug_mode_preserves_vllm_logging(self) -> None:
+        from guard_eval_harness.models.vllm_adapter import (
+            _configure_vllm_quiet_mode,
+        )
+
+        with patch.dict(
+            os.environ,
+            {"GEH_DEBUG": "1", "VLLM_LOGGING_LEVEL": "INFO"},
+            clear=False,
+        ):
+            _configure_vllm_quiet_mode()
+            self.assertEqual("INFO", os.environ["VLLM_LOGGING_LEVEL"])
 
     # ------------------------------------------------------------------
     # Capabilities
@@ -647,6 +683,16 @@ class VLLMAdapterTest(unittest.TestCase):
         self.assertEqual(call_kwargs["dtype"], "float16")
         self.assertEqual(call_kwargs["max_num_batched_tokens"], 8192)
         self.assertTrue(call_kwargs["disable_log_stats"])
+        self.assertFalse(call_kwargs["use_tqdm_on_load"])
+
+    def test_get_llm_honors_explicit_tqdm_on_load(self) -> None:
+        adapter = self._make_adapter(use_tqdm_on_load=True)
+        mock_llm_cls = MagicMock()
+        mock_vllm = MagicMock(LLM=mock_llm_cls)
+        with patch.dict("sys.modules", {"vllm": mock_vllm}):
+            adapter._get_llm()
+        call_kwargs = mock_llm_cls.call_args[1]
+        self.assertTrue(call_kwargs["use_tqdm_on_load"])
 
     def test_get_llm_caches(self) -> None:
         adapter = self._make_adapter()
