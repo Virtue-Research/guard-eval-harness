@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import time
 from typing import Any, Mapping, Sequence
+from urllib import error as urllib_error
 
 import httpx
 
@@ -29,6 +30,7 @@ from guard_eval_harness.schemas import (
 )
 
 _MAX_CONCURRENCY = 2000
+_AUTH_FAILURE_CODES = {401, 403}
 _log = logging.getLogger(__name__)
 
 
@@ -91,6 +93,37 @@ class AnthropicAdapter(ModelAdapter):
         if isinstance(extra, Mapping):
             headers.update(extra)
         return headers
+
+    def _api_key_env_name(self) -> str:
+        return str(self.config.args.get("api_key_env", "ANTHROPIC_API_KEY"))
+
+    def _validate_api_key_headers(
+        self,
+        headers: Mapping[str, str],
+    ) -> None:
+        has_api_key = any(
+            key.lower() == "x-api-key" and str(value).strip()
+            for key, value in headers.items()
+        )
+        if not has_api_key:
+            key_env = self._api_key_env_name()
+            raise ValueError(
+                "Anthropic API key is missing or empty. "
+                f"Set {key_env} or pass api_key in model args."
+            )
+
+    def _raise_for_auth_error(self, exc: BaseException) -> None:
+        if (
+            isinstance(exc, urllib_error.HTTPError)
+            and exc.code in _AUTH_FAILURE_CODES
+        ):
+            reason = exc.reason or "authentication failed"
+            key_env = self._api_key_env_name()
+            raise ValueError(
+                "Anthropic API authentication failed "
+                f"(HTTP {exc.code}: {reason}). "
+                f"Check {key_env} or model args.api_key."
+            ) from exc
 
     def _multimodal_prompt_template_mode(self) -> str:
         """Resolve how prompt templates should behave for image inputs."""
@@ -397,16 +430,7 @@ class AnthropicAdapter(ModelAdapter):
 
         endpoint = self._endpoint()
         headers = self._headers()
-        has_api_key = any(
-            k.lower() == "x-api-key" and v
-            for k, v in headers.items()
-        )
-        if not has_api_key:
-            raise ValueError(
-                "Anthropic API key is missing or empty. "
-                "Set ANTHROPIC_API_KEY or pass api_key in "
-                "adapter args."
-            )
+        self._validate_api_key_headers(headers)
         timeout = float(self.config.args.get("timeout", 120.0))
         retries = int(self.config.args.get("retries", 3))
         backoff = float(self.config.args.get("retry_backoff", 1.0))
@@ -433,6 +457,7 @@ class AnthropicAdapter(ModelAdapter):
                         )
                     )
                 except Exception as exc:
+                    self._raise_for_auth_error(exc)
                     _log.error(
                         "prediction failed for sample %s: %s",
                         sample.id,
@@ -441,6 +466,35 @@ class AnthropicAdapter(ModelAdapter):
                     if not drop_failed:
                         raise
             return predictions
+
+        index_map: dict[int, NormalizedPrediction] = {}
+        failed: list[tuple[int, str, Exception]] = []
+        remaining_samples: Sequence[PredictSample] = samples
+        offset = 0
+        try:
+            index_map[0] = self._predict_one(
+                samples[0],
+                endpoint=endpoint,
+                headers=headers,
+                timeout=timeout,
+                retries=retries,
+                backoff=backoff,
+                threshold=threshold,
+            )
+        except Exception as exc:
+            self._raise_for_auth_error(exc)
+            _log.error(
+                "prediction failed for sample %s: %s",
+                samples[0].id,
+                exc,
+            )
+            if not drop_failed:
+                raise
+            failed.append((0, samples[0].id, exc))
+        remaining_samples = samples[1:]
+        offset = 1
+        if not remaining_samples:
+            return [index_map[i] for i in sorted(index_map)]
 
         async def _factory(
             client: httpx.AsyncClient,
@@ -459,26 +513,32 @@ class AnthropicAdapter(ModelAdapter):
 
         raw_results = run_async_batch(
             _factory,
-            samples,
+            remaining_samples,
             concurrency=concurrency,
             timeout=timeout,
         )
 
-        index_map: dict[int, NormalizedPrediction] = {}
-        failed: list[tuple[int, str, Exception]] = []
         for idx, result in enumerate(raw_results):
+            original_idx = idx + offset
             if isinstance(result, BaseException):
-                sample_id = samples[idx].id
+                self._raise_for_auth_error(result)
+                sample_id = samples[original_idx].id
                 _log.error(
                     "prediction failed for sample %s: %s",
                     sample_id,
                     result,
                 )
                 failed.append(
-                    (idx, sample_id, result if isinstance(result, Exception) else Exception(str(result))),
+                    (
+                        original_idx,
+                        sample_id,
+                        result
+                        if isinstance(result, Exception)
+                        else Exception(str(result)),
+                    ),
                 )
             else:
-                index_map[idx] = result
+                index_map[original_idx] = result
 
         if failed and not drop_failed:
             _, sid, exc = failed[0]

@@ -2,12 +2,19 @@
 
 from __future__ import annotations
 
+import io
 import unittest
 from unittest.mock import patch
+from urllib import error as urllib_error
 
 from guard_eval_harness.config.models import ResolvedModelConfig
 from guard_eval_harness.models.anthropic import AnthropicAdapter
 from guard_eval_harness.schemas import NormalizedSample
+
+_MOCK_PATCH = "guard_eval_harness.models.anthropic.json_post_with_retry"
+_ASYNC_MOCK_PATCH = (
+    "guard_eval_harness.models.anthropic.async_json_post_with_retry"
+)
 
 
 def _sample(
@@ -22,6 +29,16 @@ def _sample(
         split="test",
         messages=[{"role": "user", "content": content}],
         label={"unsafe": unsafe},
+    )
+
+
+def _http_error(status: int, reason: str = "Unauthorized"):
+    return urllib_error.HTTPError(
+        "https://api.anthropic.com/v1/messages",
+        status,
+        reason,
+        {},
+        io.BytesIO(b"{}"),
     )
 
 
@@ -67,6 +84,31 @@ class AnthropicAdapterAPIKeyTest(unittest.TestCase):
             for k, v in headers.items()
         )
         self.assertTrue(has_key)
+
+    def test_concurrent_auth_error_fails_before_async_dispatch(
+        self,
+    ) -> None:
+        config = ResolvedModelConfig(
+            adapter="anthropic",
+            model_name="claude-3-haiku-20240307",
+            args={
+                "api_key": "bad-key",
+                "concurrency": 4,
+            },
+        )
+        adapter = AnthropicAdapter.from_config(config)
+        samples = [
+            _sample(sample_id=f"s-{i}", content=f"s-{i}") for i in range(3)
+        ]
+
+        with patch(_MOCK_PATCH, side_effect=_http_error(401)) as mock_post:
+            with patch(_ASYNC_MOCK_PATCH) as mock_async_post:
+                with self.assertRaises(ValueError) as ctx:
+                    adapter.predict_batch(samples, threshold=0.5)
+
+        self.assertIn("authentication failed", str(ctx.exception))
+        self.assertEqual(mock_post.call_count, 1)
+        mock_async_post.assert_not_called()
 
 
 class AnthropicAdapterCacheSystemPromptTest(unittest.TestCase):

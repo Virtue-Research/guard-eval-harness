@@ -50,6 +50,16 @@ def _as_async_side_effect(sync_side_effect):
     return _wrapped
 
 
+def _http_error(status: int, reason: str = "Unauthorized"):
+    return urllib_error.HTTPError(
+        "https://api.openai.com/v1/chat/completions",
+        status,
+        reason,
+        {},
+        io.BytesIO(b"{}"),
+    )
+
+
 class OpenAICompatibleAdapterTest(unittest.TestCase):
     """Validate request formatting and response scoring."""
 
@@ -87,6 +97,26 @@ class OpenAICompatibleAdapterTest(unittest.TestCase):
         headers = mock_post.call_args.kwargs["headers"]
         self.assertEqual(headers["X-Test"], "1")
         self.assertEqual(headers["Authorization"], "Bearer token-123")
+
+    def test_missing_openai_api_key_raises_before_request(self) -> None:
+        config = ResolvedModelConfig(
+            adapter="openai_compatible",
+            model_name="gpt-4o-mini",
+            args={
+                "root_url": "https://api.openai.com",
+                "api_key_env": "GEH_MISSING_OPENAI_KEY",
+                "concurrency": 4,
+            },
+        )
+        adapter = OpenAICompatibleAdapter.from_config(config)
+
+        with patch.dict("os.environ", {}, clear=True):
+            with patch(_MOCK_PATCH) as mock_post:
+                with self.assertRaises(ValueError) as ctx:
+                    adapter.predict_batch([_sample()], threshold=0.5)
+
+        self.assertIn("API key is missing", str(ctx.exception))
+        mock_post.assert_not_called()
 
     def test_predict_batch_omits_message_metadata(
         self,
@@ -784,7 +814,7 @@ class EndpointResolutionTest(unittest.TestCase):
         config = ResolvedModelConfig(
             adapter="openai_compatible",
             model_name="m",
-            args={"mode": "completions"},
+            args={"mode": "completions", "require_api_key": False},
         )
         adapter = OpenAICompatibleAdapter.from_config(config)
 
@@ -832,6 +862,32 @@ class BatchErrorHandlingTest(unittest.TestCase):
             [prediction.sample_id for prediction in predictions],
             ["s-0", "s-1", "s-3", "s-4"],
         )
+
+    def test_concurrent_auth_error_fails_before_async_dispatch(
+        self,
+    ) -> None:
+        config = ResolvedModelConfig(
+            adapter="openai_compatible",
+            model_name="gpt-4o-mini",
+            args={
+                "root_url": "https://api.openai.com",
+                "api_key": "bad-key",
+                "concurrency": 4,
+            },
+        )
+        adapter = OpenAICompatibleAdapter.from_config(config)
+        samples = [
+            _sample(sample_id=f"s-{i}", content=f"s-{i}") for i in range(3)
+        ]
+
+        with patch(_MOCK_PATCH, side_effect=_http_error(401)) as mock_post:
+            with patch(_ASYNC_MOCK_PATCH) as mock_async_post:
+                with self.assertRaises(ValueError) as ctx:
+                    adapter.predict_batch(samples, threshold=0.5)
+
+        self.assertIn("authentication failed", str(ctx.exception))
+        self.assertEqual(mock_post.call_count, 1)
+        mock_async_post.assert_not_called()
 
     def test_sequential_batch_raises_on_failure(
         self,
