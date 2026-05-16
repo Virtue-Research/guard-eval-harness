@@ -909,6 +909,32 @@ class BatchErrorHandlingTest(unittest.TestCase):
         self.assertEqual(mock_post.call_count, 1)
         mock_async_post.assert_not_called()
 
+    def test_concurrent_header_auth_error_fails_before_async_dispatch(
+        self,
+    ) -> None:
+        config = ResolvedModelConfig(
+            adapter="openai_compatible",
+            model_name="custom-model",
+            args={
+                "url": "https://example.test/v1/chat/completions",
+                "headers": {"Authorization": "Bearer bad-key"},
+                "concurrency": 4,
+            },
+        )
+        adapter = OpenAICompatibleAdapter.from_config(config)
+        samples = [
+            _sample(sample_id=f"s-{i}", content=f"s-{i}") for i in range(3)
+        ]
+
+        with patch(_MOCK_PATCH, side_effect=_http_error(401)) as mock_post:
+            with patch(_ASYNC_MOCK_PATCH) as mock_async_post:
+                with self.assertRaises(ValueError) as ctx:
+                    adapter.predict_batch(samples, threshold=0.5)
+
+        self.assertIn("authentication failed", str(ctx.exception))
+        self.assertEqual(mock_post.call_count, 1)
+        mock_async_post.assert_not_called()
+
     def test_sequential_batch_raises_on_failure(
         self,
     ) -> None:

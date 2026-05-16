@@ -158,6 +158,9 @@ class OpenAICompatibleAdapter(ModelAdapter):
                 f"Set {key_env} or pass api_key in model args."
             )
 
+    def _should_probe_auth(self, headers: Mapping[str, str]) -> bool:
+        return self._requires_api_key() or self._has_auth_header(headers)
+
     def _raise_for_auth_error(self, exc: BaseException) -> None:
         if (
             isinstance(exc, urllib_error.HTTPError)
@@ -510,7 +513,7 @@ class OpenAICompatibleAdapter(ModelAdapter):
         failed: list[tuple[int, str, Exception]] = []
         remaining_samples: Sequence[PredictSample] = samples
         offset = 0
-        if self._requires_api_key():
+        if self._should_probe_auth(headers):
             try:
                 index_map[0] = self._predict_one(
                     samples[0],
