@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import time
 from typing import Any, Mapping, Sequence
+from urllib import error as urllib_error
 
 import httpx
 
@@ -31,6 +32,7 @@ from guard_eval_harness.schemas import (
 )
 
 _MAX_CONCURRENCY = 2000
+_AUTH_FAILURE_CODES = {401, 403}
 _log = logging.getLogger(__name__)
 
 
@@ -106,10 +108,14 @@ class OpenAICompatibleAdapter(ModelAdapter):
 
     def _headers(self) -> dict[str, str]:
         headers = dict(self.config.args.get("headers", {}))
-        token = env_value(
-            self.config.args.get("api_key_env"),
-            self.config.args.get("api_key"),
-        )
+        api_key_env = self.config.args.get("api_key_env")
+        api_key = self.config.args.get("api_key")
+        if api_key_env is None and api_key is not None:
+            token = str(api_key)
+        else:
+            if api_key_env is None and self._requires_api_key():
+                api_key_env = self._api_key_env_name()
+            token = env_value(api_key_env, api_key)
         if token:
             prefix = str(self.config.args.get("auth_prefix", "Bearer"))
             header_name = str(
@@ -117,6 +123,56 @@ class OpenAICompatibleAdapter(ModelAdapter):
             )
             headers.setdefault(header_name, f"{prefix} {token}".strip())
         return headers
+
+    def _requires_api_key(self) -> bool:
+        configured = self.config.args.get("require_api_key")
+        if configured is not None:
+            return _bool_arg(configured, arg_name="require_api_key")
+        if (
+            "api_key_env" in self.config.args
+            or "api_key" in self.config.args
+        ):
+            return True
+        return "api.openai.com" in self._endpoint().lower()
+
+    def _api_key_env_name(self) -> str:
+        return str(self.config.args.get("api_key_env", "OPENAI_API_KEY"))
+
+    def _has_auth_header(self, headers: Mapping[str, str]) -> bool:
+        header_name = str(
+            self.config.args.get("auth_header", "Authorization")
+        ).lower()
+        return any(
+            key.lower() == header_name and str(value).strip()
+            for key, value in headers.items()
+        )
+
+    def _validate_api_key_headers(
+        self,
+        headers: Mapping[str, str],
+    ) -> None:
+        if self._requires_api_key() and not self._has_auth_header(headers):
+            key_env = self._api_key_env_name()
+            raise ValueError(
+                "OpenAI-compatible API key is missing or empty. "
+                f"Set {key_env} or pass api_key in model args."
+            )
+
+    def _should_probe_auth(self, headers: Mapping[str, str]) -> bool:
+        return self._requires_api_key() or self._has_auth_header(headers)
+
+    def _raise_for_auth_error(self, exc: BaseException) -> None:
+        if (
+            isinstance(exc, urllib_error.HTTPError)
+            and exc.code in _AUTH_FAILURE_CODES
+        ):
+            reason = exc.reason or "authentication failed"
+            key_env = self._api_key_env_name()
+            raise ValueError(
+                "OpenAI-compatible API authentication failed "
+                f"(HTTP {exc.code}: {reason}). "
+                f"Check {key_env} or model args.api_key."
+            ) from exc
 
     def _request_payload(self, sample: PredictSample) -> dict[str, Any]:
         context = sample_context(sample)
@@ -392,6 +448,7 @@ class OpenAICompatibleAdapter(ModelAdapter):
 
         endpoint = self._endpoint()
         headers = self._headers()
+        self._validate_api_key_headers(headers)
         timeout = float(self.config.args.get("timeout", 30.0))
         retries = int(self.config.args.get("retries", 0))
         backoff = float(self.config.args.get("retry_backoff", 1.0))
@@ -420,6 +477,7 @@ class OpenAICompatibleAdapter(ModelAdapter):
                         )
                     )
                 except Exception as exc:
+                    self._raise_for_auth_error(exc)
                     _log.error(
                         "prediction failed for sample %s: %s",
                         sample.id,
@@ -451,6 +509,38 @@ class OpenAICompatibleAdapter(ModelAdapter):
                 ) from last_exc
             return predictions
 
+        index_map: dict[int, NormalizedPrediction] = {}
+        failed: list[tuple[int, str, Exception]] = []
+        remaining_samples: Sequence[PredictSample] = samples
+        offset = 0
+        if self._should_probe_auth(headers):
+            try:
+                index_map[0] = self._predict_one(
+                    samples[0],
+                    endpoint=endpoint,
+                    headers=headers,
+                    timeout=timeout,
+                    retries=retries,
+                    backoff=backoff,
+                    threshold=threshold,
+                )
+            except Exception as exc:
+                self._raise_for_auth_error(exc)
+                _log.error(
+                    "prediction failed for sample %s: %s",
+                    samples[0].id,
+                    exc,
+                )
+                if not drop_failed_predictions:
+                    raise RuntimeError(
+                        f"prediction failed for sample {samples[0].id}: {exc}"
+                    ) from exc
+                failed.append((0, samples[0].id, exc))
+            remaining_samples = samples[1:]
+            offset = 1
+            if not remaining_samples:
+                return [index_map[i] for i in sorted(index_map)]
+
         async def _factory(
             client: httpx.AsyncClient,
             sample: PredictSample,
@@ -468,26 +558,32 @@ class OpenAICompatibleAdapter(ModelAdapter):
 
         raw_results = run_async_batch(
             _factory,
-            samples,
+            remaining_samples,
             concurrency=concurrency,
             timeout=timeout,
         )
 
-        index_map: dict[int, NormalizedPrediction] = {}
-        failed: list[tuple[int, str, Exception]] = []
         for idx, result in enumerate(raw_results):
+            original_idx = idx + offset
             if isinstance(result, BaseException):
-                sample_id = samples[idx].id
+                self._raise_for_auth_error(result)
+                sample_id = samples[original_idx].id
                 _log.error(
                     "prediction failed for sample %s: %s",
                     sample_id,
                     result,
                 )
                 failed.append(
-                    (idx, sample_id, result if isinstance(result, Exception) else Exception(str(result))),
+                    (
+                        original_idx,
+                        sample_id,
+                        result
+                        if isinstance(result, Exception)
+                        else Exception(str(result)),
+                    ),
                 )
             else:
-                index_map[idx] = result
+                index_map[original_idx] = result
 
         if failed:
             ids = ", ".join(sid for _, sid, _ in failed)
