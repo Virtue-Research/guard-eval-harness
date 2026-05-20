@@ -318,7 +318,8 @@ class HuggingFaceVLMGuardAdapter(HuggingFaceAdapter):
         if flow_name == "llavaguard":
             return "LlavaOnevisionForConditionalGeneration"
         if flow_name == "llama_guard_3_vision":
-            return "AutoModelForVision2Seq"
+            # transformers 5.x removed AutoModelForVision2Seq.
+            return "AutoModelForImageTextToText"
         if flow_name == "guardreasoner_vl":
             return "Qwen2_5_VLForConditionalGeneration"
         if flow_name == "internvl_chat":
