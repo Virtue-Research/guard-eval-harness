@@ -91,7 +91,7 @@ class SafeQwenVLMAdapter(HuggingFaceAdapter):
             kwargs: dict[str, Any] = {
                 "trust_remote_code": bool(
                     self.config.args.get(
-                        "trust_remote_code", True
+                        "trust_remote_code", False
                     )
                 ),
                 "revision": self.config.args.get(
@@ -131,7 +131,7 @@ class SafeQwenVLMAdapter(HuggingFaceAdapter):
             model_kwargs: dict[str, Any] = {
                 "trust_remote_code": bool(
                     self.config.args.get(
-                        "trust_remote_code", True
+                        "trust_remote_code", False
                     )
                 ),
                 "revision": self.config.args.get(
@@ -171,7 +171,7 @@ class SafeQwenVLMAdapter(HuggingFaceAdapter):
             config = transformers.AutoConfig.from_pretrained(
                 self._model_name(),
                 trust_remote_code=model_kwargs.get(
-                    "trust_remote_code", True
+                    "trust_remote_code", False
                 ),
                 revision=model_kwargs.get("revision", "main"),
             )

@@ -74,7 +74,7 @@ class HuggingFaceGemma4VLMAdapter(HuggingFaceAdapter):
             transformers = importlib.import_module("transformers")
             processor_kwargs: dict[str, Any] = {
                 "trust_remote_code": bool(
-                    self.config.args.get("trust_remote_code", True)
+                    self.config.args.get("trust_remote_code", False)
                 ),
             }
             revision = self.config.args.get("revision")
@@ -94,7 +94,7 @@ class HuggingFaceGemma4VLMAdapter(HuggingFaceAdapter):
             torch = importlib.import_module("torch")
             model_kwargs: dict[str, Any] = {
                 "trust_remote_code": bool(
-                    self.config.args.get("trust_remote_code", True)
+                    self.config.args.get("trust_remote_code", False)
                 ),
             }
             revision = self.config.args.get("revision")

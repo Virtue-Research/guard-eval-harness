@@ -21,10 +21,13 @@ dependencies = [
 [project.optional-dependencies]
 hf = [
   "accelerate>=0.30",
-  "Pillow>=10.0",
+  "Pillow>=10.3",
   "sentencepiece>=0.2",
   "torch>=2.6.0",
-  "transformers>=4.41",
+  # >=4.50 clears the CVE-2024-11392/11393/11394 buffer-overflow trio
+  # (fixed in 4.46) plus ReDoS / input-validation advisories
+  # (CVE-2024-12720, CVE-2025-1194) that cluster in 4.46-4.49.
+  "transformers>=4.50",
 ]
 audio = [
   "librosa>=0.10",
@@ -36,7 +39,9 @@ vllm = [
   # Note: vLLM 0.18.0 has a torch.compile bug (pytorch#176562) that
   # breaks CUDA graph capture; pin <0.18 until a fixed release ships.
   "vllm>=0.14.1,<0.18",
-  "transformers>=4.41",
+  # See note above on the hf extra — bumped to clear CVE-2024-11392/11393/11394
+  # and the ReDoS / validation advisories in 4.46-4.49.
+  "transformers>=4.50",
 ]
 api = [
   "tenacity>=8.2",
