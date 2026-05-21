@@ -77,26 +77,7 @@ geh run --pack jailbreak --model hf --model-name meta-llama/Llama-Guard-3-8B
 Choose this when the question is "how does this model do on a standard starter
 suite?" rather than "how does it do on one dataset?"
 
-## 6. Run Code Vulnerability Evaluation
-
-Config file:
-
-```text
-examples/code-vuln/run-vulnllm-r-openai.yaml
-```
-
-Run it with:
-
-```bash
-pip install -e ".[api]"
-export OPENAI_API_KEY=sk-...
-geh run --config examples/code-vuln/run-vulnllm-r-openai.yaml
-```
-
-This is the cleanest starting point for repository-level and function-level
-code security benchmarks.
-
-## 7. Validate A Config Before Spending GPU Or API Time
+## 6. Validate A Config Before Spending GPU Or API Time
 
 ```bash
 geh validate --config examples/run-mock-jsonl.yaml

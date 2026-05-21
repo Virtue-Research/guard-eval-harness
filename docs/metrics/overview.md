@@ -92,6 +92,3 @@ If a model adapter fails on some samples (with `drop_failed_predictions: true`),
 | 5–20% | Warning logged |
 | > 20% | Run flagged as `"partial"` in manifest |
 
-## Code Vulnerability Metrics
-
-For code benchmarks, additional specialized metrics are computed beyond binary classification, including per-vulnerability-type breakdowns (SQL injection, XSS, buffer overflow, etc.).

@@ -77,7 +77,6 @@ class HttpAdapterTest(unittest.TestCase):
         self.assertTrue(adapter.capabilities.batching)
         self.assertTrue(adapter.capabilities.probability_scores)
         self.assertTrue(adapter.capabilities.concurrency)
-        self.assertIn("code", adapter.capabilities.supported_input_modalities)
         self.assertTrue(adapter.capabilities.supports_category_outputs)
 
     def test_predict_batch_extracts_judge_categories(self) -> None:

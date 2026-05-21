@@ -103,41 +103,6 @@ class EmptyDataset(DatasetAdapter):
         return []
 
 
-class CodeMetricEligibleDataset(DatasetAdapter):
-    """Test-only dataset that opts into code-vuln metrics."""
-
-    def load(self) -> list[NormalizedSample]:
-        return [
-            NormalizedSample(
-                id="code-metric-1",
-                dataset=self.config.name,
-                split=self.config.split,
-                messages=[{"role": "user", "content": "code"}],
-                label={"unsafe": True},
-                category_labels=("CWE-79",),
-            ),
-            NormalizedSample(
-                id="code-metric-2",
-                dataset=self.config.name,
-                split=self.config.split,
-                messages=[{"role": "user", "content": "code"}],
-                label={"unsafe": True},
-                category_labels=("CWE-79",),
-            ),
-        ]
-
-    def describe(self, samples):
-        meta = super().describe(samples)
-        eligibility = dict(meta.metric_eligibility)
-        eligibility["code_vuln"] = True
-        return meta.model_copy(
-            update={
-                "input_modalities": ("code",),
-                "metric_eligibility": eligibility,
-            }
-        )
-
-
 class BuiltinPredictMetadataDataset(SourceBackedDatasetAdapter):
     """Source-backed dataset with built-in model-visible metadata."""
 
@@ -325,12 +290,6 @@ if "limit_aware" not in dataset_registry:
 
 if "empty_dataset" not in dataset_registry:
     dataset_registry.register("empty_dataset", target=EmptyDataset)
-
-if "code_metric_eligible" not in dataset_registry:
-    dataset_registry.register(
-        "code_metric_eligible",
-        target=CodeMetricEligibleDataset,
-    )
 
 if "builtin_predict_metadata" not in dataset_registry:
     dataset_registry.register(
@@ -599,91 +558,6 @@ class RunnerIntegrationTest(unittest.TestCase):
             resolved.datasets[0].options["model_name"],
             "custom-model",
         )
-
-    def test_runner_uses_dataset_metric_eligibility_for_code_metrics(
-        self,
-    ) -> None:
-        with tempfile.TemporaryDirectory() as tmpdir:
-            root = Path(tmpdir)
-            config = load_config(
-                {
-                    "version": 1,
-                    "run_name": "code-metric-test",
-                    "threshold": 0.5,
-                    "model": {"adapter": "category_echo"},
-                    "datasets": [
-                        {
-                            "name": "code_metric_demo",
-                            "adapter": "code_metric_eligible",
-                        }
-                    ],
-                    "output": {"run_dir": (root / "run").as_posix()},
-                },
-                base_dir=root.as_posix(),
-            )
-
-            result = run_benchmark(config)
-
-            metrics = json.loads(
-                (
-                    Path(result.run_dir)
-                    / "datasets"
-                    / "code_metric_demo"
-                    / "metrics.json"
-                ).read_text(encoding="utf-8")
-            )
-            self.assertIn("code_vuln", metrics)
-            self.assertEqual(metrics["code_vuln"]["tp"], 2)
-
-    def test_runner_code_vuln_excludes_dropped_predictions(
-        self,
-    ) -> None:
-        """code_vuln metrics should only count evaluated samples.
-
-        Dropped predictions (e.g. from API rate limiting) must not be
-        penalized as false negatives — they should be excluded from
-        the metric computation entirely.
-        """
-        with tempfile.TemporaryDirectory() as tmpdir:
-            root = Path(tmpdir)
-            config = load_config(
-                {
-                    "version": 1,
-                    "run_name": "code-metric-missing",
-                    "threshold": 0.5,
-                    "model": {
-                        "adapter": "category_echo",
-                        "args": {
-                            "allow_partial_predictions": True,
-                            "drop_last_prediction": True,
-                        },
-                    },
-                    "datasets": [
-                        {
-                            "name": "code_metric_missing",
-                            "adapter": "code_metric_eligible",
-                        }
-                    ],
-                    "execution": {"batch_size": 2},
-                    "output": {"run_dir": (root / "run").as_posix()},
-                },
-                base_dir=root.as_posix(),
-            )
-
-            result = run_benchmark(config)
-
-            metrics = json.loads(
-                (
-                    Path(result.run_dir)
-                    / "datasets"
-                    / "code_metric_missing"
-                    / "metrics.json"
-                ).read_text(encoding="utf-8")
-            )
-            # Only the 1 evaluated sample should be counted;
-            # the dropped sample must not appear as fn.
-            self.assertEqual(metrics["code_vuln"]["count"], 1)
-            self.assertEqual(metrics["code_vuln"]["tp"], 1)
 
     def test_run_redacts_sensitive_values_in_artifacts(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:

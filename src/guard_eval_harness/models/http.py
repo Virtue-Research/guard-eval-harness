@@ -83,7 +83,7 @@ class HttpAdapter(ModelAdapter):
             concurrency=concurrency > 1,
             cost_estimation=False,
             token_accounting=False,
-            supported_input_modalities=("text", "code"),
+            supported_input_modalities=("text",),
             supports_category_outputs=True,
             notes=("generic-http",),
         )

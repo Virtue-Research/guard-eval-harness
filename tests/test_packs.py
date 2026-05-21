@@ -30,7 +30,6 @@ class PackRegistryTest(unittest.TestCase):
             sorted(names),
             [
                 "audio",
-                "code_vuln",
                 "core",
                 "hate_harassment",
                 "jailbreak",
