@@ -38,9 +38,6 @@ from guard_eval_harness.metrics.binary import (
     validate_binary_prediction_set,
     validate_binary_prediction_set_partial,
 )
-from guard_eval_harness.metrics.code_vuln import (
-    compute_code_vuln_metrics,
-)
 from guard_eval_harness.registry import ensure_builtin_registrations
 from guard_eval_harness.registry import dataset_registry, model_registry
 from guard_eval_harness.reports import build_summary, write_html_report
@@ -691,16 +688,6 @@ def run_benchmark(
                 f"{exc}"
             ) from exc
 
-        if metadata.metric_eligibility.get("code_vuln", False):
-            metrics["code_vuln"] = compute_code_vuln_metrics(
-                evaluated_samples,
-                predictions,
-            )
-            if dropped_sample_ids:
-                metrics["code_vuln"]["dropped_sample_count"] = len(
-                    dropped_sample_ids
-                )
-                metrics["code_vuln"]["total_dataset_samples"] = len(samples)
         metadata_payload = dict(metadata.metadata)
         metadata_payload["evaluated_sample_count"] = len(
             evaluated_samples,

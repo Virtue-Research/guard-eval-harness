@@ -25,7 +25,6 @@ geh list packs
 | `toxicity` | 7 | moderation quality and toxicity filtering |
 | `hate_harassment` | 11 | abuse, harassment, and hate-speech detection |
 | `prompt_injection` | 6 | prompt override and policy-evasion attacks |
-| `code_vuln` | 4 | code vulnerability detection |
 | `audio` | 1 | native audio safety models |
 
 ## Pack Details
@@ -94,11 +93,6 @@ Representative datasets include:
 - `mitre`
 - `tdc_red_teaming`
 
-### `code_vuln`
-
-Curated code-security entry point based on VulnLLM-R style datasets across
-multiple languages.
-
 ### `audio`
 
 A minimal audio-first entry point for models that operate directly on audio
@@ -110,7 +104,6 @@ instead of relying on text-only moderation.
 geh run --pack core --model mock
 geh run --pack jailbreak --model hf --model-name meta-llama/Llama-Guard-3-8B
 geh run --pack toxicity --model openai_moderation --threshold 0.6
-geh run --pack code_vuln --model openai_compatible --model-name gpt-4o
 ```
 
 ## What A Pack Stores

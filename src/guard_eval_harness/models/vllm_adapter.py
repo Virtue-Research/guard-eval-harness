@@ -234,9 +234,9 @@ class VLLMAdapter(ModelAdapter):
             cost_estimation=False,
             token_accounting=False,
             supported_input_modalities=(
-                ("text", "image", "code")
+                ("text", "image")
                 if task == "text-generation"
-                else ("text", "code")
+                else ("text",)
             ),
             supports_category_outputs=True,
             notes=("vllm-offline",),

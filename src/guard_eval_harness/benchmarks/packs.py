@@ -281,43 +281,6 @@ _HATE_HARASSMENT_V1 = PackManifest(
     ),
 )
 
-_CODE_VULN_V1 = PackManifest(
-    name="code_vuln",
-    version="v1",
-    description=(
-        "Code vulnerability detection benchmarks from the "
-        "VulnLLM-R evaluation suite.  Tests a model's ability "
-        "to identify vulnerable code across C, Python, and "
-        "Java with CWE-level categorization."
-    ),
-    datasets=(
-        PresetDataset(
-            name="vulnllm_r_function_level_c",
-            adapter="vulnllm_r_function_level",
-            split="function_level",
-            options={"language": "c"},
-        ),
-        PresetDataset(
-            name="vulnllm_r_function_level_python",
-            adapter="vulnllm_r_function_level",
-            split="function_level",
-            options={"language": "python"},
-        ),
-        PresetDataset(
-            name="vulnllm_r_function_level_java",
-            adapter="vulnllm_r_function_level",
-            split="function_level",
-            options={"language": "java"},
-        ),
-        PresetDataset(
-            name="vulnllm_r_repo_level",
-            adapter="vulnllm_r_repo_level",
-            split="repo_level",
-            options={"language": "java"},
-        ),
-    ),
-)
-
 _PROMPT_INJECTION_V1 = PackManifest(
     name="prompt_injection",
     version="v1",
@@ -387,8 +350,6 @@ _PACKS: dict[str, PackManifest] = {
     "hate_harassment-v1": _HATE_HARASSMENT_V1,
     "prompt_injection": _PROMPT_INJECTION_V1,
     "prompt_injection-v1": _PROMPT_INJECTION_V1,
-    "code_vuln": _CODE_VULN_V1,
-    "code_vuln-v1": _CODE_VULN_V1,
 }
 
 

@@ -60,7 +60,7 @@ class AnthropicAdapter(ModelAdapter):
             concurrency=concurrency > 1,
             cost_estimation=False,
             token_accounting=True,
-            supported_input_modalities=("text", "image", "code"),
+            supported_input_modalities=("text", "image"),
         )
 
     def _model_name(self) -> str:

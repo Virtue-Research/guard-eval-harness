@@ -235,7 +235,6 @@ class OpenAICompatibleAdapterTest(unittest.TestCase):
         self.assertTrue(adapter.capabilities.batching)
         self.assertTrue(adapter.capabilities.probability_scores)
         self.assertIn("image", adapter.capabilities.supported_input_modalities)
-        self.assertIn("code", adapter.capabilities.supported_input_modalities)
         self.assertTrue(adapter.capabilities.supports_category_outputs)
 
     def test_predict_batch_builds_multimodal_chat_request(self) -> None:

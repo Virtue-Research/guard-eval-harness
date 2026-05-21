@@ -53,7 +53,6 @@ class HuggingFaceAdapterTest(unittest.TestCase):
 
         self.assertTrue(adapter.capabilities.batching)
         self.assertTrue(adapter.capabilities.probability_scores)
-        self.assertIn("code", adapter.capabilities.supported_input_modalities)
         self.assertTrue(adapter.capabilities.supports_category_outputs)
 
     def test_generated_text_output_maps_to_binary_score(self) -> None:

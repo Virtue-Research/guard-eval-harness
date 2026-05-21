@@ -116,7 +116,6 @@ class VLLMAdapterTest(unittest.TestCase):
         self.assertFalse(caps.probability_scores)
         self.assertFalse(caps.concurrency)
         self.assertEqual(caps.adapter_name, "vllm")
-        self.assertIn("code", caps.supported_input_modalities)
         self.assertTrue(caps.supports_category_outputs)
 
     def test_generation_capabilities_include_image(self) -> None:

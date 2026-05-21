@@ -14,7 +14,6 @@ same sample contract so model comparisons stay consistent across modalities.
 | prompt injection attacks | `prompt_injection` pack |
 | image safety | [Image benchmarks](image.md) or `local_image_jsonl` |
 | audio safety | [Audio benchmarks](audio.md) or `local_audio_jsonl` |
-| code vulnerability detection | [Code benchmarks](code.md) or `code_vuln` pack |
 
 ## Modalities
 
@@ -23,7 +22,6 @@ same sample contract so model comparisons stay consistent across modalities.
 | text | [Text benchmarks](text.md) | refusal, toxicity, abuse, jailbreaks |
 | image | [Image benchmarks](image.md) | multimodal moderation and visual attacks |
 | audio | [Audio benchmarks](audio.md) | speech or native audio safety models |
-| code | [Code benchmarks](code.md) | insecure code detection |
 | local | [Local data](local.md) | bring your own production-shaped data |
 
 ## The Normalized Sample Shape
