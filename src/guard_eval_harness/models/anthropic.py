@@ -7,8 +7,6 @@ import time
 from typing import Any, Mapping, Sequence
 from urllib import error as urllib_error
 
-import httpx
-
 from guard_eval_harness.models._async_dispatch import run_async_batch
 from guard_eval_harness.models.base import ModelAdapter
 from guard_eval_harness.models.templates import (
@@ -28,6 +26,9 @@ from guard_eval_harness.schemas import (
     NormalizedPrediction,
     PredictSample,
 )
+
+import httpx
+from tqdm import tqdm
 
 _MAX_CONCURRENCY = 2000
 _AUTH_FAILURE_CODES = {401, 403}
@@ -251,6 +252,18 @@ class AnthropicAdapter(ModelAdapter):
                 messages.append(
                     {"role": msg["role"], "content": content}
                 )
+        user_prompt_template = self.config.args.get("user_prompt_template")
+        if user_prompt_template and not prompt_template:
+            if sample_has_media(sample):
+                raise ValueError(
+                    "user_prompt_template would drop image/media content; "
+                    "remove user_prompt_template or use a text-only dataset"
+                )
+            rendered_user = str(
+                render_value(user_prompt_template, context)
+            )
+            messages = [{"role": "user", "content": rendered_user}]
+            system_parts.clear()
         config_system = self.config.args.get("system_prompt")
         if config_system:
             rendered = str(
@@ -344,6 +357,7 @@ class AnthropicAdapter(ModelAdapter):
             "adapter": self.adapter_name,
             "endpoint": endpoint,
             "model_name": self._model_name(),
+            "generated_text": response_text,
         }
         if usage:
             metadata["usage"] = usage
@@ -443,7 +457,7 @@ class AnthropicAdapter(ModelAdapter):
 
         if concurrency <= 1:
             predictions: list[NormalizedPrediction] = []
-            for sample in samples:
+            for sample in tqdm(samples, desc=self.config.model_name, unit="sample"):
                 try:
                     predictions.append(
                         self._predict_one(
@@ -511,14 +525,13 @@ class AnthropicAdapter(ModelAdapter):
                 threshold=threshold,
             )
 
-        raw_results = run_async_batch(
+        results = run_async_batch(
             _factory,
             remaining_samples,
             concurrency=concurrency,
             timeout=timeout,
         )
-
-        for idx, result in enumerate(raw_results):
+        for idx, result in enumerate(results):
             original_idx = idx + offset
             if isinstance(result, BaseException):
                 self._raise_for_auth_error(result)

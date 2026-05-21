@@ -8,6 +8,7 @@ from typing import Any, Mapping, Sequence
 from urllib import error as urllib_error
 
 import httpx
+from tqdm import tqdm
 
 from guard_eval_harness.models._async_dispatch import run_async_batch
 from guard_eval_harness.models.base import ModelAdapter
@@ -189,8 +190,10 @@ class OpenAICompatibleAdapter(ModelAdapter):
         )
         payload: dict[str, Any] = {
             "model": self._model_name(),
-            "temperature": float(self.config.args.get("temperature", 0.0)),
         }
+        temperature = self.config.args.get("temperature", 0.0)
+        if temperature is not None and temperature is not False:
+            payload["temperature"] = float(temperature)
         if max_completion_tokens is not None and mode != "completions":
             payload["max_completion_tokens"] = int(max_completion_tokens)
         else:
@@ -361,6 +364,7 @@ class OpenAICompatibleAdapter(ModelAdapter):
             "endpoint": endpoint,
             "model_name": self._model_name(),
             "mode": self._mode(),
+            "generated_text": response_text,
         }
         if usage:
             metadata["usage"] = usage
@@ -463,7 +467,7 @@ class OpenAICompatibleAdapter(ModelAdapter):
             predictions: list[NormalizedPrediction] = []
             failed_id: str | None = None
             last_exc: Exception | None = None
-            for sample in samples:
+            for sample in tqdm(samples, desc=self.config.model_name, unit="sample"):
                 try:
                     predictions.append(
                         self._predict_one(
@@ -556,14 +560,13 @@ class OpenAICompatibleAdapter(ModelAdapter):
                 threshold=threshold,
             )
 
-        raw_results = run_async_batch(
+        results = run_async_batch(
             _factory,
             remaining_samples,
             concurrency=concurrency,
             timeout=timeout,
         )
-
-        for idx, result in enumerate(raw_results):
+        for idx, result in enumerate(results):
             original_idx = idx + offset
             if isinstance(result, BaseException):
                 self._raise_for_auth_error(result)
