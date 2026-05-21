@@ -98,6 +98,59 @@ class OpenAICompatibleAdapterTest(unittest.TestCase):
         self.assertEqual(headers["X-Test"], "1")
         self.assertEqual(headers["Authorization"], "Bearer token-123")
 
+    def test_temperature_included_by_default(self) -> None:
+        config = ResolvedModelConfig(
+            adapter="openai_compatible",
+            model_name="demo-openai",
+            args={
+                "url": "https://example.test/v1/chat/completions",
+                "api_key": "token-123",
+            },
+        )
+        adapter = OpenAICompatibleAdapter.from_config(config)
+        with patch(_MOCK_PATCH, return_value={"score": 0.1}) as mock_post:
+            adapter.predict_batch([_sample()], threshold=0.5)
+        payload = mock_post.call_args.args[1]
+        self.assertEqual(payload["temperature"], 0.0)
+
+    def test_temperature_omitted_when_null(self) -> None:
+        """Reasoning models (e.g. GPT-5.4 high) reject a temperature field."""
+        config = ResolvedModelConfig(
+            adapter="openai_compatible",
+            model_name="demo-reasoning",
+            args={
+                "url": "https://example.test/v1/chat/completions",
+                "api_key": "token-123",
+                "temperature": None,
+            },
+        )
+        adapter = OpenAICompatibleAdapter.from_config(config)
+        with patch(_MOCK_PATCH, return_value={"score": 0.1}) as mock_post:
+            adapter.predict_batch([_sample()], threshold=0.5)
+        payload = mock_post.call_args.args[1]
+        self.assertNotIn("temperature", payload)
+
+    def test_generated_text_recorded_in_metadata(self) -> None:
+        config = ResolvedModelConfig(
+            adapter="openai_compatible",
+            model_name="demo-openai",
+            args={
+                "url": "https://example.test/v1/chat/completions",
+                "api_key": "token-123",
+            },
+        )
+        adapter = OpenAICompatibleAdapter.from_config(config)
+        response = {
+            "choices": [
+                {"message": {"role": "assistant", "content": "unsafe"}}
+            ]
+        }
+        with patch(_MOCK_PATCH, return_value=response):
+            predictions = adapter.predict_batch([_sample()], threshold=0.5)
+        self.assertEqual(
+            predictions[0].metadata["generated_text"], "unsafe"
+        )
+
     def test_missing_openai_api_key_raises_before_request(self) -> None:
         config = ResolvedModelConfig(
             adapter="openai_compatible",

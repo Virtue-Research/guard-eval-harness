@@ -184,5 +184,114 @@ class AnthropicAdapterCacheSystemPromptTest(unittest.TestCase):
         )
 
 
+_PNG_PIXEL = (
+    "data:image/png;base64,"
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMA"
+    "ASsJTYQAAAAASUVORK5CYII="
+)
+
+
+def _media_sample() -> NormalizedSample:
+    """A sample carrying an inline image part."""
+    return NormalizedSample(
+        id="sample-img",
+        dataset="demo",
+        split="test",
+        messages=[
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": "classify"},
+                    {"type": "image_url", "image_url": {"url": _PNG_PIXEL}},
+                ],
+            }
+        ],
+        label={"unsafe": False},
+    )
+
+
+def _template_adapter(**args) -> AnthropicAdapter:
+    config = ResolvedModelConfig(
+        adapter="anthropic",
+        model_name="claude-haiku-4-5-20251001",
+        args={"api_key": "sk-test", **args},
+    )
+    return AnthropicAdapter.from_config(config)
+
+
+class AnthropicAdapterPromptTemplateTest(unittest.TestCase):
+    """Cover prompt_template and user_prompt_template handling.
+
+    These two knobs collapse the conversation to a single user turn in
+    different ways; both must keep working and the multimodal guards
+    must fire so image content is never silently dropped.
+    """
+
+    def test_prompt_template_renders_single_user_turn(self) -> None:
+        adapter = _template_adapter(prompt_template="JUDGE: {messages_text}")
+        payload = adapter._request_payload(_sample(content="is this safe?"))
+        self.assertEqual(len(payload["messages"]), 1)
+        self.assertEqual(payload["messages"][0]["role"], "user")
+        self.assertIn("JUDGE:", str(payload["messages"][0]["content"]))
+
+    def test_prompt_template_rejects_media_by_default(self) -> None:
+        adapter = _template_adapter(prompt_template="JUDGE: {messages_text}")
+        with self.assertRaisesRegex(ValueError, "drop image content"):
+            adapter._request_payload(_media_sample())
+
+    def test_prompt_template_text_only_mode_allows_media(self) -> None:
+        adapter = _template_adapter(
+            prompt_template="JUDGE: {messages_text}",
+            prompt_template_multimodal_mode="text_only",
+        )
+        payload = adapter._request_payload(_media_sample())
+        self.assertEqual(len(payload["messages"]), 1)
+
+    def test_invalid_multimodal_mode_raises(self) -> None:
+        adapter = _template_adapter(
+            prompt_template="JUDGE: {messages_text}",
+            prompt_template_multimodal_mode="bogus",
+        )
+        with self.assertRaisesRegex(ValueError, "error.*text_only"):
+            adapter._request_payload(_media_sample())
+
+    def test_user_prompt_template_renders_single_user_turn(self) -> None:
+        adapter = _template_adapter(
+            user_prompt_template="UPT: {messages_text}",
+            system_prompt="SYS",
+        )
+        payload = adapter._request_payload(_sample(content="is this safe?"))
+        self.assertEqual(len(payload["messages"]), 1)
+        self.assertIn("UPT:", str(payload["messages"][0]["content"]))
+        self.assertEqual(payload["system"], "SYS")
+
+    def test_user_prompt_template_rejects_media(self) -> None:
+        adapter = _template_adapter(user_prompt_template="UPT: {messages_text}")
+        with self.assertRaisesRegex(ValueError, "drop image/media"):
+            adapter._request_payload(_media_sample())
+
+    def test_prompt_template_takes_precedence_over_user_prompt_template(
+        self,
+    ) -> None:
+        adapter = _template_adapter(
+            prompt_template="JUDGE: {messages_text}",
+            user_prompt_template="UPT: {messages_text}",
+        )
+        payload = adapter._request_payload(_sample())
+        self.assertIn("JUDGE:", str(payload["messages"][0]["content"]))
+
+    def test_generated_text_recorded_in_metadata(self) -> None:
+        adapter = _template_adapter(prompt_template="{messages_text}")
+        response = {
+            "content": [{"type": "text", "text": "unsafe"}],
+            "usage": {"input_tokens": 5, "output_tokens": 1},
+        }
+        with patch(_MOCK_PATCH, return_value=response):
+            predictions = adapter.predict_batch([_sample()], threshold=0.5)
+        self.assertEqual(
+            predictions[0].metadata["generated_text"], "unsafe"
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
