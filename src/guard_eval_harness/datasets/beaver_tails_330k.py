@@ -1,11 +1,9 @@
 """Source-backed BeaverTails 330k dataset adapter."""
 
-from __future__ import annotations
-
 from collections import defaultdict
 
-from guard_eval_harness.datasets.source_backed import (
-    SourceBackedDatasetAdapter,
+from guard_eval_harness.datasets.base import (
+    DatasetAdapter,
     load_hf_rows,
 )
 from guard_eval_harness.registry import dataset_registry
@@ -21,7 +19,7 @@ def _active_categories(category_mapping: dict[str, bool]) -> tuple[str, ...]:
 
 
 @dataset_registry.register("beaver_tails_330k")
-class BeaverTailsDataset(SourceBackedDatasetAdapter):
+class BeaverTailsDataset(DatasetAdapter):
     """Load the BeaverTails 330k test split and deduplicate prompt/response pairs."""
 
     display_name = "BeaverTails 330k"

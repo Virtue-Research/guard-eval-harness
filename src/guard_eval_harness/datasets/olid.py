@@ -1,9 +1,7 @@
 """Source-backed OLID dataset adapter."""
 
-from __future__ import annotations
-
-from guard_eval_harness.datasets.source_backed import (
-    SourceBackedDatasetAdapter,
+from guard_eval_harness.datasets.base import (
+    DatasetAdapter,
     load_hf_rows,
 )
 from guard_eval_harness.registry import dataset_registry
@@ -12,7 +10,7 @@ _REVISION = "37262ae493ed725b68b93aab1632b8207760dc8f"
 
 
 @dataset_registry.register("olid")
-class OlidDataset(SourceBackedDatasetAdapter):
+class OlidDataset(DatasetAdapter):
     """Load the Offensive Language Identification Dataset."""
 
     display_name = "OLID"

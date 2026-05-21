@@ -1,11 +1,9 @@
 """Multimodal UnsafeBench dataset adapter."""
 
-from __future__ import annotations
-
 import importlib
 
-from guard_eval_harness.datasets.multimodal_base import (
-    MultimodalDatasetAdapter,
+from guard_eval_harness.datasets.image_base import (
+    ImageDatasetAdapter,
 )
 from guard_eval_harness.registry import dataset_registry
 from guard_eval_harness.schemas import NormalizedSample, UnsafeLabel
@@ -15,7 +13,7 @@ _REVISION = "9f4560ae90059237eb5eafc6bd8108c78639d180"
 
 
 @dataset_registry.register("unsafebench")
-class UnsafeBenchDataset(MultimodalDatasetAdapter):
+class UnsafeBenchDataset(ImageDatasetAdapter):
     """Load UnsafeBench as image-only binary safety samples."""
 
     display_name = "UnsafeBench"

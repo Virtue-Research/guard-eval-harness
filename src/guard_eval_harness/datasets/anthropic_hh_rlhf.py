@@ -1,9 +1,7 @@
 """Source-backed Anthropic HH-RLHF Harmless adapter."""
 
-from __future__ import annotations
-
-from guard_eval_harness.datasets.source_backed import (
-    SourceBackedDatasetAdapter,
+from guard_eval_harness.datasets.base import (
+    DatasetAdapter,
     load_hf_rows,
 )
 from guard_eval_harness.registry import dataset_registry
@@ -36,7 +34,7 @@ def _parse_conversation(
 
 
 @dataset_registry.register("anthropic_hh_rlhf")
-class AnthropicHHRLHFDataset(SourceBackedDatasetAdapter):
+class AnthropicHHRLHFDataset(DatasetAdapter):
     """Load Anthropic HH-RLHF harmless subset from HF."""
 
     display_name = "Anthropic HH-RLHF Harmless"

@@ -1,9 +1,7 @@
 """Source-backed XSTest dataset adapter."""
 
-from __future__ import annotations
-
-from guard_eval_harness.datasets.source_backed import (
-    SourceBackedDatasetAdapter,
+from guard_eval_harness.datasets.base import (
+    DatasetAdapter,
     load_csv_rows,
 )
 from guard_eval_harness.registry import dataset_registry
@@ -17,7 +15,7 @@ _FILENAME = "xstest_v2_prompts.csv"
 
 
 @dataset_registry.register("xstest")
-class XSTestDataset(SourceBackedDatasetAdapter):
+class XSTestDataset(DatasetAdapter):
     """Load the full XSTest v2 prompt suite."""
 
     display_name = "XSTest"

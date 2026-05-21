@@ -1,11 +1,9 @@
 """HoliSafe-Bench multimodal safety benchmark adapter."""
 
-from __future__ import annotations
-
 from typing import Any
 
-from guard_eval_harness.datasets.multimodal_source_backed import (
-    SourceBackedMultimodalDatasetAdapter,
+from guard_eval_harness.datasets.image_base import (
+    ImageDatasetAdapter,
 )
 from guard_eval_harness.registry import dataset_registry
 from guard_eval_harness.schemas import (
@@ -38,7 +36,7 @@ def _is_unsafe_by_risk_type(risk_type: str) -> bool:
 
 @dataset_registry.register("holisafe_bench")
 class HoliSafeBenchDataset(
-    SourceBackedMultimodalDatasetAdapter,
+    ImageDatasetAdapter,
 ):
     """Load HoliSafe-Bench as text+image safety samples."""
 

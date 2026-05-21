@@ -1,12 +1,10 @@
 """Tests for built-in dataset adapters."""
 
-from __future__ import annotations
-
 import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from guard_eval_harness.config.models import ResolvedDatasetConfig
+from guard_eval_harness.config import ResolvedDatasetConfig
 from guard_eval_harness.registry import dataset_registry, ensure_builtin_registrations
 
 

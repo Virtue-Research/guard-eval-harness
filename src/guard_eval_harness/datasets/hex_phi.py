@@ -1,11 +1,9 @@
 """Source-backed HEx-PHI dataset adapter."""
 
-from __future__ import annotations
-
 from typing import Any
 
-from guard_eval_harness.datasets.source_backed import (
-    SourceBackedDatasetAdapter,
+from guard_eval_harness.datasets.base import (
+    DatasetAdapter,
 )
 from guard_eval_harness.registry import dataset_registry
 
@@ -55,7 +53,7 @@ def _load_category_csv(
 
 
 @dataset_registry.register("hex_phi")
-class HExPHIDataset(SourceBackedDatasetAdapter):
+class HExPHIDataset(DatasetAdapter):
     """Load the HEx-PHI harmful question set from Hugging Face."""
 
     display_name = "HEx-PHI"

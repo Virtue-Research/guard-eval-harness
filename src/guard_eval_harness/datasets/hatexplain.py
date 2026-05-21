@@ -1,9 +1,7 @@
 """Source-backed HateXplain dataset adapter."""
 
-from __future__ import annotations
-
-from guard_eval_harness.datasets.source_backed import (
-    SourceBackedDatasetAdapter,
+from guard_eval_harness.datasets.base import (
+    DatasetAdapter,
     load_hf_rows,
 )
 from guard_eval_harness.registry import dataset_registry
@@ -45,7 +43,7 @@ def _label_balanced_rows(
 
 
 @dataset_registry.register("hatexplain")
-class HateXplainDataset(SourceBackedDatasetAdapter):
+class HateXplainDataset(DatasetAdapter):
     """Load the HateXplain hate-speech dataset from HF."""
 
     display_name = "HateXplain"

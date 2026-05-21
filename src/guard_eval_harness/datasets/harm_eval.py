@@ -1,9 +1,7 @@
 """Source-backed HarmEval dataset adapter."""
 
-from __future__ import annotations
-
-from guard_eval_harness.datasets.source_backed import (
-    SourceBackedDatasetAdapter,
+from guard_eval_harness.datasets.base import (
+    DatasetAdapter,
     load_hf_rows,
 )
 from guard_eval_harness.registry import dataset_registry
@@ -12,7 +10,7 @@ _REVISION = "d1f62d8c8a42b919d7466fcd1896dc9cdb8134c3"
 
 
 @dataset_registry.register("harm_eval")
-class HarmEvalDataset(SourceBackedDatasetAdapter):
+class HarmEvalDataset(DatasetAdapter):
     """Load the HarmEval harmful question set."""
 
     display_name = "HarmEval"

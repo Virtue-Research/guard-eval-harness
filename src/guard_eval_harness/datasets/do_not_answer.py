@@ -1,9 +1,7 @@
 """Source-backed DoNotAnswer dataset adapter."""
 
-from __future__ import annotations
-
-from guard_eval_harness.datasets.source_backed import (
-    SourceBackedDatasetAdapter,
+from guard_eval_harness.datasets.base import (
+    DatasetAdapter,
     load_hf_rows,
 )
 from guard_eval_harness.registry import dataset_registry
@@ -12,7 +10,7 @@ _REVISION = "74e74f2e4507ef256fe536f78a776f4a1ff67955"
 
 
 @dataset_registry.register("do_not_answer")
-class DoNotAnswerDataset(SourceBackedDatasetAdapter):
+class DoNotAnswerDataset(DatasetAdapter):
     """Load the public DoNotAnswer Hugging Face dataset."""
 
     display_name = "DoNotAnswer"

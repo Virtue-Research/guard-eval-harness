@@ -1,9 +1,7 @@
 """Hateful Memes image dataset adapter."""
 
-from __future__ import annotations
-
-from guard_eval_harness.datasets.multimodal_source_backed import (
-    SourceBackedMultimodalDatasetAdapter,
+from guard_eval_harness.datasets.image_base import (
+    ImageDatasetAdapter,
 )
 from guard_eval_harness.registry import dataset_registry
 from guard_eval_harness.schemas import NormalizedSample, UnsafeLabel
@@ -14,7 +12,7 @@ _REVISION = "a3b0091dc58efd09d3661335fe0d764ceb839690"
 
 
 @dataset_registry.register("hateful_memes")
-class HatefulMemesDataset(SourceBackedMultimodalDatasetAdapter):
+class HatefulMemesDataset(ImageDatasetAdapter):
     """Load Hateful Memes as binary image-safety samples."""
 
     display_name = "Hateful Memes"

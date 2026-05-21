@@ -1,11 +1,9 @@
 """Source-backed AgentHarm dataset adapter."""
 
-from __future__ import annotations
-
 from typing import Any
 
-from guard_eval_harness.datasets.source_backed import (
-    SourceBackedDatasetAdapter,
+from guard_eval_harness.datasets.base import (
+    DatasetAdapter,
     load_hf_rows,
 )
 from guard_eval_harness.registry import dataset_registry
@@ -19,7 +17,7 @@ _SUPPORTED_CONFIGS = {
 
 
 @dataset_registry.register("agent_harm")
-class AgentHarmDataset(SourceBackedDatasetAdapter):
+class AgentHarmDataset(DatasetAdapter):
     """Load the UK AISI AgentHarm benchmark.
 
     By default loads the ``harmful`` config.  Set

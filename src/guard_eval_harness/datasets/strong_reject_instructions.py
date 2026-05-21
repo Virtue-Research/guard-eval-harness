@@ -1,9 +1,7 @@
 """Source-backed StrongREJECT Instructions dataset adapter."""
 
-from __future__ import annotations
-
-from guard_eval_harness.datasets.source_backed import (
-    SourceBackedDatasetAdapter,
+from guard_eval_harness.datasets.base import (
+    DatasetAdapter,
     load_csv_rows,
 )
 from guard_eval_harness.registry import dataset_registry
@@ -17,7 +15,7 @@ _FILENAME = "strongreject_dataset.csv"
 
 
 @dataset_registry.register("strong_reject_instructions")
-class StrongRejectInstructionsDataset(SourceBackedDatasetAdapter):
+class StrongRejectInstructionsDataset(DatasetAdapter):
     """Load StrongREJECT prompts from the published CSV source."""
 
     display_name = "StrongREJECT Instructions"

@@ -8,6 +8,7 @@ examples/out/
 .local-tokenizers/
 tmp*.yaml
 *.lock
+!uv.lock
 
 # Claude Code
 .claude/

@@ -1,9 +1,7 @@
 """Source-backed TechHazardQA dataset adapter."""
 
-from __future__ import annotations
-
-from guard_eval_harness.datasets.source_backed import (
-    SourceBackedDatasetAdapter,
+from guard_eval_harness.datasets.base import (
+    DatasetAdapter,
     load_hf_rows,
 )
 from guard_eval_harness.registry import dataset_registry
@@ -12,7 +10,7 @@ _REVISION = "d100fa1222a7179e0f492813129054dc19195408"
 
 
 @dataset_registry.register("tech_hazard_qa")
-class TechHazardQADataset(SourceBackedDatasetAdapter):
+class TechHazardQADataset(DatasetAdapter):
     """Load the TechHazardQA harmful question set."""
 
     display_name = "TechHazardQA"

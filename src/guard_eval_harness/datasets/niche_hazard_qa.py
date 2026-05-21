@@ -1,9 +1,7 @@
 """Source-backed NicheHazardQA dataset adapter."""
 
-from __future__ import annotations
-
-from guard_eval_harness.datasets.source_backed import (
-    SourceBackedDatasetAdapter,
+from guard_eval_harness.datasets.base import (
+    DatasetAdapter,
     load_hf_rows,
 )
 from guard_eval_harness.registry import dataset_registry
@@ -12,7 +10,7 @@ _REVISION = "114a05b168027c3190dc4e2f3b558fe48e6092c8"
 
 
 @dataset_registry.register("niche_hazard_qa")
-class NicheHazardQADataset(SourceBackedDatasetAdapter):
+class NicheHazardQADataset(DatasetAdapter):
     """Load the NicheHazardQA harmful question set."""
 
     display_name = "NicheHazardQA"

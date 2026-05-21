@@ -1,9 +1,7 @@
 """Source-backed TweetEval Hate dataset adapter."""
 
-from __future__ import annotations
-
-from guard_eval_harness.datasets.source_backed import (
-    SourceBackedDatasetAdapter,
+from guard_eval_harness.datasets.base import (
+    DatasetAdapter,
     load_hf_rows,
 )
 from guard_eval_harness.registry import dataset_registry
@@ -12,7 +10,7 @@ _REVISION = "b3a375baf0f409c77e6bc7aa35102b7b3534f8be"
 
 
 @dataset_registry.register("tweet_eval_hate")
-class TweetEvalHateDataset(SourceBackedDatasetAdapter):
+class TweetEvalHateDataset(DatasetAdapter):
     """Load the TweetEval hate speech detection subset."""
 
     display_name = "TweetEval Hate"

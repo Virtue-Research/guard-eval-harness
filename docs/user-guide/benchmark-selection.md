@@ -12,8 +12,6 @@ matches your deployment risk, not just the model you happen to be testing.
 | prompt injection style attacks | `prompt_injection` pack | better fit for policy override and red-team inputs |
 | moderation quality | `toxicity` or `hate_harassment` | better signal for over-blocking and abuse detection |
 | image safety | `safe_vs_unsafe_image_edits`, `unsafebench`, or local image adapters | lets you test multimodal behavior directly |
-| code vulnerability detection | `code_vuln` pack | curated code-security entry point |
-| native audio safety | `audio` pack | built for audio-first moderation models |
 
 ## Recommended Starting Paths
 
@@ -52,15 +50,6 @@ Start with a single dataset before scaling up:
 - `unsafebench` for broader unsafe image safety checks
 - `local_image_jsonl` when you already have internal or bespoke image prompts
 
-### Code Vulnerability Evaluation
-
-If you are scoring models on insecure code detection instead of conversational
-moderation, start with:
-
-```bash
-geh run --pack code_vuln --model openai_compatible --model-name gpt-4o
-```
-
 ## How To Decide Between Packs And Individual Datasets
 
 Choose packs when:
@@ -84,10 +73,8 @@ Examples:
 
 - `xstest` plus `local_jsonl` for a refusal model
 - `unsafebench` plus `local_image_jsonl` for a multimodal guardrail
-- `code_vuln` plus a local CWE-labeled dataset for code review tooling
 
 ## Related References
 
-- [Benchmark Packs](benchmark-packs.md)
 - [Datasets Overview](../datasets/overview.md)
 - [Common Workflows](common-workflows.md)

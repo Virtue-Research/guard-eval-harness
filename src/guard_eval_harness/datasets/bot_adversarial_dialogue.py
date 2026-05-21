@@ -1,9 +1,7 @@
 """Source-backed Bot-Adversarial Dialogue dataset adapter."""
 
-from __future__ import annotations
-
-from guard_eval_harness.datasets.source_backed import (
-    SourceBackedDatasetAdapter,
+from guard_eval_harness.datasets.base import (
+    DatasetAdapter,
     load_hf_rows,
 )
 from guard_eval_harness.registry import dataset_registry
@@ -12,7 +10,7 @@ _REVISION = "main"
 
 
 @dataset_registry.register("bot_adversarial_dialogue")
-class BotAdversarialDialogueDataset(SourceBackedDatasetAdapter):
+class BotAdversarialDialogueDataset(DatasetAdapter):
     """Load the Bot-Adversarial Dialogue dataset from Hugging Face."""
 
     display_name = "Bot-Adversarial Dialogue"

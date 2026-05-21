@@ -1,7 +1,5 @@
 """Built-in OpenAI Moderation dataset adapter."""
 
-from __future__ import annotations
-
 from guard_eval_harness.datasets.base import DatasetAdapter
 from guard_eval_harness.registry import dataset_registry
 from guard_eval_harness.schemas import DatasetMetadata, NormalizedSample

@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "guard-eval-harness"
 version = "0.1.0"
-description = "CLI-first harness for safety and guardrail evaluation"
+description = "Lightweight harness for evaluating safety guards"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
@@ -19,6 +19,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# Local HF inference (chat-LLM guards, image-classifier guards, VLM guards).
 hf = [
   "accelerate>=0.30",
   "Pillow>=10.3",
@@ -29,30 +30,9 @@ hf = [
   # (CVE-2024-12720, CVE-2025-1194) that cluster in 4.46-4.49.
   "transformers>=4.50",
 ]
-audio = [
-  "librosa>=0.10",
-  "soundfile>=0.12",
-]
-vllm = [
-  # vLLM pins its own torch version (e.g. 0.17.x requires torch==2.10).
-  # Do NOT pin torch here — let vLLM's dependency resolver handle it.
-  # Note: vLLM 0.18.0 has a torch.compile bug (pytorch#176562) that
-  # breaks CUDA graph capture; pin <0.18 until a fixed release ships.
-  "vllm>=0.14.1,<0.18",
-  # See note above on the hf extra — bumped to clear CVE-2024-11392/11393/11394
-  # and the ReDoS / validation advisories in 4.46-4.49.
-  "transformers>=4.50",
-]
+# Hosted endpoints (OpenAI, vLLM OpenAI-compatible server, LiteLLM, …).
 api = [
   "tenacity>=8.2",
-]
-report = [
-  "jinja2>=3.1.6",
-  "pandas>=2.2",
-]
-sheets = [
-  "google-auth>=2.29",
-  "gspread>=6.1",
 ]
 dev = [
   "build>=1.2",
@@ -61,7 +41,7 @@ dev = [
 ]
 
 [project.scripts]
-geh = "guard_eval_harness.cli.main:main"
+geh = "guard_eval_harness.cli:main"
 
 [tool.setuptools]
 package-dir = { "" = "src" }
@@ -70,9 +50,6 @@ include-package-data = true
 [tool.setuptools.packages.find]
 where = ["src"]
 include = ["guard_eval_harness*"]
-
-[tool.setuptools.package-data]
-"guard_eval_harness.models" = ["catalog/*.yaml"]
 
 [tool.ruff]
 line-length = 80

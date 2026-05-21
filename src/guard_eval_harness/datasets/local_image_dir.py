@@ -1,12 +1,10 @@
 """Local directory adapter for image moderation datasets."""
 
-from __future__ import annotations
-
 from pathlib import Path
 from typing import Sequence
 
-from guard_eval_harness.datasets.multimodal_base import (
-    MultimodalDatasetAdapter,
+from guard_eval_harness.datasets.image_base import (
+    ImageDatasetAdapter,
 )
 from guard_eval_harness.registry import dataset_registry
 from guard_eval_harness.schemas import NormalizedSample, UnsafeLabel
@@ -38,7 +36,7 @@ def _bool_option(
 
 
 @dataset_registry.register("local_image_dir")
-class LocalImageDirDataset(MultimodalDatasetAdapter):
+class LocalImageDirDataset(ImageDatasetAdapter):
     """Load image-only or captioned images from a local directory tree."""
 
     def load(self) -> list[NormalizedSample]:

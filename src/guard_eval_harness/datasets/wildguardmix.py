@@ -1,11 +1,9 @@
 """Source-backed WildGuardMix dataset adapter."""
 
-from __future__ import annotations
-
 from typing import Any
 
-from guard_eval_harness.datasets.source_backed import (
-    SourceBackedDatasetAdapter,
+from guard_eval_harness.datasets.base import (
+    DatasetAdapter,
     load_hf_rows,
 )
 from guard_eval_harness.registry import dataset_registry
@@ -20,7 +18,7 @@ _SUPPORTED_TASKS = {"prompt_harm", "response_harm"}
 
 
 @dataset_registry.register("wildguardmix")
-class WildGuardMixDataset(SourceBackedDatasetAdapter):
+class WildGuardMixDataset(DatasetAdapter):
     """Load WildGuardMix prompt-harm or response-harm examples."""
 
     display_name = "WildGuardMix"

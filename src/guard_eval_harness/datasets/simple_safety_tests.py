@@ -1,9 +1,7 @@
 """Source-backed SimpleSafetyTests dataset adapter."""
 
-from __future__ import annotations
-
-from guard_eval_harness.datasets.source_backed import (
-    SourceBackedDatasetAdapter,
+from guard_eval_harness.datasets.base import (
+    DatasetAdapter,
     load_hf_rows,
 )
 from guard_eval_harness.registry import dataset_registry
@@ -12,7 +10,7 @@ _REVISION = "98223c5d8c4059c8f4d8fe2fec8720ee8a20d3c5"
 
 
 @dataset_registry.register("simple_safety_tests")
-class SimpleSafetyTestsDataset(SourceBackedDatasetAdapter):
+class SimpleSafetyTestsDataset(DatasetAdapter):
     """Load the SimpleSafetyTests prompt set."""
 
     display_name = "SimpleSafetyTests"

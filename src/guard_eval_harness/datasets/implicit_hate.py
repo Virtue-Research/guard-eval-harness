@@ -1,9 +1,7 @@
 """Source-backed Implicit Hate (stage 1) dataset adapter."""
 
-from __future__ import annotations
-
-from guard_eval_harness.datasets.source_backed import (
-    SourceBackedDatasetAdapter,
+from guard_eval_harness.datasets.base import (
+    DatasetAdapter,
     load_hf_rows,
 )
 from guard_eval_harness.registry import dataset_registry
@@ -12,7 +10,7 @@ _REVISION = "02f0834f16f2c0bbf38654378f29c26402e47d15"
 
 
 @dataset_registry.register("implicit_hate")
-class ImplicitHateDataset(SourceBackedDatasetAdapter):
+class ImplicitHateDataset(DatasetAdapter):
     """Load the Implicit Hate stage-1 classification dataset."""
 
     display_name = "Implicit Hate"

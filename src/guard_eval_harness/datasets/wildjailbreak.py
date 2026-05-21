@@ -1,11 +1,9 @@
 """Source-backed WildJailbreak dataset adapter."""
 
-from __future__ import annotations
-
 from typing import Any
 
-from guard_eval_harness.datasets.source_backed import (
-    SourceBackedDatasetAdapter,
+from guard_eval_harness.datasets.base import (
+    DatasetAdapter,
 )
 from guard_eval_harness.registry import dataset_registry
 
@@ -22,7 +20,7 @@ _HF_SPLIT_BY_CONFIG = {
 
 
 @dataset_registry.register("wildjailbreak")
-class WildJailbreakDataset(SourceBackedDatasetAdapter):
+class WildJailbreakDataset(DatasetAdapter):
     """Load AllenAI WildJailbreak jailbreak + benign prompts."""
 
     display_name = "WildJailbreak"

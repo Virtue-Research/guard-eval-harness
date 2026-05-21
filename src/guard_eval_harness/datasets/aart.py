@@ -1,9 +1,7 @@
 """Source-backed AART dataset adapter."""
 
-from __future__ import annotations
-
-from guard_eval_harness.datasets.source_backed import (
-    SourceBackedDatasetAdapter,
+from guard_eval_harness.datasets.base import (
+    DatasetAdapter,
     load_hf_rows,
 )
 from guard_eval_harness.registry import dataset_registry
@@ -12,7 +10,7 @@ _REVISION = "main"
 
 
 @dataset_registry.register("aart")
-class AARTDataset(SourceBackedDatasetAdapter):
+class AARTDataset(DatasetAdapter):
     """Load the AART AI-generated adversarial prompt set."""
 
     display_name = "AART"

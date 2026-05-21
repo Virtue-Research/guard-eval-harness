@@ -1,9 +1,7 @@
 """Source-backed MLCommons AILuminate dataset adapter."""
 
-from __future__ import annotations
-
-from guard_eval_harness.datasets.source_backed import (
-    SourceBackedDatasetAdapter,
+from guard_eval_harness.datasets.base import (
+    DatasetAdapter,
     load_csv_rows,
 )
 from guard_eval_harness.registry import dataset_registry
@@ -35,7 +33,7 @@ _HAZARD_LABELS = {
 
 
 @dataset_registry.register("mlcommons_ailuminate")
-class MLCommonsAILuminateDataset(SourceBackedDatasetAdapter):
+class MLCommonsAILuminateDataset(DatasetAdapter):
     """Load the MLCommons AILuminate demo prompt set."""
 
     display_name = "MLCommons AILuminate"

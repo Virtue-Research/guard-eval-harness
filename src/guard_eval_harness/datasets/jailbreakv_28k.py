@@ -1,12 +1,10 @@
 """JailBreakV-28K multimodal jailbreak dataset adapter."""
 
-from __future__ import annotations
-
 from pathlib import Path
 from typing import Any
 
-from guard_eval_harness.datasets.multimodal_source_backed import (
-    SourceBackedMultimodalDatasetAdapter,
+from guard_eval_harness.datasets.image_base import (
+    ImageDatasetAdapter,
 )
 from guard_eval_harness.registry import dataset_registry
 from guard_eval_harness.schemas import NormalizedSample, UnsafeLabel
@@ -46,7 +44,7 @@ def _bool_option(
 
 
 @dataset_registry.register("jailbreakv_28k")
-class JailBreakV28KDataset(SourceBackedMultimodalDatasetAdapter):
+class JailBreakV28KDataset(ImageDatasetAdapter):
     """Load JailBreakV-28K multimodal attack prompts."""
 
     display_name = "JailBreakV-28K"

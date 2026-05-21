@@ -1,9 +1,7 @@
 """Source-backed HarmfulQA Questions dataset adapter."""
 
-from __future__ import annotations
-
-from guard_eval_harness.datasets.source_backed import (
-    SourceBackedDatasetAdapter,
+from guard_eval_harness.datasets.base import (
+    DatasetAdapter,
     load_hf_rows,
 )
 from guard_eval_harness.registry import dataset_registry
@@ -13,7 +11,7 @@ _REVISION = "6f1a78aed47d16c0695e4595d0159abc38197bfd"
 
 
 @dataset_registry.register("harmful_qa_questions")
-class HarmfulQAQuestionsDataset(SourceBackedDatasetAdapter):
+class HarmfulQAQuestionsDataset(DatasetAdapter):
     """Load the HarmfulQA prompt-only question set."""
 
     display_name = "HarmfulQA Questions"

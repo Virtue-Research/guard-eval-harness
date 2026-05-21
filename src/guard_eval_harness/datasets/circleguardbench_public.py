@@ -1,11 +1,9 @@
 """Source-backed CircleGuardBench Public dataset adapter."""
 
-from __future__ import annotations
-
 from typing import Any
 
-from guard_eval_harness.datasets.source_backed import (
-    SourceBackedDatasetAdapter,
+from guard_eval_harness.datasets.base import (
+    DatasetAdapter,
     load_hf_rows,
 )
 from guard_eval_harness.registry import dataset_registry
@@ -16,7 +14,7 @@ _SUPPORTED_TASKS = {"prompt_harm", "default_response_harm"}
 
 
 @dataset_registry.register("circleguardbench_public")
-class CircleGuardBenchPublicDataset(SourceBackedDatasetAdapter):
+class CircleGuardBenchPublicDataset(DatasetAdapter):
     """Load prompt-harm or default-response views of CircleGuardBench."""
 
     display_name = "CircleGuardBench Public"

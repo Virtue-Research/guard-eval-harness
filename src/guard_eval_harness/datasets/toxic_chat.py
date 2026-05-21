@@ -1,9 +1,7 @@
 """Source-backed Toxic Chat dataset adapter."""
 
-from __future__ import annotations
-
-from guard_eval_harness.datasets.source_backed import (
-    SourceBackedDatasetAdapter,
+from guard_eval_harness.datasets.base import (
+    DatasetAdapter,
     load_hf_rows,
 )
 from guard_eval_harness.registry import dataset_registry
@@ -14,7 +12,7 @@ _REVISION = "29df8e4dba60e1f4af4b4075c0705c5b313548a8"
 
 
 @dataset_registry.register("toxic_chat")
-class ToxicChatDataset(SourceBackedDatasetAdapter):
+class ToxicChatDataset(DatasetAdapter):
     """Load the Toxic Chat dataset from Hugging Face."""
 
     display_name = "Toxic Chat"

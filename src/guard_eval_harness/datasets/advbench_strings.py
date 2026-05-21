@@ -1,9 +1,7 @@
 """Source-backed AdvBench Strings dataset adapter."""
 
-from __future__ import annotations
-
-from guard_eval_harness.datasets.source_backed import (
-    SourceBackedDatasetAdapter,
+from guard_eval_harness.datasets.base import (
+    DatasetAdapter,
     load_csv_rows,
 )
 from guard_eval_harness.registry import dataset_registry
@@ -17,7 +15,7 @@ _FILENAME = "harmful_strings.csv"
 
 
 @dataset_registry.register("advbench_strings")
-class AdvBenchStringsDataset(SourceBackedDatasetAdapter):
+class AdvBenchStringsDataset(DatasetAdapter):
     """Load the AdvBench harmful string set."""
 
     display_name = "AdvBench Strings"

@@ -1,9 +1,7 @@
 """Source-backed SALAD-Bench dataset adapter."""
 
-from __future__ import annotations
-
-from guard_eval_harness.datasets.source_backed import (
-    SourceBackedDatasetAdapter,
+from guard_eval_harness.datasets.base import (
+    DatasetAdapter,
     load_hf_rows,
 )
 from guard_eval_harness.registry import dataset_registry
@@ -12,7 +10,7 @@ _REVISION = "70a1ddce6be3f0239b2fe7c70d0d96cb3be1fcad"
 
 
 @dataset_registry.register("salad_bench")
-class SaladBenchDataset(SourceBackedDatasetAdapter):
+class SaladBenchDataset(DatasetAdapter):
     """Load the SALAD-Bench base safety question set."""
 
     display_name = "SALAD-Bench"

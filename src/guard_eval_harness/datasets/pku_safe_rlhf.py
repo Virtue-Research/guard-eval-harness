@@ -1,9 +1,7 @@
 """Source-backed PKU-SafeRLHF dataset adapter."""
 
-from __future__ import annotations
-
-from guard_eval_harness.datasets.source_backed import (
-    SourceBackedDatasetAdapter,
+from guard_eval_harness.datasets.base import (
+    DatasetAdapter,
     load_hf_rows,
 )
 from guard_eval_harness.registry import dataset_registry
@@ -19,7 +17,7 @@ def _harm_categories(category_mapping: dict[str, bool]) -> tuple[str, ...]:
 
 
 @dataset_registry.register("pku_safe_rlhf")
-class PKUSafeRLHFDataset(SourceBackedDatasetAdapter):
+class PKUSafeRLHFDataset(DatasetAdapter):
     """Load PKU-SafeRLHF prompt/response pairs as assistant-turn samples."""
 
     display_name = "PKU-SafeRLHF"

@@ -1,9 +1,7 @@
 """Source-backed RealToxicityPrompts dataset adapter."""
 
-from __future__ import annotations
-
-from guard_eval_harness.datasets.source_backed import (
-    SourceBackedDatasetAdapter,
+from guard_eval_harness.datasets.base import (
+    DatasetAdapter,
     load_hf_rows,
 )
 from guard_eval_harness.registry import dataset_registry
@@ -14,7 +12,7 @@ _TOXICITY_THRESHOLD = 0.5
 
 
 @dataset_registry.register("real_toxicity_prompts")
-class RealToxicityPromptsDataset(SourceBackedDatasetAdapter):
+class RealToxicityPromptsDataset(DatasetAdapter):
     """Load RealToxicityPrompts as a prompt-toxicity dataset."""
 
     display_name = "RealToxicityPrompts"

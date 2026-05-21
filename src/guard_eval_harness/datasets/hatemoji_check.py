@@ -1,9 +1,7 @@
 """Source-backed Hatemoji Check dataset adapter."""
 
-from __future__ import annotations
-
-from guard_eval_harness.datasets.source_backed import (
-    SourceBackedDatasetAdapter,
+from guard_eval_harness.datasets.base import (
+    DatasetAdapter,
     load_csv_rows,
 )
 from guard_eval_harness.registry import dataset_registry
@@ -17,7 +15,7 @@ _FILENAME = "test.csv"
 
 
 @dataset_registry.register("hatemoji_check")
-class HatemojiCheckDataset(SourceBackedDatasetAdapter):
+class HatemojiCheckDataset(DatasetAdapter):
     """Load the Hatemoji Check benchmark from its published CSV."""
 
     display_name = "Hatemoji Check"

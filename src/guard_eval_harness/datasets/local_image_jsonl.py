@@ -1,13 +1,11 @@
 """Local JSONL adapter for text+image moderation datasets."""
 
-from __future__ import annotations
-
 import json
 from pathlib import Path
 from typing import Any, Mapping
 
-from guard_eval_harness.datasets.multimodal_base import (
-    MultimodalDatasetAdapter,
+from guard_eval_harness.datasets.image_base import (
+    ImageDatasetAdapter,
 )
 from guard_eval_harness.registry import dataset_registry
 from guard_eval_harness.schemas import (
@@ -27,7 +25,7 @@ def _clean_text(value: Any) -> str:
 
 
 @dataset_registry.register("local_image_jsonl")
-class LocalImageJsonlDataset(MultimodalDatasetAdapter):
+class LocalImageJsonlDataset(ImageDatasetAdapter):
     """Load rows from a local JSONL file with image references."""
 
     source_suffixes = (".jsonl", ".ndjson")

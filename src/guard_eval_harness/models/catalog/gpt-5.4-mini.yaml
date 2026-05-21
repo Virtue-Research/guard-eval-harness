@@ -1,8 +1,0 @@
-adapter: openai_compatible
-model_name: gpt-5.4-mini
-args:
-  root_url: https://api.openai.com
-  api_key_env: OPENAI_API_KEY
-  max_completion_tokens: 32
-  temperature: 0.0
-  prompt_template: $llama_guard_taxonomy

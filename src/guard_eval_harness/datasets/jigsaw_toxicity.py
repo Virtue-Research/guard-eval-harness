@@ -1,9 +1,7 @@
 """Source-backed Jigsaw Toxicity dataset adapter."""
 
-from __future__ import annotations
-
-from guard_eval_harness.datasets.source_backed import (
-    SourceBackedDatasetAdapter,
+from guard_eval_harness.datasets.base import (
+    DatasetAdapter,
     load_hf_rows,
 )
 from guard_eval_harness.registry import dataset_registry
@@ -20,7 +18,7 @@ _LABEL_COLUMNS = (
 
 
 @dataset_registry.register("jigsaw_toxicity")
-class JigsawToxicityDataset(SourceBackedDatasetAdapter):
+class JigsawToxicityDataset(DatasetAdapter):
     """Load the Jigsaw Toxic Comment Classification dataset."""
 
     display_name = "Jigsaw Toxicity"

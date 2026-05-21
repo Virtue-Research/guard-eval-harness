@@ -1,12 +1,10 @@
 """Public paired safe/unsafe image edits dataset adapter."""
 
-from __future__ import annotations
-
 import importlib
 from typing import Any
 
-from guard_eval_harness.datasets.multimodal_base import (
-    MultimodalDatasetAdapter,
+from guard_eval_harness.datasets.image_base import (
+    ImageDatasetAdapter,
 )
 from guard_eval_harness.registry import dataset_registry
 from guard_eval_harness.schemas import NormalizedSample, UnsafeLabel
@@ -24,7 +22,7 @@ _REPO_BY_VARIANT = {
 
 
 @dataset_registry.register("safe_vs_unsafe_image_edits")
-class SafeVsUnsafeImageEditsDataset(MultimodalDatasetAdapter):
+class SafeVsUnsafeImageEditsDataset(ImageDatasetAdapter):
     """Load public paired safe/unsafe image edits as image-only samples."""
 
     display_name = "Safe vs Unsafe Image Edits"

@@ -11,44 +11,47 @@ Evaluate any safety model — local HuggingFace, vLLM, OpenAI, Anthropic, or cus
 ## Quickstart
 
 ```bash
-pip install -e "."
+# clone + install (uv recommended, pip works too)
+git clone https://github.com/Virtue-Research/guard-eval-harness.git
+cd guard-eval-harness
+uv sync                              # base
+uv sync --extra hf --extra dev       # add local HF inference + tests
 
-# Run a quick eval
-geh run --dataset xstest --model mock --limit 50
+# zero-config demo (uses the bundled mock backend, no API keys)
+uv run geh run --config examples/mock-jsonl.yaml
 
-# Run multiple datasets
-geh run --dataset xstest,toxic_chat,harmful_qa --model hf \
-    --model-name meta-llama/Llama-Guard-3-8B
-
-# Run from a YAML config
-geh run --config examples/run-mock-jsonl.yaml
-
-# Use benchmark packs
-geh run --pack core --model mock
+# real run: Llama Guard 3 via vLLM OpenAI-compatible server on XSTest
+uv run geh run --config examples/llama-guard.yaml
 ```
+
+The CLI command is `geh`. `uv run <cmd>` enters the project venv
+automatically — no `source .venv/bin/activate` needed.
 
 ## Installation
 
-Requires Python 3.10+.
+Requires Python 3.10+. See [docs/getting-started/installation.md](docs/getting-started/installation.md) for the full guide.
 
 ```bash
-# Base install
-pip install -e "."
+# uv (recommended)
+git clone https://github.com/Virtue-Research/guard-eval-harness.git
+cd guard-eval-harness
+uv sync                              # base
+uv sync --extra hf                   # + local HuggingFace inference
+uv sync --extra api                  # + retry for hosted endpoints
+uv sync --extra dev                  # + pytest / ruff
 
-# With HuggingFace model support
-pip install -e ".[hf]"
+# pip
+pip install -e .                     # base
+pip install -e ".[hf]"               # + HF
+pip install -e ".[dev]"              # + dev
 
-# With vLLM support
-pip install -e ".[vllm]"
-
-# With API model support (OpenAI, Anthropic)
-pip install -e ".[api]"
-
-# Development
-pip install -e ".[dev]"
+# install straight from GitHub (no clone)
+pip install "git+https://github.com/Virtue-Research/guard-eval-harness.git"
+uv tool install "guard-eval-harness @ git+https://github.com/Virtue-Research/guard-eval-harness.git"
 ```
 
-Copy `.env.example` to `.env` and fill in the API keys you need.
+Set API keys via env vars (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `HF_TOKEN`)
+only if you use the corresponding hosted backends.
 
 ## Documentation
 

@@ -1,9 +1,7 @@
 """Source-backed MITRE dataset adapter."""
 
-from __future__ import annotations
-
-from guard_eval_harness.datasets.source_backed import (
-    SourceBackedDatasetAdapter,
+from guard_eval_harness.datasets.base import (
+    DatasetAdapter,
     load_json_payload,
 )
 from guard_eval_harness.registry import dataset_registry
@@ -26,7 +24,7 @@ def _is_real_user_prompt(value: object) -> bool:
 
 
 @dataset_registry.register("mitre")
-class MitreDataset(SourceBackedDatasetAdapter):
+class MitreDataset(DatasetAdapter):
     """Load the MITRE cybersecurity prompt set."""
 
     display_name = "MITRE"

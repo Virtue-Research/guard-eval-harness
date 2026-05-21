@@ -1,12 +1,10 @@
 """Source-backed Do Anything Now Questions dataset adapter."""
 
-from __future__ import annotations
-
 import csv
 from zipfile import ZipFile
 
-from guard_eval_harness.datasets.source_backed import (
-    SourceBackedDatasetAdapter,
+from guard_eval_harness.datasets.base import (
+    DatasetAdapter,
     cached_download,
     load_csv_rows,
 )
@@ -62,7 +60,7 @@ def _load_dan_wrapped_rows(limit: int | None = None) -> list[dict[str, str]]:
 
 
 @dataset_registry.register("do_anything_now_questions")
-class DoAnythingNowQuestionsDataset(SourceBackedDatasetAdapter):
+class DoAnythingNowQuestionsDataset(DatasetAdapter):
     """Load Do Anything Now questions wrapped with a DAN jailbreak prompt."""
 
     display_name = "Do Anything Now Questions"

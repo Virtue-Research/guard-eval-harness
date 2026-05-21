@@ -1,9 +1,7 @@
 """Source-backed Hate Speech Offensive dataset adapter."""
 
-from __future__ import annotations
-
-from guard_eval_harness.datasets.source_backed import (
-    SourceBackedDatasetAdapter,
+from guard_eval_harness.datasets.base import (
+    DatasetAdapter,
     load_hf_rows,
 )
 from guard_eval_harness.registry import dataset_registry
@@ -12,7 +10,7 @@ _REVISION = "adc5fb774614827695774f2dbe0ea8122f6a92b4"
 
 
 @dataset_registry.register("hate_speech_offensive")
-class HateSpeechOffensiveDataset(SourceBackedDatasetAdapter):
+class HateSpeechOffensiveDataset(DatasetAdapter):
     """Load the Davidson et al. Hate Speech and Offensive Language
     dataset."""
 

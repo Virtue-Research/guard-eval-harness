@@ -1,9 +1,7 @@
 """Source-backed JailbreakBench dataset adapter."""
 
-from __future__ import annotations
-
-from guard_eval_harness.datasets.source_backed import (
-    SourceBackedDatasetAdapter,
+from guard_eval_harness.datasets.base import (
+    DatasetAdapter,
     load_json_payload,
     load_hf_rows,
 )
@@ -20,7 +18,7 @@ _DEFAULT_ARTIFACT_MODEL = "vicuna-13b-v1.5"
 
 
 @dataset_registry.register("jailbreakbench")
-class JailbreakBenchDataset(SourceBackedDatasetAdapter):
+class JailbreakBenchDataset(DatasetAdapter):
     """Load JailbreakBench attack artifacts by default."""
 
     display_name = "JailbreakBench Artifacts"

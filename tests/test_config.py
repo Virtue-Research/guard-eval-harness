@@ -1,271 +1,135 @@
-"""Tests for resolved config loading."""
+"""Tests for the config loader and validators."""
 
-from __future__ import annotations
-
-import os
-import tempfile
-import textwrap
 import unittest
-from pathlib import Path
 
-from guard_eval_harness.config import load_config, load_config_from_path
+from pydantic import ValidationError
+
+from guard_eval_harness.config import load_config
+from guard_eval_harness.config import (
+    InlinePolicy,
+    ResolvedRunConfig,
+)
+from guard_eval_harness.guards import guard_registry
+from guard_eval_harness.guards.base import Guard
 
 
-class ConfigLoadingTest(unittest.TestCase):
-    """Validate config resolution and overrides."""
+class _FakeFixedGuard(Guard):
+    """Stand-in guard that does not accept a custom policy or format."""
 
-    def test_load_config_resolves_models(self) -> None:
-        config = load_config(
-            {
-                "run_name": "demo",
-                "model": {"adapter": "mock"},
-                "datasets": [{"name": "demo", "adapter": "local_jsonl"}],
-                "output": {"run_dir": "runs/demo"},
+    name = "fake_fixed_for_tests"
+    accepts_policy = False
+    accepts_output_format = False
+
+    def build_messages(self, sample, *, policy=None, output_format=None):
+        return []
+
+    def parse(self, output):
+        return None
+
+
+class ConfigV2LoaderTest(unittest.TestCase):
+    """Validate the YAML → ResolvedRunConfig path."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        if "fake_fixed_for_tests" not in guard_registry:
+            guard_registry.register(
+                "fake_fixed_for_tests",
+                target=_FakeFixedGuard,
+            )
+
+    def _base_payload(self, **overrides):
+        payload = {
+            "version": 2,
+            "run_name": "test-run",
+            "threshold": 0.5,
+            "model": {
+                "guard": "llm",
+                "policy": "general_safety",
+                "output_format": "safe_unsafe_first_line",
+                "backend": {"kind": "mock"},
             },
-            base_dir="/tmp/project",
+            "datasets": [
+                {"name": "d1", "adapter": "local_jsonl"},
+            ],
+            "output": {"run_dir": "out/test", "resume": True},
+        }
+        for key, value in overrides.items():
+            payload[key] = value
+        return payload
+
+    def test_loads_minimal_v2_config(self) -> None:
+        cfg = load_config(self._base_payload())
+        self.assertIsInstance(cfg, ResolvedRunConfig)
+        self.assertEqual(cfg.model.guard, "llm")
+        self.assertEqual(cfg.model.backend.kind, "mock")
+        self.assertTrue(cfg.output.resume)
+        self.assertEqual(len(cfg.datasets), 1)
+
+    def test_inline_policy_object(self) -> None:
+        payload = self._base_payload()
+        payload["model"]["policy"] = {
+            "name": "inline_p",
+            "text": "inline policy text",
+            "categories": ["a", "b"],
+        }
+        cfg = load_config(payload)
+        self.assertIsInstance(cfg.model.policy, InlinePolicy)
+        self.assertEqual(cfg.model.policy.name, "inline_p")
+
+    def test_rejects_policy_on_fixed_guard(self) -> None:
+        payload = self._base_payload()
+        payload["model"]["guard"] = "fake_fixed_for_tests"
+        with self.assertRaisesRegex(ValueError, "does not accept a custom policy"):
+            load_config(payload)
+
+    def test_rejects_output_format_on_fixed_guard(self) -> None:
+        payload = self._base_payload()
+        payload["model"]["guard"] = "fake_fixed_for_tests"
+        payload["model"]["policy"] = None
+        payload["model"]["output_format"] = "safe_unsafe_first_line"
+        with self.assertRaisesRegex(
+            ValueError, "does not accept a custom\\s+output_format"
+        ):
+            load_config(payload)
+
+    def test_rejects_multiple_subset_selectors(self) -> None:
+        payload = self._base_payload()
+        payload["datasets"][0].update(
+            limit=5,
+            sample_indices=[0, 1],
         )
-        self.assertEqual(config.output.run_dir, "/tmp/project/runs/demo")
-        self.assertEqual(config.datasets[0].adapter, "local_jsonl")
+        with self.assertRaisesRegex(
+            ValidationError, "at most one of\\s+limit/sample_ids/sample_indices"
+        ):
+            load_config(payload)
+
+    def test_rejects_resume_with_overwrite(self) -> None:
+        payload = self._base_payload()
+        payload["output"]["overwrite"] = True
+        with self.assertRaisesRegex(
+            ValidationError, "mutually exclusive"
+        ):
+            load_config(payload)
 
     def test_rejects_duplicate_dataset_names(self) -> None:
-        with self.assertRaisesRegex(Exception, "duplicate dataset name"):
-            load_config(
-                {
-                    "run_name": "dup-test",
-                    "model": {"adapter": "mock"},
-                    "datasets": [
-                        {"name": "same", "adapter": "local_jsonl"},
-                        {"name": "same", "adapter": "local_jsonl"},
-                    ],
-                    "output": {"run_dir": "/tmp/dup-test"},
-                },
-                base_dir="/tmp",
-            )
-
-    def test_rejects_dataset_names_that_collide_on_disk(self) -> None:
+        payload = self._base_payload()
+        payload["datasets"] = [
+            {"name": "x", "adapter": "local_jsonl"},
+            {"name": "x", "adapter": "local_jsonl"},
+        ]
         with self.assertRaisesRegex(
-            Exception, "same artifact directory"
+            ValidationError, "duplicate dataset name"
         ):
-            load_config(
-                {
-                    "run_name": "collision-test",
-                    "model": {"adapter": "mock"},
-                    "datasets": [
-                        {"name": "foo/bar", "adapter": "local_jsonl"},
-                        {"name": "foo__bar", "adapter": "local_jsonl"},
-                    ],
-                    "output": {"run_dir": "/tmp/collision-test"},
-                },
-                base_dir="/tmp",
-            )
+            load_config(payload)
 
-    def test_load_config_from_path_expands_env_and_cli_overrides(self) -> None:
-        with tempfile.TemporaryDirectory() as tmpdir:
-            root = Path(tmpdir)
-            dataset_path = root / "dataset.jsonl"
-            dataset_path.write_text("", encoding="utf-8")
-            os.environ["GEH_DATASET_PATH"] = dataset_path.as_posix()
-
-            config_path = root / "config.yaml"
-            config_path.write_text(
-                textwrap.dedent(
-                    """
-                    run_name: env-demo
-                    model:
-                      adapter: mock
-                    datasets:
-                      - name: env_dataset
-                        adapter: local_jsonl
-                        path: ${GEH_DATASET_PATH}
-                    output:
-                      run_dir: out/default
-                    """
-                ).strip(),
-                encoding="utf-8",
-            )
-
-            config = load_config_from_path(
-                config_path,
-                output_dir=(root / "runs" / "override").as_posix(),
-                threshold=0.7,
-                limit=2,
-            )
-
-            self.assertEqual(config.threshold, 0.7)
-            self.assertEqual(config.execution.limit, 2)
-            self.assertEqual(
-                config.output.run_dir,
-                (root / "runs" / "override").as_posix(),
-            )
-            self.assertEqual(config.datasets[0].path, dataset_path.as_posix())
-
-    def test_load_config_accepts_auto_batch_resume_and_backoff(self) -> None:
-        config = load_config(
-            {
-                "run_name": "auto-batch",
-                "model": {"adapter": "mock"},
-                "datasets": [{"name": "demo", "adapter": "local_jsonl"}],
-                "output": {"run_dir": "runs/demo"},
-                "execution": {
-                    "batch_size": "auto",
-                    "resume": True,
-                    "retry_backoff": 2.5,
-                },
-            },
-            base_dir="/tmp/project",
-        )
-
-        self.assertEqual(config.execution.batch_size, "auto")
-        self.assertTrue(config.execution.resume)
-        self.assertEqual(config.execution.retry_backoff, 2.5)
-
-    def test_load_config_accepts_numeric_string_batch_size(self) -> None:
-        config = load_config(
-            {
-                "run_name": "string-batch-size",
-                "model": {"adapter": "mock"},
-                "datasets": [{"name": "demo", "adapter": "local_jsonl"}],
-                "output": {"run_dir": "runs/demo"},
-                "execution": {"batch_size": "4"},
-            },
-            base_dir="/tmp/project",
-        )
-
-        self.assertEqual(config.execution.batch_size, 4)
-
-    def test_load_config_accepts_predict_metadata_fields(self) -> None:
-        config = load_config(
-            {
-                "run_name": "predict-metadata",
-                "model": {"adapter": "mock"},
-                "datasets": [
-                    {
-                        "name": "demo",
-                        "adapter": "local_jsonl",
-                        "metadata_fields": ["category", "category"],
-                        "predict_metadata_fields": ["category"],
-                    }
-                ],
-                "output": {"run_dir": "runs/demo"},
-            },
-            base_dir="/tmp/project",
-        )
-
-        self.assertEqual(config.datasets[0].metadata_fields, ("category",))
-        self.assertEqual(
-            config.datasets[0].predict_metadata_fields,
-            ("category",),
-        )
-
-    def test_rejects_label_like_predict_metadata_fields(self) -> None:
-        with self.assertRaisesRegex(Exception, "label-like fields"):
-            load_config(
-                {
-                    "run_name": "bad-predict-metadata",
-                    "model": {"adapter": "mock"},
-                    "datasets": [
-                        {
-                            "name": "demo",
-                            "adapter": "local_jsonl",
-                            "label_field": "verdict",
-                            "predict_metadata_fields": [
-                                "category_labels",
-                                "verdict",
-                            ],
-                        }
-                    ],
-                    "output": {"run_dir": "/tmp/demo"},
-                },
-                base_dir="/tmp",
-            )
-
-    def test_rejects_invalid_auto_batch_syntax(self) -> None:
-        with self.assertRaisesRegex(Exception, "batch_size"):
-            load_config(
-                {
-                    "run_name": "bad-auto-batch",
-                    "model": {"adapter": "mock"},
-                    "datasets": [
-                        {"name": "demo", "adapter": "local_jsonl"}
-                    ],
-                    "output": {"run_dir": "/tmp/demo"},
-                    "execution": {"batch_size": "auto:4"},
-                },
-                base_dir="/tmp",
-            )
-
-
-class ExpansionTest(unittest.TestCase):
-    """Validate named-template and env-var expansion in raw configs."""
-
-    def test_named_template_resolves_in_raw_config(self) -> None:
-        """``prompt_template: $llama_guard_taxonomy`` must expand in user YAMLs."""
-        config = load_config(
-            {
-                "run_name": "tpl",
-                "model": {
-                    "adapter": "openai_compatible",
-                    "model_name": "gpt-4o-mini",
-                    "args": {"prompt_template": "$llama_guard_taxonomy"},
-                },
-                "datasets": [{"name": "demo", "adapter": "xstest"}],
-                "output": {"run_dir": "/tmp/tpl"},
-            },
-            base_dir="/tmp",
-        )
-        rendered = config.model.args["prompt_template"]
-        self.assertNotIn("$llama_guard_taxonomy", rendered)
-        # The shipped taxonomy describes "safe" / "unsafe" categories.
-        self.assertIn("unsafe", rendered.lower())
-
-    def test_unset_env_var_raises_clear_error(self) -> None:
-        """Unset ``${VAR}`` must error fast with the variable name."""
-        os.environ.pop("GEH_TEST_MISSING_VAR", None)
+    def test_sample_indices_must_be_non_negative(self) -> None:
+        payload = self._base_payload()
+        payload["datasets"][0]["sample_indices"] = [-1, 0]
         with self.assertRaisesRegex(
-            ValueError, r"GEH_TEST_MISSING_VAR"
+            ValidationError, "sample_indices must be non-negative"
         ):
-            load_config(
-                {
-                    "run_name": "envfail",
-                    "model": {"adapter": "mock"},
-                    "datasets": [
-                        {
-                            "name": "demo",
-                            "adapter": "local_jsonl",
-                            "path": "${GEH_TEST_MISSING_VAR}",
-                        }
-                    ],
-                    "output": {"run_dir": "/tmp/envfail"},
-                },
-                base_dir="/tmp",
-            )
-
-    def test_set_env_var_expands(self) -> None:
-        """Set ``${VAR}`` substitutes the value and the run loads."""
-        os.environ["GEH_TEST_SET_VAR"] = "demo.jsonl"
-        try:
-            config = load_config(
-                {
-                    "run_name": "envok",
-                    "model": {"adapter": "mock"},
-                    "datasets": [
-                        {
-                            "name": "demo",
-                            "adapter": "local_jsonl",
-                            "path": "${GEH_TEST_SET_VAR}",
-                        }
-                    ],
-                    "output": {"run_dir": "/tmp/envok"},
-                },
-                base_dir="/tmp",
-            )
-        finally:
-            os.environ.pop("GEH_TEST_SET_VAR", None)
-        self.assertTrue(
-            config.datasets[0].path.endswith("demo.jsonl"),
-            config.datasets[0].path,
-        )
-        self.assertNotIn("$", config.datasets[0].path)
+            load_config(payload)
 
 
 if __name__ == "__main__":

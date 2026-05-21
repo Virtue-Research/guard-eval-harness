@@ -1,9 +1,7 @@
 """Source-backed HarmBench Behaviors dataset adapter."""
 
-from __future__ import annotations
-
-from guard_eval_harness.datasets.source_backed import (
-    SourceBackedDatasetAdapter,
+from guard_eval_harness.datasets.base import (
+    DatasetAdapter,
     load_csv_rows,
 )
 from guard_eval_harness.registry import dataset_registry
@@ -20,7 +18,7 @@ _FILENAMES = {
 
 
 @dataset_registry.register("harmbench_behaviors")
-class HarmBenchBehaviorsDataset(SourceBackedDatasetAdapter):
+class HarmBenchBehaviorsDataset(DatasetAdapter):
     """Load the real HarmBench Behaviors source files."""
 
     display_name = "HarmBench Behaviors"

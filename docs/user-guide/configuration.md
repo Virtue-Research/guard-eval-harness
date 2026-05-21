@@ -51,7 +51,7 @@ output:
 3. Classification threshold (0.0–1.0). Scores above this are classified as `unsafe`.
 4. Model backend alias. Use any registered adapter returned by `geh list backends`; most users start with `mock`, `hf`, `vllm`, `openai_moderation`, `openai_compatible`, `anthropic`, or `http`.
 5. Model identifier — HuggingFace repo ID, API model name, etc.
-6. Backend-specific arguments. See [Models](../models/overview.md) for each adapter's options.
+6. Backend-specific arguments. See [Backends](../backends/overview.md) for each adapter's options.
 7. One or more datasets to evaluate. At least one is required.
 8. Batch size for inference. Use `"auto"` for adaptive sizing (local models only).
 9. Parallel workers for API adapters.

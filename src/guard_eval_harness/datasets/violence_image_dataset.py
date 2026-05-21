@@ -1,14 +1,12 @@
 """ChinaZhangPeng Violence-Image-Dataset adapter."""
 
-from __future__ import annotations
-
 from pathlib import Path
 from urllib.parse import quote
 
-from guard_eval_harness.datasets.multimodal_source_backed import (
-    SourceBackedMultimodalDatasetAdapter,
+from guard_eval_harness.datasets.image_base import (
+    ImageDatasetAdapter,
 )
-from guard_eval_harness.datasets.source_backed import (
+from guard_eval_harness.datasets.base import (
     cached_download,
     load_json_payload,
 )
@@ -26,7 +24,7 @@ _IMAGE_SUFFIXES = (".jpg", ".jpeg", ".png", ".webp", ".bmp", ".gif")
 
 
 @dataset_registry.register("violence_image_dataset")
-class ViolenceImageDataset(SourceBackedMultimodalDatasetAdapter):
+class ViolenceImageDataset(ImageDatasetAdapter):
     """Load violence images from the public GitHub repository."""
 
     display_name = "Violence Image Dataset"

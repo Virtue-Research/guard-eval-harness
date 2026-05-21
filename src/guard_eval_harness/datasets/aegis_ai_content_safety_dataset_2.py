@@ -1,11 +1,9 @@
 """Source-backed NVIDIA Aegis AI Content Safety Dataset 2.0 adapter."""
 
-from __future__ import annotations
-
 from typing import Any
 
-from guard_eval_harness.datasets.source_backed import (
-    SourceBackedDatasetAdapter,
+from guard_eval_harness.datasets.base import (
+    DatasetAdapter,
     load_hf_rows,
 )
 from guard_eval_harness.registry import dataset_registry
@@ -16,7 +14,7 @@ _SUPPORTED_TASKS = {"prompt_harm", "response_harm"}
 
 
 @dataset_registry.register("aegis_ai_content_safety_dataset_2")
-class AegisAIContentSafetyDataset2(SourceBackedDatasetAdapter):
+class AegisAIContentSafetyDataset2(DatasetAdapter):
     """Load prompt-harm or response-harm views of the Aegis 2.0 dataset."""
 
     display_name = "NVIDIA Aegis AI Content Safety Dataset 2.0"

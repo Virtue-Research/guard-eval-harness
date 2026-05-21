@@ -1,109 +1,106 @@
 # Installation
 
-Use the base install when you only need the CLI, configs, dataset
-normalization, and core metrics. Add extras only for the backends and features
-you plan to use.
+Recommended path: use [uv](https://docs.astral.sh/uv/) to manage a
+project-local virtualenv. `pip` works too if you prefer.
 
 ## Requirements
 
-- Python `3.10+`
-- `pip` or another PEP 517-compatible installer
-- a working shell environment for API keys if you use hosted models
+- Python 3.10+
+- [`uv`](https://docs.astral.sh/uv/getting-started/installation/) (or `pip` if you don't have uv)
+- A shell environment for API keys (only if you use hosted models)
 
-## Base Install
+## Install — uv (recommended)
+
+```bash
+# clone
+git clone https://github.com/Virtue-Research/guard-eval-harness.git
+cd guard-eval-harness
+
+# base install (mock backend + dataset normalization + CLI)
+uv sync
+
+# add extras you actually need
+uv sync --extra dev                 # tests + lint
+uv sync --extra hf                  # local HuggingFace inference
+uv sync --extra api                 # tenacity retry for hosted endpoints
+uv sync --extra hf --extra dev      # combine extras
+
+# run anything inside the venv automatically
+uv run geh list guards
+uv run pytest
+```
+
+`uv sync` creates `.venv/` in the project root and installs the
+locked dependency set from `uv.lock`. `uv run <cmd>` executes
+`<cmd>` inside that venv without needing `source .venv/bin/activate`.
+
+## Install — pip
 
 ```bash
 git clone https://github.com/Virtue-Research/guard-eval-harness.git
 cd guard-eval-harness
-pip install -e "."
+
+python -m venv .venv
+source .venv/bin/activate
+pip install -e .                     # base
+pip install -e ".[hf]"               # add local HF backend
+pip install -e ".[dev]"              # add tests + lint
 ```
 
-The base install is enough for:
+## Install from git (no clone)
 
-- the `geh` CLI
-- config validation
-- built-in dataset loading
-- the `mock` model adapter
-- artifact inspection and comparison flows
+If you only want to *use* `geh` and not develop on it, install
+straight from GitHub:
+
+```bash
+pip install "git+https://github.com/Virtue-Research/guard-eval-harness.git"
+
+# with extras
+pip install "guard-eval-harness[hf] @ git+https://github.com/Virtue-Research/guard-eval-harness.git"
+```
+
+Or install as a standalone CLI tool (isolated venv, available on
+`$PATH`):
+
+```bash
+uv tool install "guard-eval-harness @ git+https://github.com/Virtue-Research/guard-eval-harness.git"
+# or
+pipx install "git+https://github.com/Virtue-Research/guard-eval-harness.git"
+```
 
 ## Optional Extras
 
-=== "HuggingFace"
-
-    ```bash
-    pip install -e ".[hf]"
-    ```
-
-    Use this for local text, image, and specialized multimodal HuggingFace adapters.
-
-=== "vLLM"
-
-    ```bash
-    pip install -e ".[vllm]"
-    ```
-
-    Use this for high-throughput local inference with the `vllm` adapter.
-
-=== "API"
-
-    ```bash
-    pip install -e ".[api]"
-    ```
-
-    Use this for `openai_moderation`, `openai_compatible`, `anthropic`, and `http`.
-
-=== "Audio"
-
-    ```bash
-    pip install -e ".[audio]"
-    ```
-
-    Add this when working with native audio datasets or adapters.
-
-=== "Reports"
-
-    ```bash
-    pip install -e ".[report]"
-    ```
-
-    Useful when you want HTML or spreadsheet-friendly reporting dependencies available explicitly.
-
-=== "Everything"
-
-    ```bash
-    pip install -e ".[hf,vllm,api,audio,report,dev]"
-    ```
+| Extra | What it pulls in | When you need it |
+|---|---|---|
+| `hf` | `torch`, `transformers`, `accelerate`, `Pillow`, `sentencepiece` | Local HuggingFace guards (Llama Guard, ShieldGemma, image classifier, VLM) |
+| `api` | `tenacity` | Robust retry for hosted OpenAI / vLLM-server / LiteLLM endpoints |
+| `dev` | `pytest`, `ruff`, `build` | Running tests + lint, building wheels |
 
 ## Environment Setup
 
-Copy the example environment file if you plan to use hosted models or gated
-HuggingFace assets:
+For hosted models you'll typically need API keys:
 
 ```bash
-cp .env.example .env
+export OPENAI_API_KEY=sk-...
+export ANTHROPIC_API_KEY=sk-ant-...
+export HF_TOKEN=hf_...
 ```
 
-```bash title=".env"
-OPENAI_API_KEY=sk-...
-ANTHROPIC_API_KEY=sk-ant-...
-HF_TOKEN=hf_...
-```
-
-You only need to set the variables required by the adapters you actually run.
+You only need the variables required by the backends you actually run.
 
 ## Verify The Install
 
 ```bash
-geh list backends
-geh list packs
-geh run --dataset xstest --model mock --limit 10
+uv run geh list guards     # llm, llama_guard, shieldgemma, ...
+uv run geh list backends   # mock, hf_generate, hf_vlm, openai_compat, ...
+uv run geh run --config examples/mock-jsonl.yaml
 ```
 
-You should see JSON output with the created `run_dir`, `manifest_path`, and
-`summary_path`.
+You should see JSON output with the created `run_dir`,
+`manifest_path`, and `summary_path`.
 
 ## Next Steps
 
 - [Quickstart](quickstart.md) for a 2-minute first run
-- [Run Modes](run-modes.md) to choose inline, pack, or YAML config flows
+- [Configuration](../user-guide/configuration.md) for the full YAML reference
 - [Troubleshooting](troubleshooting.md) if installs, auth, or dataset downloads fail

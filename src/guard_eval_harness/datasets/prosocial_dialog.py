@@ -1,9 +1,7 @@
 """Source-backed ProsocialDialog dataset adapter."""
 
-from __future__ import annotations
-
-from guard_eval_harness.datasets.source_backed import (
-    SourceBackedDatasetAdapter,
+from guard_eval_harness.datasets.base import (
+    DatasetAdapter,
     load_hf_rows,
 )
 from guard_eval_harness.registry import dataset_registry
@@ -30,7 +28,7 @@ def _label_balanced_rows(
 
 
 @dataset_registry.register("prosocial_dialog")
-class ProsocialDialogDataset(SourceBackedDatasetAdapter):
+class ProsocialDialogDataset(DatasetAdapter):
     """Load the ProsocialDialog dataset from Hugging Face."""
 
     display_name = "ProsocialDialog"

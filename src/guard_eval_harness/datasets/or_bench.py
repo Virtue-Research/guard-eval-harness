@@ -1,9 +1,7 @@
 """Source-backed OR-Bench over-refusal dataset adapter."""
 
-from __future__ import annotations
-
-from guard_eval_harness.datasets.source_backed import (
-    SourceBackedDatasetAdapter,
+from guard_eval_harness.datasets.base import (
+    DatasetAdapter,
     load_hf_rows,
 )
 from guard_eval_harness.registry import dataset_registry
@@ -17,7 +15,7 @@ _SUPPORTED_SUBSETS = {
 
 
 @dataset_registry.register("or_bench")
-class ORBenchDataset(SourceBackedDatasetAdapter):
+class ORBenchDataset(DatasetAdapter):
     """Load the OR-Bench over-refusal benchmark.
 
     The dataset has three configs selectable via

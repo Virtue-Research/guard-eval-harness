@@ -1,9 +1,7 @@
 """Source-backed OpenAI Moderation evaluation dataset adapter."""
 
-from __future__ import annotations
-
-from guard_eval_harness.datasets.source_backed import (
-    SourceBackedDatasetAdapter,
+from guard_eval_harness.datasets.base import (
+    DatasetAdapter,
     load_hf_rows,
 )
 from guard_eval_harness.registry import dataset_registry
@@ -24,7 +22,7 @@ _CATEGORY_LABELS = {
 
 
 @dataset_registry.register("openai_moderation_eval")
-class OpenAIModerationEvalDataset(SourceBackedDatasetAdapter):
+class OpenAIModerationEvalDataset(DatasetAdapter):
     """Load the full OpenAI Moderation API evaluation dataset."""
 
     display_name = "OpenAI Moderation Eval"

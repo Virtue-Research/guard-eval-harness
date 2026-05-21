@@ -1,8 +1,8 @@
 # Datasets
 
-Guard Eval Harness ships with more than 80 built-in datasets covering text,
-image, audio, and code safety. Every adapter normalizes source rows into the
-same sample contract so model comparisons stay consistent across modalities.
+Guard Eval Harness ships with many built-in datasets covering text and
+image safety. Every adapter normalizes source rows into the same sample
+contract so model comparisons stay consistent across modalities.
 
 ## Start With The Dataset Family, Not The Raw Count
 
@@ -13,8 +13,6 @@ same sample contract so model comparisons stay consistent across modalities.
 | moderation quality | `toxicity` or `hate_harassment` pack |
 | prompt injection attacks | `prompt_injection` pack |
 | image safety | [Image benchmarks](image.md) or `local_image_jsonl` |
-| audio safety | [Audio benchmarks](audio.md) or `local_audio_jsonl` |
-| code vulnerability detection | [Code benchmarks](code.md) or `code_vuln` pack |
 
 ## Modalities
 
@@ -22,8 +20,6 @@ same sample contract so model comparisons stay consistent across modalities.
 | --- | --- | --- |
 | text | [Text benchmarks](text.md) | refusal, toxicity, abuse, jailbreaks |
 | image | [Image benchmarks](image.md) | multimodal moderation and visual attacks |
-| audio | [Audio benchmarks](audio.md) | speech or native audio safety models |
-| code | [Code benchmarks](code.md) | insecure code detection |
 | local | [Local data](local.md) | bring your own production-shaped data |
 
 ## The Normalized Sample Shape
@@ -72,7 +68,6 @@ Local adapters include:
 - `local_csv`
 - `local_image_jsonl`
 - `local_image_dir`
-- `local_audio_jsonl`
 
 ## Helpful Discovery Commands
 
@@ -84,5 +79,4 @@ geh list packs
 ## Related References
 
 - [Benchmark Selection](../user-guide/benchmark-selection.md)
-- [Benchmark Packs](../user-guide/benchmark-packs.md)
 - [Local Data](local.md)

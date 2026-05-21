@@ -1,13 +1,11 @@
 """MM-SafetyBench local dataset adapter."""
 
-from __future__ import annotations
-
 import json
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
-from guard_eval_harness.datasets.multimodal_base import (
-    MultimodalDatasetAdapter,
+from guard_eval_harness.datasets.image_base import (
+    ImageDatasetAdapter,
 )
 from guard_eval_harness.registry import dataset_registry
 from guard_eval_harness.schemas import NormalizedSample, UnsafeLabel
@@ -44,7 +42,7 @@ def _clean_text(value: Any) -> str:
 
 
 @dataset_registry.register("mm_safetybench")
-class MMSafetyBenchDataset(MultimodalDatasetAdapter):
+class MMSafetyBenchDataset(ImageDatasetAdapter):
     """Load MM-SafetyBench from a local repo/data checkout."""
 
     def load(self) -> list[NormalizedSample]:

@@ -1,9 +1,7 @@
 """Source-backed I-Physical-Safety dataset adapter."""
 
-from __future__ import annotations
-
-from guard_eval_harness.datasets.source_backed import (
-    SourceBackedDatasetAdapter,
+from guard_eval_harness.datasets.base import (
+    DatasetAdapter,
     load_json_payload,
 )
 from guard_eval_harness.registry import dataset_registry
@@ -33,7 +31,7 @@ def _limited_rows(
 
 
 @dataset_registry.register("i_physical_safety")
-class IPhysicalSafetyDataset(SourceBackedDatasetAdapter):
+class IPhysicalSafetyDataset(DatasetAdapter):
     """Load the mixed safe and unsafe I-Physical-Safety prompts."""
 
     display_name = "I-Physical-Safety"

@@ -1,11 +1,9 @@
 """Source-backed Social Bias Frames dataset adapter."""
 
-from __future__ import annotations
-
 from collections import defaultdict
 
-from guard_eval_harness.datasets.source_backed import (
-    SourceBackedDatasetAdapter,
+from guard_eval_harness.datasets.base import (
+    DatasetAdapter,
     load_hf_rows,
 )
 from guard_eval_harness.registry import dataset_registry
@@ -16,7 +14,7 @@ _REVISION = "b7b7ca4203e44921958c1e4aa254ff60d4cb73cd"
 
 
 @dataset_registry.register("social_bias_frames")
-class SocialBiasFramesDataset(SourceBackedDatasetAdapter):
+class SocialBiasFramesDataset(DatasetAdapter):
     """Load Social Bias Frames as a binary offensiveness benchmark."""
 
     display_name = "Social Bias Frames"

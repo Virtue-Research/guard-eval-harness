@@ -1,206 +1,26 @@
-/* ── VirtueAI Brand Colors ─────────────────────────────────── */
+/* Light touch-ups on top of Material defaults. */
 
-/* Dark mode (slate) overrides */
-[data-md-color-scheme="slate"] {
-  --md-primary-fg-color: #1621f6;
-  --md-primary-fg-color--light: #3d46f7;
-  --md-primary-fg-color--dark: #0d15c4;
-  --md-accent-fg-color: #9f9eff;
-  --md-default-bg-color: #0d0f10;
-  --md-default-bg-color--light: #131515;
-  --md-code-bg-color: #131515;
-  --md-footer-bg-color: #090b0b;
-  --md-footer-bg-color--dark: #000000;
-  --md-typeset-a-color: #9f9eff;
-}
-
-/* Light mode overrides */
-[data-md-color-scheme="default"] {
-  --md-primary-fg-color: #1621f6;
-  --md-primary-fg-color--light: #3d46f7;
-  --md-primary-fg-color--dark: #0d15c4;
-  --md-accent-fg-color: #5300f8;
-}
-
-/* ── Header / Tabs ─────────────────────────────────────────── */
-
-.md-header {
-  background: #1621f6;
-}
-
-.md-tabs {
-  background: #0d15c4;
-}
-
-/* ── Navigation ────────────────────────────────────────────── */
-
-/* Active nav item accent */
-.md-nav__link--active,
-.md-nav__link:is([href]):hover {
-  color: #9f9eff;
-}
-
-.md-nav__item--active > .md-nav__link {
-  color: #9f9eff;
-  font-weight: 600;
-}
-
-/* Sidebar left border on active */
-.md-nav--primary .md-nav__item--active > .md-nav__link {
-  border-left: 3px solid #1621f6;
-  padding-left: 9px;
-}
-
-/* ── Content ───────────────────────────────────────────────── */
-
-/* Inline code */
+/* Slightly rounded inline code. */
 .md-typeset code {
   border-radius: 4px;
 }
 
+/* Dark mode: gently subdued code background. */
 [data-md-color-scheme="slate"] .md-typeset code {
   background: #1a1c1c;
-  border: 1px solid #2b2c2c;
 }
 
-/* Code block header */
-.md-typeset .highlight .filename {
-  background: #1a1c1c;
-  border-bottom: 1px solid #2b2c2c;
+/* Make table headers a touch heavier so they stand out. */
+.md-typeset table:not([class]) th {
+  font-weight: 600;
 }
 
-/* ── Links ─────────────────────────────────────────────────── */
-
-[data-md-color-scheme="slate"] .md-typeset a {
-  color: #9f9eff;
-}
-
-[data-md-color-scheme="slate"] .md-typeset a:hover {
-  color: #c4c3ff;
-}
-
-/* ── Admonitions ───────────────────────────────────────────── */
-
-/* Tip admonitions use brand lavender */
-.md-typeset .admonition.tip,
-.md-typeset details.tip {
-  border-color: #9f9eff;
-}
-
-.md-typeset .tip > .admonition-title,
-.md-typeset .tip > summary {
-  background-color: rgba(159, 158, 255, 0.1);
-}
-
-.md-typeset .tip > .admonition-title::before,
-.md-typeset .tip > summary::before {
-  background-color: #9f9eff;
-}
-
-/* Info admonitions use brand blue */
-.md-typeset .admonition.info,
-.md-typeset details.info {
-  border-color: #1621f6;
-}
-
-.md-typeset .info > .admonition-title,
-.md-typeset .info > summary {
-  background-color: rgba(22, 33, 246, 0.1);
-}
-
-/* ── Tables ────────────────────────────────────────────────── */
-
-[data-md-color-scheme="slate"] .md-typeset table:not([class]) th {
-  background-color: #131515;
-  color: #ffffff;
-  border-bottom: 2px solid #1621f6;
-}
-
-[data-md-color-scheme="slate"] .md-typeset table:not([class]) tr:hover td {
-  background-color: rgba(159, 158, 255, 0.04);
-}
-
-/* ── Tabs (content tabs) ───────────────────────────────────── */
-
-.md-typeset .tabbed-labels > label--active,
-.md-typeset .tabbed-labels > label:hover {
-  color: #9f9eff;
-}
-
-.md-typeset .tabbed-set > input:checked + label {
-  border-color: #1621f6;
-  color: #9f9eff;
-}
-
-/* ── Search ────────────────────────────────────────────────── */
-
-[data-md-color-scheme="slate"] .md-search__input {
-  background-color: rgba(255, 255, 255, 0.06);
-}
-
-/* ── Footer ────────────────────────────────────────────────── */
-
-[data-md-color-scheme="slate"] .md-footer {
-  border-top: 1px solid #2b2c2c;
-}
-
-/* ── Scrollbar (subtle) ────────────────────────────────────── */
-
-[data-md-color-scheme="slate"] ::-webkit-scrollbar {
-  width: 6px;
-}
-
-[data-md-color-scheme="slate"] ::-webkit-scrollbar-thumb {
-  background: #2b2c2c;
-  border-radius: 3px;
-}
-
-[data-md-color-scheme="slate"] ::-webkit-scrollbar-thumb:hover {
-  background: #3d46f7;
-}
-
-/* ── Home page feature grid cards ──────────────────────────── */
-
-[data-md-color-scheme="slate"] .grid.cards > ul > li {
-  background: #131515;
-  border: 1px solid #2b2c2c;
+/* Home page card grid: gentle hover effect. */
+.md-typeset .grid.cards > ul > li {
   border-radius: 8px;
-  transition: border-color 0.2s ease;
+  transition: border-color 0.2s ease, transform 0.15s ease;
 }
 
-[data-md-color-scheme="slate"] .grid.cards > ul > li:hover {
-  border-color: rgba(159, 158, 255, 0.3);
-}
-
-/* ── Mermaid diagram styling ───────────────────────────────── */
-
-[data-md-color-scheme="slate"] .mermaid {
-  background: transparent;
-}
-
-/* ── Home page hero area ───────────────────────────────────── */
-
-.md-typeset h1 {
-  font-weight: 700;
-}
-
-/* Badge images on home page */
-.md-typeset img[alt="PyPI"],
-.md-typeset img[alt="License"],
-.md-typeset img[alt="Datasets"],
-.md-typeset img[alt="Modalities"] {
-  display: inline;
-  margin: 0 2px;
-}
-
-/* ── Code copy button ──────────────────────────────────────── */
-
-.md-clipboard:hover {
-  color: #9f9eff;
-}
-
-/* ── Progress bar (navigation.instant.progress) ────────────── */
-
-.md-progress {
-  background: linear-gradient(90deg, #1621f6, #5300f8);
+.md-typeset .grid.cards > ul > li:hover {
+  transform: translateY(-1px);
 }

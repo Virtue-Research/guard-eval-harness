@@ -1,9 +1,7 @@
 """Source-backed SafeText dataset adapter."""
 
-from __future__ import annotations
-
-from guard_eval_harness.datasets.source_backed import (
-    SourceBackedDatasetAdapter,
+from guard_eval_harness.datasets.base import (
+    DatasetAdapter,
     load_json_payload,
 )
 from guard_eval_harness.registry import dataset_registry
@@ -32,7 +30,7 @@ def _safe_text_limit(
 
 
 @dataset_registry.register("safe_text")
-class SafeTextDataset(SourceBackedDatasetAdapter):
+class SafeTextDataset(DatasetAdapter):
     """Load the SafeText commonsense physical safety set."""
 
     display_name = "SafeText"

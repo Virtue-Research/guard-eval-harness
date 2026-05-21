@@ -1,9 +1,7 @@
 """Source-backed DICES 350 dataset adapter."""
 
-from __future__ import annotations
-
-from guard_eval_harness.datasets.source_backed import (
-    SourceBackedDatasetAdapter,
+from guard_eval_harness.datasets.base import (
+    DatasetAdapter,
     load_hf_rows,
 )
 from guard_eval_harness.registry import dataset_registry
@@ -30,7 +28,7 @@ def _label_balanced_rows(
 
 
 @dataset_registry.register("dices_350")
-class DICES350Dataset(SourceBackedDatasetAdapter):
+class DICES350Dataset(DatasetAdapter):
     """Load the DICES 350 dataset from Hugging Face."""
 
     display_name = "DICES 350"

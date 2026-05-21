@@ -1,7 +1,5 @@
 """Shared test bootstrap for local `src/` imports."""
 
-from __future__ import annotations
-
 import sys
 from pathlib import Path
 

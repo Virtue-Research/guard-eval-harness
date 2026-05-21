@@ -1,9 +1,7 @@
 """Source-backed MaliciousInstruct dataset adapter."""
 
-from __future__ import annotations
-
-from guard_eval_harness.datasets.source_backed import (
-    SourceBackedDatasetAdapter,
+from guard_eval_harness.datasets.base import (
+    DatasetAdapter,
     load_text_lines,
 )
 from guard_eval_harness.registry import dataset_registry
@@ -17,7 +15,7 @@ _FILENAME = "MaliciousInstruct.txt"
 
 
 @dataset_registry.register("malicious_instruct")
-class MaliciousInstructDataset(SourceBackedDatasetAdapter):
+class MaliciousInstructDataset(DatasetAdapter):
     """Load the MaliciousInstruct text prompt list."""
 
     display_name = "MaliciousInstruct"

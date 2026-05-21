@@ -1,9 +1,7 @@
 """Source-backed TDCRedTeaming dataset adapter."""
 
-from __future__ import annotations
-
-from guard_eval_harness.datasets.source_backed import (
-    SourceBackedDatasetAdapter,
+from guard_eval_harness.datasets.base import (
+    DatasetAdapter,
     load_json_payload,
 )
 from guard_eval_harness.registry import dataset_registry
@@ -17,7 +15,7 @@ _FILENAME = "behaviors.json"
 
 
 @dataset_registry.register("tdc_red_teaming")
-class TDCRedTeamingDataset(SourceBackedDatasetAdapter):
+class TDCRedTeamingDataset(DatasetAdapter):
     """Load the TDCRedTeaming prompt sets."""
 
     display_name = "TDCRedTeaming"

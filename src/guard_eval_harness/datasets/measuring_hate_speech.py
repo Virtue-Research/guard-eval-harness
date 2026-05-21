@@ -1,9 +1,7 @@
 """Source-backed Measuring Hate Speech dataset adapter."""
 
-from __future__ import annotations
-
-from guard_eval_harness.datasets.source_backed import (
-    SourceBackedDatasetAdapter,
+from guard_eval_harness.datasets.base import (
+    DatasetAdapter,
     load_hf_rows,
 )
 from guard_eval_harness.registry import dataset_registry
@@ -13,7 +11,7 @@ _HATE_SPEECH_THRESHOLD = 0.0
 
 
 @dataset_registry.register("measuring_hate_speech")
-class MeasuringHateSpeechDataset(SourceBackedDatasetAdapter):
+class MeasuringHateSpeechDataset(DatasetAdapter):
     """Load Measuring Hate Speech, deduplicated by comment."""
 
     display_name = "Measuring Hate Speech"

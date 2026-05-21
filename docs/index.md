@@ -5,95 +5,126 @@ hide:
 
 # Guard Eval Harness
 
-<p style="font-size: 1.25em; color: var(--md-default-fg-color--light);">
-CLI-first harness for benchmarking guardrail, moderation, and safety classification models.
+<p style="font-size: 1.2em; color: var(--md-default-fg-color--light);">
+Lightweight harness for evaluating safety guards against canonical benchmarks.
 </p>
 
 <p>
-  <img alt="Datasets" src="https://img.shields.io/badge/datasets-80+-9f9eff?style=flat-square">
-  <img alt="Modalities" src="https://img.shields.io/badge/modalities-text%20%7C%20image%20%7C%20audio%20%7C%20code-9f9eff?style=flat-square">
+  <img alt="Datasets" src="https://img.shields.io/badge/datasets-80+-5b6cff?style=flat-square">
+  <img alt="Modalities" src="https://img.shields.io/badge/modalities-text%20%7C%20image-5b6cff?style=flat-square">
+  <img alt="Python" src="https://img.shields.io/badge/python-3.10+-5b6cff?style=flat-square">
 </p>
 
-Evaluate any safety model — local HuggingFace, vLLM, OpenAI, Anthropic, or custom API — against **80+ built-in safety benchmarks** with a single command.
+Wire any chat LLM (OpenAI, Anthropic, local HF, vLLM) — or any guard model
+(Llama Guard, ShieldGemma, LlavaGuard, an HF image classifier) — to **80+
+built-in safety benchmarks** with one YAML.
 
 ---
 
-## Key Features
+## Mental model
+
+A run is exactly four things:
+
+```
+       Guard               Backend
+   (prompt + parser)   (inference engine)
+        │                    │
+        ▼                    ▼
+sample ──► messages ──► raw output ──► ParsedLabel ──► metrics
+                                            ▲
+                                            │
+                                       Policy + OutputFormat
+                                       (LLM-as-guard only)
+```
+
+- **Guard** owns the prompt construction + output parser. Fixed-taxonomy
+  guards (Llama Guard, ShieldGemma) embed their taxonomy. The generic
+  `llm` guard accepts any **Policy** + **OutputFormat** combo.
+- **Backend** is the inference engine (`hf_generate`, `openai_compat`,
+  `hf_vlm`, `hf_image_classifier`, `mock`, …). It knows nothing about
+  safety taxonomies.
+- **Dataset** loads samples in a normalized shape.
+- **Runner** glues them together, streams predictions to disk, and
+  computes metrics — resumable by default.
+
+## Quick example
+
+```yaml title="examples/llama-guard.yaml"
+version: 2
+run_name: llama-guard-3-on-xstest
+
+model:
+  guard: llama_guard
+  backend:
+    kind: openai_compat
+    name: meta-llama/Llama-Guard-3-8B
+    args:
+      base_url: http://localhost:8000/v1
+      api_key_env: null
+
+datasets:
+  - name: xstest
+    adapter: xstest
+    limit: 50
+
+output:
+  run_dir: out/llama-guard-3-on-xstest
+```
+
+```bash
+geh run --config examples/llama-guard.yaml
+```
+
+Streams one record per sample to
+`out/llama-guard-3-on-xstest/datasets/xstest/predictions.jsonl`,
+writes `metrics.json` + `manifest.json`, and resumes cleanly if
+interrupted.
+
+## Key features
 
 <div class="grid cards" markdown>
 
-- :material-console: **CLI-First**
+- :material-package-variant: **Guard × Backend split**
 
-    Run evaluations from a single command — no notebooks or scripts required.
+    Plug any guard prompt into any inference engine. Llama Guard runs
+    the same way on local HF, vLLM, or any OpenAI-compatible server.
 
-- :material-database: **80+ Benchmarks**
+- :material-database: **80+ datasets**
 
-    Built-in datasets covering text, image, audio, and code safety.
+    Text and image safety benchmarks (XSTest, HarmBench, ToxicChat,
+    BeaverTails, WildGuardMix, VLSBench, MM-SafetyBench, …) with a
+    single YAML.
 
-- :material-swap-horizontal: **Any Backend**
+- :material-restore: **Resumable runs**
 
-    HuggingFace, vLLM, OpenAI, Anthropic, or bring your own HTTP endpoint.
+    Predictions stream to disk per-sample. Re-run the same config and
+    it picks up where it stopped — config-hash guard prevents
+    silent mixing.
 
-- :material-chart-bar: **Rich Metrics**
+- :material-chart-bar: **Per-sample outputs**
 
-    Accuracy, precision, recall, F1, AUROC, AUPRC — computed automatically.
+    Every run writes one JSONL row per sample with raw output, parsed
+    label, ground truth, and latency. Metrics computed from disk, not
+    in-memory.
 
-- :material-package-variant: **Benchmark Packs**
+- :material-source-branch: **30-line custom guards**
 
-    Curated dataset bundles for common evaluation scenarios.
+    Adding a new safety model is a `Guard` subclass with
+    `build_messages()` + `parse()`. No catalog YAMLs, no template
+    profiles.
 
-- :material-file-document: **Self-Contained Artifacts**
+- :material-shield-lock: **Ground-truth leak proof**
 
-    Every run produces a portable directory with predictions, metrics, and HTML reports.
+    `PredictSample` structurally excludes labels. A denylist rejects
+    label-shaped metadata at the boundary.
 
 </div>
 
-## Quick Example
+## What's next?
 
-```bash
-# Install
-pip install -e ".[hf]"
-
-# Evaluate Llama Guard on XSTest
-geh run --dataset xstest --model hf \
-    --model-name meta-llama/Llama-Guard-3-8B
-
-# Run a curated benchmark pack
-geh run --pack core --model openai_moderation
-
-# Compare two runs
-geh compare --run-a out/run1 --run-b out/run2
-```
-
-## How It Works
-
-```
-geh run --dataset xstest --model hf --model-name meta-llama/Llama-Guard-3-8B
-         │                    │                      │
-         ▼                    ▼                      ▼
-   Load & normalize     Instantiate adapter    Load model weights
-   safety samples       (HF, vLLM, API...)     or connect to API
-         │                    │                      │
-         └────────────────────┼──────────────────────┘
-                              ▼
-                     Run inference (batched)
-                              │
-                              ▼
-                    Compute binary metrics
-                    (accuracy, F1, AUROC...)
-                              │
-                              ▼
-                   Write artifacts to disk
-                   (predictions, metrics, HTML report)
-```
-
-## What's Next?
-
-- **[Installation](getting-started/installation.md)** — Set up your environment
-- **[Quickstart](getting-started/quickstart.md)** — Run your first evaluation in 2 minutes
-- **[Run Modes](getting-started/run-modes.md)** — Choose between inline, pack, and YAML flows
-- **[Troubleshooting](getting-started/troubleshooting.md)** — Fix install, auth, and path issues
-- **[Benchmark Selection](user-guide/benchmark-selection.md)** — Pick the right benchmark path
-- **[Configuration](user-guide/configuration.md)** — Full YAML config reference
-- **[Models](models/overview.md)** — Connect any safety model backend
-- **[Datasets](datasets/overview.md)** — Browse 80+ built-in benchmarks
+- **[Installation](getting-started/installation.md)** — one-line install
+- **[Quickstart](getting-started/quickstart.md)** — first evaluation in 2 minutes
+- **[Configuration](user-guide/configuration.md)** — full YAML reference
+- **[Guards](guards/overview.md)** — built-in guard catalog
+- **[Backends](backends/overview.md)** — supported inference engines
+- **[Datasets](datasets/overview.md)** — 80+ built-in benchmarks

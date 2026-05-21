@@ -1,15 +1,13 @@
 """ImageNet 1K validation set adapter (all-safe image-only)."""
 
-from __future__ import annotations
-
 import importlib
 import logging
 from pathlib import Path
 
-from guard_eval_harness.datasets.multimodal_base import (
-    MultimodalDatasetAdapter,
+from guard_eval_harness.datasets.image_base import (
+    ImageDatasetAdapter,
 )
-from guard_eval_harness.datasets.sample_cache import (
+from guard_eval_harness.utils.sample_cache import (
     compute_cache_key,
     load_cached_samples,
     sample_cache_base_dir,
@@ -25,7 +23,7 @@ _REVISION = "main"
 
 
 @dataset_registry.register("imagenet1k_val_safe")
-class ImageNet1KValSafeDataset(MultimodalDatasetAdapter):
+class ImageNet1KValSafeDataset(ImageDatasetAdapter):
     """Load ImageNet 1K validation as image-only safe samples."""
 
     display_name = "ImageNet 1K (Safe)"

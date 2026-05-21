@@ -1,9 +1,7 @@
 """Source-backed CatQA dataset adapter."""
 
-from __future__ import annotations
-
-from guard_eval_harness.datasets.source_backed import (
-    SourceBackedDatasetAdapter,
+from guard_eval_harness.datasets.base import (
+    DatasetAdapter,
     load_hf_rows,
 )
 from guard_eval_harness.registry import dataset_registry
@@ -12,7 +10,7 @@ _REVISION = "321e068b391b7d1aeeb882ac468356a9513c9167"
 
 
 @dataset_registry.register("cat_qa")
-class CatQADataset(SourceBackedDatasetAdapter):
+class CatQADataset(DatasetAdapter):
     """Load the English CatQA harmful question set."""
 
     display_name = "CatQA"

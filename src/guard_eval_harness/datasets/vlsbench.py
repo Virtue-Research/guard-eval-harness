@@ -1,11 +1,9 @@
 """VLSBench multimodal safety benchmark adapter."""
 
-from __future__ import annotations
-
 from typing import Any
 
-from guard_eval_harness.datasets.multimodal_source_backed import (
-    SourceBackedMultimodalDatasetAdapter,
+from guard_eval_harness.datasets.image_base import (
+    ImageDatasetAdapter,
 )
 from guard_eval_harness.registry import dataset_registry
 from guard_eval_harness.schemas import NormalizedSample, UnsafeLabel
@@ -22,7 +20,7 @@ def _clean_text(value: Any) -> str:
 
 
 @dataset_registry.register("vlsbench")
-class VLSBenchDataset(SourceBackedMultimodalDatasetAdapter):
+class VLSBenchDataset(ImageDatasetAdapter):
     """Load VLSBench as text+image unsafe samples."""
 
     display_name = "VLSBench"

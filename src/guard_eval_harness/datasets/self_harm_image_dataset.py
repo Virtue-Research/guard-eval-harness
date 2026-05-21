@@ -1,13 +1,11 @@
 """Yiting Self-harm_Dataset adapter."""
 
-from __future__ import annotations
-
 import base64
 from io import BytesIO
 from typing import Any
 
-from guard_eval_harness.datasets.multimodal_source_backed import (
-    SourceBackedMultimodalDatasetAdapter,
+from guard_eval_harness.datasets.image_base import (
+    ImageDatasetAdapter,
 )
 from guard_eval_harness.registry import dataset_registry
 from guard_eval_harness.schemas import NormalizedSample, UnsafeLabel
@@ -18,7 +16,7 @@ _REVISION = "7b73824c8d63f76e1f258ab2b176a3d7507cc418"
 
 
 @dataset_registry.register("self_harm_image_dataset")
-class SelfHarmImageDataset(SourceBackedMultimodalDatasetAdapter):
+class SelfHarmImageDataset(ImageDatasetAdapter):
     """Load the public self-harm image classification dataset."""
 
     display_name = "Self-harm Image Dataset"

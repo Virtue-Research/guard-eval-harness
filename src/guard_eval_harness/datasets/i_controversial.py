@@ -1,9 +1,7 @@
 """Source-backed I-Controversial dataset adapter."""
 
-from __future__ import annotations
-
-from guard_eval_harness.datasets.source_backed import (
-    SourceBackedDatasetAdapter,
+from guard_eval_harness.datasets.base import (
+    DatasetAdapter,
     load_json_payload,
 )
 from guard_eval_harness.registry import dataset_registry
@@ -17,7 +15,7 @@ _FILENAME = "I-Controversial.json"
 
 
 @dataset_registry.register("i_controversial")
-class IControversialDataset(SourceBackedDatasetAdapter):
+class IControversialDataset(DatasetAdapter):
     """Load the I-Controversial instruction set."""
 
     display_name = "I-Controversial"

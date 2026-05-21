@@ -1,11 +1,9 @@
 """Parveshiiii AI-vs-Real dataset adapter."""
 
-from __future__ import annotations
-
 import logging
 
-from guard_eval_harness.datasets.multimodal_source_backed import (
-    SourceBackedMultimodalDatasetAdapter,
+from guard_eval_harness.datasets.image_base import (
+    ImageDatasetAdapter,
 )
 from guard_eval_harness.registry import dataset_registry
 from guard_eval_harness.schemas import NormalizedSample, UnsafeLabel
@@ -17,7 +15,7 @@ _log = logging.getLogger(__name__)
 
 
 @dataset_registry.register("ai_vs_real")
-class AIVsRealDataset(SourceBackedMultimodalDatasetAdapter):
+class AIVsRealDataset(ImageDatasetAdapter):
     """Load AI-generated vs real images as GenAI moderation samples."""
 
     display_name = "AI-vs-Real"
