@@ -29,7 +29,6 @@ class PackRegistryTest(unittest.TestCase):
         self.assertEqual(
             sorted(names),
             [
-                "audio",
                 "core",
                 "hate_harassment",
                 "jailbreak",
@@ -124,12 +123,6 @@ class PackDatasetCountsTest(unittest.TestCase):
             6,
             len(get_pack("prompt_injection").datasets),
         )
-
-    def test_audio_has_1_dataset(self) -> None:
-        self.assertEqual(
-            1, len(get_pack("audio").datasets)
-        )
-
 
 class PackNoDuplicatesTest(unittest.TestCase):
     """Each pack must have unique dataset names."""

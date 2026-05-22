@@ -35,15 +35,12 @@ class HarnessModel(BaseModel):
 class MediaRef(HarnessModel):
     """Reference to a resolved media artifact."""
 
-    modality: Literal["image", "audio"]
+    modality: Literal["image"]
     uri: str = Field(min_length=1)
     sha256: str | None = None
     mime_type: str | None = None
     width: int | None = None
     height: int | None = None
-    duration_seconds: float | None = Field(default=None, ge=0.0)
-    sample_rate_hz: int | None = Field(default=None, ge=1)
-    channels: int | None = Field(default=None, ge=1)
 
 
 class TextPart(HarnessModel):
@@ -92,27 +89,6 @@ def _coerce_openai_content_part(part: Any) -> Any:
         return {
             "type": "media",
             "media": {"modality": "image", "uri": url},
-        }
-    if ptype == "audio":
-        audio_value = (
-            part.get("audio_url")
-            if part.get("audio_url") is not None
-            else part.get("audio")
-        )
-        if isinstance(audio_value, str):
-            url = audio_value
-        elif isinstance(audio_value, dict):
-            url = (
-                audio_value.get("url")
-                or audio_value.get("audio_url")
-                or audio_value.get("audio")
-                or ""
-            )
-        else:
-            url = part.get("url", "")
-        return {
-            "type": "media",
-            "media": {"modality": "audio", "uri": url},
         }
     return part
 
@@ -203,18 +179,6 @@ class Message(HarnessModel):
             p.media
             for p in self.content
             if isinstance(p, MediaPart)
-        ]
-
-    @property
-    def audio_refs(self) -> list[MediaRef]:
-        """Extract audio MediaRefs from content."""
-        if isinstance(self.content, str):
-            return []
-        return [
-            p.media
-            for p in self.content
-            if isinstance(p, MediaPart)
-            and p.media.modality == "audio"
         ]
 
 
