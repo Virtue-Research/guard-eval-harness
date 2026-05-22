@@ -11,7 +11,7 @@ Evaluate any safety model — local HuggingFace, vLLM, OpenAI, Anthropic, or cus
 ## Quickstart
 
 ```bash
-pip install -e "."
+pip install geh
 
 # Run a quick eval
 geh run --dataset xstest --model mock --limit 50
@@ -33,18 +33,23 @@ Requires Python 3.10+.
 
 ```bash
 # Base install
-pip install -e "."
+pip install geh
 
 # With HuggingFace model support
-pip install -e ".[hf]"
+pip install "geh[hf]"
 
 # With vLLM support
-pip install -e ".[vllm]"
+pip install "geh[vllm]"
 
 # With API model support (OpenAI, Anthropic)
-pip install -e ".[api]"
+pip install "geh[api]"
+```
 
-# Development
+From source (for development):
+
+```bash
+git clone https://github.com/Virtue-Research/guard-eval-harness.git
+cd guard-eval-harness
 pip install -e ".[dev]"
 ```
 
