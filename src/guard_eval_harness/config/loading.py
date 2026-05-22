@@ -70,7 +70,11 @@ def _resolve_relative_path(
     return path.as_posix()
 
 
-def _build_policy_payload(value: Any) -> str | InlinePolicy | None:
+def _build_policy_payload(
+    value: Any,
+    *,
+    where: str,
+) -> str | InlinePolicy | None:
     """Coerce a raw policy spec into a registry name or inline policy."""
     if value is None:
         return None
@@ -79,7 +83,7 @@ def _build_policy_payload(value: Any) -> str | InlinePolicy | None:
     if isinstance(value, dict):
         return InlinePolicy.model_validate(value)
     raise ValueError(
-        "model.policy must be a registry name (str) or an inline "
+        f"{where} must be a registry name (str) or an inline "
         "{name, text, categories?} object"
     )
 
@@ -95,32 +99,29 @@ def _build_model(payload: dict[str, Any]) -> ResolvedModelConfig:
         raise ValueError("model.backend must be a mapping")
     backend = ResolvedBackendConfig.model_validate(backend_payload)
 
-    policy = _build_policy_payload(payload.get("policy"))
+    if "policy" in payload:
+        raise ValueError(
+            "model.policy is no longer supported. Move `policy:` under "
+            "each dataset entry (the policy describes how to score the "
+            "dataset, not a property of the guard)."
+        )
+
     output_format = payload.get("output_format")
     guard_args = dict(payload.get("guard_args", {}))
 
     resolved = ResolvedModelConfig(
         guard=payload["guard"],
-        policy=policy,
         output_format=output_format,
         guard_args=guard_args,
         backend=backend,
     )
 
-    # Compat check: reject policy/output_format on guards that don't
-    # advertise support. We do this here (not in the pydantic model)
-    # so the schema stays free of registry side effects.
+    # Compat check: reject output_format on guards that don't advertise
+    # support. We do this here (not in the pydantic model) so the schema
+    # stays free of registry side effects.
     from guard_eval_harness.guards import get_guard_cls
 
     guard_cls = get_guard_cls(resolved.guard)
-    if resolved.policy is not None and not getattr(
-        guard_cls, "accepts_policy", False
-    ):
-        raise ValueError(
-            f"guard {resolved.guard!r} does not accept a custom policy; "
-            "remove `model.policy` from the YAML (the guard uses a "
-            "fixed taxonomy)"
-        )
     if resolved.output_format is not None and not getattr(
         guard_cls, "accepts_output_format", False
     ):
@@ -145,6 +146,19 @@ def _build_dataset(
     for key in ("sample_ids", "sample_indices"):
         if key in mapping and mapping[key] is not None:
             mapping[key] = tuple(mapping[key])
+    if "policy" in mapping:
+        mapping["policy"] = _build_policy_payload(
+            mapping["policy"],
+            where=f"datasets[{mapping.get('name', '?')!r}].policy",
+        )
+    if "policy" in mapping and "policy_source" in mapping:
+        if mapping["policy"] is not None and mapping["policy_source"]:
+            raise ValueError(
+                f"datasets[{mapping.get('name', '?')!r}]: cannot set "
+                "both `policy` and `policy_source` — `policy` already "
+                "resolves to a concrete policy, `policy_source` is "
+                "only used when no explicit `policy` is given."
+            )
     return ResolvedDatasetSelection.model_validate(mapping)
 
 

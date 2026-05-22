@@ -170,6 +170,15 @@ class DatasetAdapter(ABC):
     supported_splits: tuple[str, ...] = ("test",)
     version: str | None = None
 
+    # --- policy source default ---
+    # Tells the runner which kind of dataset-scoped policy to use when
+    # the YAML doesn't override ``policy_source``. Built-in values:
+    #   "upstream"       — paper's official taxonomy (Tier A datasets)
+    #   "generated"      — deployment-style GPT-derived policy (most)
+    #   "virtue_general" — global fallback (all-safe / no-taxonomy)
+    # Users can register their own and reference it via YAML.
+    default_policy_source: str = "generated"
+
     def __init__(self, config: ResolvedDatasetConfig) -> None:
         self.config = config
         self._source_metadata: dict[str, Any] = {}

@@ -4,7 +4,6 @@ threshold: 0.5
 
 model:
   guard: llm
-  policy: general_safety
   output_format: safe_unsafe_first_line
   backend:
     kind: mock
@@ -13,10 +12,12 @@ datasets:
   - name: mock_full
     adapter: local_jsonl
     path: datasets/mock_samples.jsonl
+    policy: general_safety
   - name: mock_first_4
     adapter: local_jsonl
     path: datasets/mock_samples.jsonl
     limit: 4
+    policy: general_safety
 
 output:
   run_dir: ../out/mock-demo

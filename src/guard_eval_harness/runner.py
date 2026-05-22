@@ -158,12 +158,11 @@ def run_from_config(
 ) -> RunResult:
     """Execute a run end-to-end from a resolved config."""
     ensure_builtin_registrations()
-    guard, policy, output_format = _build_guard(config)
+    guard, output_format = _build_guard(config)
     backend = _build_backend(config)
     return _execute_run(
         config=config,
         guard=guard,
-        policy=policy,
         output_format=output_format,
         backend=backend,
         recompute_metrics_only=recompute_metrics_only,
@@ -179,12 +178,10 @@ def run_benchmark(
 ) -> RunResult:
     """Programmatic entry point: caller supplies prebuilt guard + backend."""
     ensure_builtin_registrations()
-    policy = _resolve_policy(config)
     output_format = _resolve_output_format(config)
     return _execute_run(
         config=config,
         guard=guard,
-        policy=policy,
         output_format=output_format,
         backend=backend,
         recompute_metrics_only=recompute_metrics_only,
@@ -196,9 +193,10 @@ def run_benchmark(
 # ---------------------------------------------------------------------------
 
 
-def _resolve_policy(config: ResolvedRunConfig) -> Policy | None:
-    """Materialize a Policy from a registry name or inline definition."""
-    spec = config.model.policy
+def _materialize_policy(
+    spec: str | InlinePolicy | None,
+) -> Policy | None:
+    """Materialize a Policy spec (registry name or inline) into a Policy."""
     if spec is None:
         return None
     if isinstance(spec, InlinePolicy):
@@ -208,6 +206,45 @@ def _resolve_policy(config: ResolvedRunConfig) -> Policy | None:
             categories=tuple(spec.categories),
         )
     return get_policy(spec)
+
+
+def _effective_policy_for_dataset(
+    guard: Guard,
+    selection: ResolvedDatasetSelection,
+) -> Policy | None:
+    """Decide the effective policy for one (guard, dataset) pair.
+
+    Fixed-taxonomy guards (accepts_policy=False) always get ``None`` —
+    the model uses its own trained-in taxonomy.
+
+    For LLM-as-guard, priority:
+        1. ``datasets[].policy:`` in YAML (registry name or inline)
+        2. ``datasets[].policy_source:`` in YAML → lookup
+        3. adapter's bundled default source (data/policy_source_defaults.json)
+        4. guard's ``default_policy`` (LLMGuard ships ``general_safety``)
+        5. None
+    """
+    if not guard.accepts_policy:
+        return None
+    # 1. explicit policy on the dataset entry
+    if selection.policy is not None:
+        return _materialize_policy(selection.policy)
+
+    # Determine effective source name
+    from guard_eval_harness.policies import (
+        adapter_default_policy_source,
+        lookup_policy_by_source,
+    )
+
+    source = selection.policy_source or adapter_default_policy_source(
+        selection.adapter
+    )
+    found = lookup_policy_by_source(selection.adapter, source)
+    if found is not None:
+        return found
+
+    # Fallback: guard's own default
+    return guard.default_policy
 
 
 def _resolve_output_format(
@@ -222,22 +259,19 @@ def _resolve_output_format(
 
 def _build_guard(
     config: ResolvedRunConfig,
-) -> tuple[Guard, Policy | None, OutputFormat | None]:
+) -> tuple[Guard, OutputFormat | None]:
     """Instantiate the configured Guard with sensible defaults."""
     guard_cls = get_guard_cls(config.model.guard)
-    policy = _resolve_policy(config)
     output_format = _resolve_output_format(config)
 
     kwargs: dict[str, Any] = dict(config.model.guard_args)
     if guard_cls is LLMGuard:
-        if policy is not None:
-            kwargs.setdefault("default_policy", policy)
         if output_format is not None:
             kwargs.setdefault("default_output_format", output_format)
         guard: Guard = LLMGuard(**kwargs)
     else:
         guard = guard_cls(**kwargs)
-    return guard, policy, output_format
+    return guard, output_format
 
 
 def _build_backend(config: ResolvedRunConfig) -> Backend:
@@ -290,22 +324,24 @@ def _canonical_config_view(config: ResolvedRunConfig) -> dict[str, Any]:
     """Produce the canonical fingerprintable view of a run config.
 
     Excludes fields that don't affect predictions (run_name, run_dir,
-    resume, overwrite) and resolves inline policies into their full
-    text so a renamed policy is detected as a change.
+    resume, overwrite). Inline policies are resolved into their full
+    text so a renamed registry policy is detected as a change.
     """
-    policy_view: Any
-    if config.model.policy is None:
-        policy_view = None
-    elif isinstance(config.model.policy, InlinePolicy):
-        policy_view = {
-            "kind": "inline",
-            "name": config.model.policy.name,
-            "text": config.model.policy.text,
-            "categories": list(config.model.policy.categories),
-        }
-    else:
-        resolved = get_policy(config.model.policy)
-        policy_view = {
+
+    def _policy_view(
+        spec: str | InlinePolicy | None,
+    ) -> dict[str, Any] | None:
+        if spec is None:
+            return None
+        if isinstance(spec, InlinePolicy):
+            return {
+                "kind": "inline",
+                "name": spec.name,
+                "text": spec.text,
+                "categories": list(spec.categories),
+            }
+        resolved = get_policy(spec)
+        return {
             "kind": "registry",
             "name": resolved.name,
             "text": resolved.text,
@@ -318,6 +354,7 @@ def _canonical_config_view(config: ResolvedRunConfig) -> dict[str, Any]:
             {
                 "name": dataset.name,
                 "adapter": dataset.adapter,
+                "policy": _policy_view(dataset.policy),
                 "path": dataset.path,
                 "split": dataset.split,
                 "limit": dataset.limit,
@@ -332,7 +369,6 @@ def _canonical_config_view(config: ResolvedRunConfig) -> dict[str, Any]:
         "threshold": config.threshold,
         "model": {
             "guard": config.model.guard,
-            "policy": policy_view,
             "output_format": config.model.output_format,
             "guard_args": dict(config.model.guard_args),
             "backend": {
@@ -822,7 +858,6 @@ def _execute_run(
     *,
     config: ResolvedRunConfig,
     guard: Guard,
-    policy: Policy | None,
     output_format: OutputFormat | None,
     backend: GenerationBackend,
     recompute_metrics_only: bool,
@@ -846,11 +881,13 @@ def _execute_run(
     total_failed = 0
 
     for selection in config.datasets:
+        # Effective policy per dataset (see _effective_policy_for_dataset).
+        effective_policy = _effective_policy_for_dataset(guard, selection)
         metrics, completed, failed = _run_one_dataset(
             config=config,
             selection=selection,
             guard=guard,
-            policy=policy,
+            policy=effective_policy,
             output_format=output_format,
             backend=backend,
             root=root,

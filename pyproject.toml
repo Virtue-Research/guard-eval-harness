@@ -51,5 +51,8 @@ include-package-data = true
 where = ["src"]
 include = ["guard_eval_harness*"]
 
+[tool.setuptools.package-data]
+"guard_eval_harness.policies" = ["*.json"]
+
 [tool.ruff]
 line-length = 80

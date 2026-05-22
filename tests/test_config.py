@@ -45,12 +45,15 @@ class ConfigV2LoaderTest(unittest.TestCase):
             "threshold": 0.5,
             "model": {
                 "guard": "llm",
-                "policy": "general_safety",
                 "output_format": "safe_unsafe_first_line",
                 "backend": {"kind": "mock"},
             },
             "datasets": [
-                {"name": "d1", "adapter": "local_jsonl"},
+                {
+                    "name": "d1",
+                    "adapter": "local_jsonl",
+                    "policy": "general_safety",
+                },
             ],
             "output": {"run_dir": "out/test", "resume": True},
         }
@@ -58,35 +61,48 @@ class ConfigV2LoaderTest(unittest.TestCase):
             payload[key] = value
         return payload
 
-    def test_loads_minimal_v2_config(self) -> None:
+    def test_loads_minimal_config(self) -> None:
         cfg = load_config(self._base_payload())
         self.assertIsInstance(cfg, ResolvedRunConfig)
         self.assertEqual(cfg.model.guard, "llm")
         self.assertEqual(cfg.model.backend.kind, "mock")
         self.assertTrue(cfg.output.resume)
         self.assertEqual(len(cfg.datasets), 1)
+        self.assertEqual(cfg.datasets[0].policy, "general_safety")
 
-    def test_inline_policy_object(self) -> None:
+    def test_inline_policy_object_on_dataset(self) -> None:
         payload = self._base_payload()
-        payload["model"]["policy"] = {
+        payload["datasets"][0]["policy"] = {
             "name": "inline_p",
             "text": "inline policy text",
             "categories": ["a", "b"],
         }
         cfg = load_config(payload)
-        self.assertIsInstance(cfg.model.policy, InlinePolicy)
-        self.assertEqual(cfg.model.policy.name, "inline_p")
+        self.assertIsInstance(cfg.datasets[0].policy, InlinePolicy)
+        self.assertEqual(cfg.datasets[0].policy.name, "inline_p")
 
-    def test_rejects_policy_on_fixed_guard(self) -> None:
+    def test_adapter_defaults_to_name(self) -> None:
         payload = self._base_payload()
-        payload["model"]["guard"] = "fake_fixed_for_tests"
-        with self.assertRaisesRegex(ValueError, "does not accept a custom policy"):
+        payload["datasets"] = [
+            {"name": "xstest"},   # adapter omitted → "xstest"
+            {"name": "alias-quick", "adapter": "local_jsonl", "limit": 5},
+        ]
+        cfg = load_config(payload)
+        self.assertEqual(cfg.datasets[0].adapter, "xstest")
+        self.assertEqual(cfg.datasets[1].adapter, "local_jsonl")
+
+    def test_rejects_model_level_policy(self) -> None:
+        """model.policy is no longer supported; must error clearly."""
+        payload = self._base_payload()
+        payload["model"]["policy"] = "general_safety"
+        with self.assertRaisesRegex(
+            ValueError, "model.policy is no longer supported"
+        ):
             load_config(payload)
 
     def test_rejects_output_format_on_fixed_guard(self) -> None:
         payload = self._base_payload()
         payload["model"]["guard"] = "fake_fixed_for_tests"
-        payload["model"]["policy"] = None
         payload["model"]["output_format"] = "safe_unsafe_first_line"
         with self.assertRaisesRegex(
             ValueError, "does not accept a custom\\s+output_format"

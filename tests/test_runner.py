@@ -72,7 +72,6 @@ class RunnerV2Test(unittest.TestCase):
             "threshold": 0.5,
             "model": {
                 "guard": "llm",
-                "policy": "general_safety",
                 "output_format": "safe_unsafe_first_line",
                 "backend": {
                     "kind": "mock",
@@ -84,6 +83,7 @@ class RunnerV2Test(unittest.TestCase):
                     "name": "tiny",
                     "adapter": "local_jsonl",
                     "path": dataset_path.as_posix(),
+                    "policy": "general_safety",
                     **(dataset_kwargs or {}),
                 },
             ],

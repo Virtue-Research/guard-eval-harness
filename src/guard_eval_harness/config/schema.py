@@ -165,10 +165,14 @@ class ResolvedBackendConfig(ConfigModel):
 
 
 class ResolvedModelConfig(ConfigModel):
-    """Top-level model group: guard + optional policy/output_format + backend."""
+    """Top-level model group: guard + optional output_format + backend.
+
+    Note: ``policy`` lives at the dataset level, not the model level.
+    Policy is "what taxonomy to score this dataset under", not a
+    model property. Fixed-taxonomy guards ignore policies entirely.
+    """
 
     guard: str
-    policy: str | InlinePolicy | None = None
     output_format: str | None = None
     guard_args: dict[str, Any] = Field(default_factory=dict)
     backend: ResolvedBackendConfig
@@ -185,10 +189,21 @@ class ResolvedModelConfig(ConfigModel):
 
 
 class ResolvedDatasetSelection(ConfigModel):
-    """One dataset entry in a run config, with optional subset selection."""
+    """One dataset entry in a run config, with optional subset + policy.
+
+    Policy resolution priority (handled by the runner):
+        1. ``policy:`` field — explicit Policy (registry name or inline)
+        2. ``policy_source:`` field — registry suffix, looks up
+           ``dataset_<adapter>_<policy_source>``
+        3. adapter's ``default_policy_source`` class attribute
+        4. guard's ``default_policy`` (e.g. LLMGuard ships general_safety)
+        5. None
+    """
 
     name: str
-    adapter: str
+    adapter: str | None = None
+    policy: str | InlinePolicy | None = None
+    policy_source: str | None = None
     path: str | None = None
     split: str = "test"
     limit: int | None = Field(default=None, ge=1)
@@ -196,12 +211,22 @@ class ResolvedDatasetSelection(ConfigModel):
     sample_indices: tuple[int, ...] = ()
     options: dict[str, Any] = Field(default_factory=dict)
 
-    @field_validator("name", "adapter", "split")
+    @field_validator("name", "split")
     @classmethod
     def _non_empty(cls, value: str) -> str:
         cleaned = value.strip()
         if not cleaned:
             raise ValueError("value must not be empty")
+        return cleaned
+
+    @field_validator("adapter")
+    @classmethod
+    def _adapter_non_empty(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("adapter must not be empty when provided")
         return cleaned
 
     @field_validator("path")
@@ -234,6 +259,17 @@ class ResolvedDatasetSelection(ConfigModel):
                     "sample_ids entries must be non-empty strings"
                 )
         return value
+
+    @model_validator(mode="after")
+    def _default_adapter_to_name(self) -> "ResolvedDatasetSelection":
+        """If adapter is omitted, default to `name`.
+
+        Common case: ``- name: xstest`` → adapter implicitly = "xstest".
+        Subset / alias case: ``- name: xstest-quick / adapter: xstest``.
+        """
+        if self.adapter is None:
+            object.__setattr__(self, "adapter", self.name)
+        return self
 
     @model_validator(mode="after")
     def _exclusive_subset_selector(

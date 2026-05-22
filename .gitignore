@@ -10,6 +10,9 @@ tmp*.yaml
 *.lock
 !uv.lock
 
+# Internal development docs (audit reports, design notes, agent outputs)
+docs_dev/
+
 # Claude Code
 .claude/
 
