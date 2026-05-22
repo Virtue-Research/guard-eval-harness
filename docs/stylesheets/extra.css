@@ -2,9 +2,9 @@
 
 /* Dark mode (slate) overrides */
 [data-md-color-scheme="slate"] {
-  --md-primary-fg-color: #1621f6;
-  --md-primary-fg-color--light: #3d46f7;
-  --md-primary-fg-color--dark: #0d15c4;
+  --md-primary-fg-color: #221d45;
+  --md-primary-fg-color--light: #312a63;
+  --md-primary-fg-color--dark: #16122e;
   --md-accent-fg-color: #9f9eff;
   --md-default-bg-color: #0d0f10;
   --md-default-bg-color--light: #131515;
@@ -16,20 +16,20 @@
 
 /* Light mode overrides */
 [data-md-color-scheme="default"] {
-  --md-primary-fg-color: #1621f6;
-  --md-primary-fg-color--light: #3d46f7;
-  --md-primary-fg-color--dark: #0d15c4;
+  --md-primary-fg-color: #221d45;
+  --md-primary-fg-color--light: #312a63;
+  --md-primary-fg-color--dark: #16122e;
   --md-accent-fg-color: #5300f8;
 }
 
 /* ── Header / Tabs ─────────────────────────────────────────── */
 
 .md-header {
-  background: #1621f6;
+  background: #221d45;
 }
 
 .md-tabs {
-  background: #0d15c4;
+  background: #16122e;
 }
 
 /* ── Navigation ────────────────────────────────────────────── */
