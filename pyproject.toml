@@ -29,10 +29,6 @@ hf = [
   # (CVE-2024-12720, CVE-2025-1194) that cluster in 4.46-4.49.
   "transformers>=4.50",
 ]
-audio = [
-  "librosa>=0.10",
-  "soundfile>=0.12",
-]
 vllm = [
   # vLLM pins its own torch version (e.g. 0.17.x requires torch==2.10).
   # Do NOT pin torch here — let vLLM's dependency resolver handle it.

@@ -13,12 +13,10 @@ from collections.abc import Callable
 from guard_eval_harness.datasets.base import DatasetAdapter
 from guard_eval_harness.schemas import DatasetMetadata
 from guard_eval_harness.datasets.media_cache import (
-    audio_metadata,
     compute_sha256,
     default_cache_dir,
     image_dimensions,
     resolve_image_bytes,
-    resolve_local_audio,
     resolve_pil_image,
 )
 from guard_eval_harness.datasets.sample_cache import (
@@ -57,11 +55,7 @@ class MultimodalDatasetAdapter(DatasetAdapter):
                     modalities.add("text")
                 for media_ref in message.media_refs:
                     modalities.add(media_ref.modality)
-            if (
-                "text" in modalities
-                and "image" in modalities
-                and "audio" in modalities
-            ):
+            if "text" in modalities and "image" in modalities:
                 break
         if not modalities:
             modalities.add("text")
@@ -157,7 +151,6 @@ class MultimodalDatasetAdapter(DatasetAdapter):
         *,
         text: str | None = None,
         image_ref: MediaRef | None = None,
-        audio_ref: MediaRef | None = None,
         role: str = "user",
     ) -> Message:
         """Construct a ``Message`` with typed content parts.
@@ -169,11 +162,9 @@ class MultimodalDatasetAdapter(DatasetAdapter):
             parts.append(TextPart(text=text))
         if image_ref is not None:
             parts.append(MediaPart(media=image_ref))
-        if audio_ref is not None:
-            parts.append(MediaPart(media=audio_ref))
         if not parts:
             raise ValueError(
-                "At least one of text, image_ref, or audio_ref is required"
+                "At least one of text or image_ref is required"
             )
         return Message(role=role, content=parts)
 
@@ -184,7 +175,6 @@ class MultimodalDatasetAdapter(DatasetAdapter):
         row_number: int,
         text: str | None = None,
         image_ref: MediaRef | None = None,
-        audio_ref: MediaRef | None = None,
         unsafe: bool,
         category_labels: tuple[str, ...] = (),
         extra_metadata: dict[str, Any] | None = None,
@@ -193,7 +183,6 @@ class MultimodalDatasetAdapter(DatasetAdapter):
         message = self.build_multimodal_message(
             text=text,
             image_ref=image_ref,
-            audio_ref=audio_ref,
         )
         sample_id = self._make_sample_id(row, row_number)
         metadata = dict(extra_metadata or {})
@@ -208,43 +197,6 @@ class MultimodalDatasetAdapter(DatasetAdapter):
             label=UnsafeLabel(unsafe=unsafe),
             category_labels=category_labels,
             metadata=metadata,
-        )
-
-    def resolve_audio(self, source: Any) -> MediaRef:
-        """Resolve an audio source to a ``MediaRef``."""
-        return self.resolve_audio_with_base_dir(source)
-
-    def resolve_audio_with_base_dir(
-        self,
-        source: Any,
-        *,
-        base_dir: str | Path | None = None,
-    ) -> MediaRef:
-        """Resolve a local audio source relative to one optional base directory."""
-        resolved_base_dir = (
-            Path(base_dir).expanduser() if base_dir is not None else None
-        )
-
-        if not isinstance(source, (str, Path)):
-            raise TypeError(
-                f"Unsupported audio source type: {type(source).__name__}"
-            )
-
-        local_path = Path(source).expanduser()
-        if resolved_base_dir is not None and not local_path.is_absolute():
-            local_path = resolved_base_dir / local_path
-        local_path, digest = resolve_local_audio(local_path)
-        duration_seconds, sample_rate_hz, channels, mime_type = audio_metadata(
-            local_path
-        )
-        return MediaRef(
-            modality="audio",
-            uri=local_path.as_posix(),
-            sha256=digest,
-            mime_type=mime_type,
-            duration_seconds=duration_seconds,
-            sample_rate_hz=sample_rate_hz,
-            channels=channels,
         )
 
     # ------------------------------------------------------------------

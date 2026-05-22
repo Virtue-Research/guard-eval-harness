@@ -3,10 +3,8 @@
 from __future__ import annotations
 
 import hashlib
-import mimetypes
 import shutil
 import uuid
-import wave
 from pathlib import Path
 from typing import Any
 
@@ -42,94 +40,6 @@ def image_dimensions(path: Path) -> tuple[int, int]:
         ) from exc
     with Image.open(path) as img:
         return img.size  # (width, height)
-
-
-def audio_metadata(
-    path: Path,
-) -> tuple[float | None, int | None, int | None, str | None]:
-    """Return ``(duration_seconds, sample_rate_hz, channels, mime_type)``."""
-    mime_type, _encoding = mimetypes.guess_type(path.name)
-
-    try:
-        import soundfile as sf  # type: ignore[import-untyped]
-    except ImportError:
-        sf = None
-
-    if sf is not None:
-        info = sf.info(path.as_posix())
-        duration_seconds: float | None = None
-        if info.frames and info.samplerate:
-            duration_seconds = float(info.frames) / float(info.samplerate)
-        return (
-            duration_seconds,
-            int(info.samplerate) if info.samplerate else None,
-            int(info.channels) if info.channels else None,
-            mime_type,
-        )
-
-    if path.suffix.lower() == ".wav":
-        with wave.open(path.as_posix(), "rb") as handle:
-            frame_count = handle.getnframes()
-            sample_rate_hz = handle.getframerate()
-            channels = handle.getnchannels()
-        duration_seconds = None
-        if frame_count and sample_rate_hz:
-            duration_seconds = float(frame_count) / float(sample_rate_hz)
-        return (
-            duration_seconds,
-            int(sample_rate_hz) if sample_rate_hz else None,
-            int(channels) if channels else None,
-            mime_type or "audio/wav",
-        )
-
-    raise ImportError(
-        "Audio support requires soundfile for non-WAV formats: "
-        "pip install soundfile"
-    )
-
-
-def load_audio_waveform(
-    path: Path,
-    *,
-    target_sample_rate: int | None = None,
-) -> tuple[Any, int]:
-    """Load one audio file as a mono float waveform plus sample rate."""
-    try:
-        import numpy as np
-        import soundfile as sf  # type: ignore[import-untyped]
-    except ImportError as exc:
-        raise ImportError(
-            "Audio support requires numpy and soundfile: "
-            "pip install numpy soundfile"
-        ) from exc
-
-    waveform, sample_rate_hz = sf.read(
-        path.as_posix(),
-        always_2d=False,
-        dtype="float32",
-    )
-    if getattr(waveform, "ndim", 1) > 1:
-        waveform = np.mean(waveform, axis=1)
-
-    resolved_sample_rate = int(sample_rate_hz)
-    if (
-        target_sample_rate is not None
-        and resolved_sample_rate != int(target_sample_rate)
-    ):
-        try:
-            import librosa  # type: ignore[import-untyped]
-        except ImportError as exc:
-            raise ImportError(
-                "Resampling audio requires librosa: pip install librosa"
-            ) from exc
-        waveform = librosa.resample(
-            waveform,
-            orig_sr=resolved_sample_rate,
-            target_sr=int(target_sample_rate),
-        )
-        resolved_sample_rate = int(target_sample_rate)
-
-    return waveform, resolved_sample_rate
 
 
 def resolve_pil_image(
@@ -232,16 +142,5 @@ def resolve_local_image(
     """
     if not path.exists():
         raise FileNotFoundError(f"Image not found: {path}")
-    digest = compute_sha256(path)
-    return path, digest
-
-
-def resolve_local_audio(
-    path: Path,
-    cache_dir: Path | None = None,
-) -> tuple[Path, str]:
-    """Compute the SHA-256 for a local audio file."""
-    if not path.exists():
-        raise FileNotFoundError(f"Audio not found: {path}")
     digest = compute_sha256(path)
     return path, digest

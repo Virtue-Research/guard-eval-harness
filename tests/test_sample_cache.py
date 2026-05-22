@@ -5,7 +5,6 @@ from __future__ import annotations
 import tempfile
 import unittest
 from pathlib import Path
-import wave
 
 from guard_eval_harness.datasets.sample_cache import (
     clear_sample_cache,
@@ -61,45 +60,6 @@ def _image_sample(
             )
         ],
         label=UnsafeLabel(unsafe=True),
-    )
-
-
-def _write_wav(path: Path) -> None:
-    """Write a tiny mono WAV fixture."""
-    with wave.open(path.as_posix(), "wb") as handle:
-        handle.setnchannels(1)
-        handle.setsampwidth(2)
-        handle.setframerate(16000)
-        handle.writeframes(b"\x00\x00" * 160)
-
-
-def _audio_sample(
-    audio_path: Path,
-    sample_id: str = "aud1",
-) -> NormalizedSample:
-    ref = MediaRef(
-        modality="audio",
-        uri=audio_path.as_posix(),
-        sha256="b" * 64,
-        mime_type="audio/wav",
-        duration_seconds=0.01,
-        sample_rate_hz=16000,
-        channels=1,
-    )
-    return NormalizedSample(
-        id=sample_id,
-        dataset="test_ds",
-        split="train",
-        messages=[
-            Message(
-                role="user",
-                content=[
-                    TextPart(text="listen"),
-                    MediaPart(media=ref),
-                ],
-            )
-        ],
-        label=UnsafeLabel(unsafe=False),
     )
 
 
@@ -177,25 +137,6 @@ class WriteAndLoadTest(unittest.TestCase):
             loaded = load_cached_samples(cache, "adapter_c", "key3")
             self.assertIsNotNone(loaded)
             self.assertEqual(loaded, [])
-
-    def test_audio_roundtrip(self) -> None:
-        with tempfile.TemporaryDirectory() as tmpdir:
-            cache = Path(tmpdir)
-            audio_path = Path(tmpdir) / "test.wav"
-            _write_wav(audio_path)
-            samples = [_audio_sample(audio_path)]
-            write_sample_cache(cache, "adapter_audio", "key_audio", samples)
-            loaded = load_cached_samples(
-                cache,
-                "adapter_audio",
-                "key_audio",
-            )
-            self.assertIsNotNone(loaded)
-            self.assertEqual(len(loaded), 1)
-            self.assertEqual(
-                loaded[0].messages[0].audio_refs[0].uri,
-                audio_path.as_posix(),
-            )
 
 
 class CacheMissTest(unittest.TestCase):

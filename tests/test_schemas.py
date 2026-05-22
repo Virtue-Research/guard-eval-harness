@@ -114,7 +114,6 @@ class MultimodalSchemaTest(unittest.TestCase):
         self.assertEqual(msg.content, "Hello")
         self.assertEqual(msg.text_content, "Hello")
         self.assertEqual(msg.image_refs, [])
-        self.assertEqual(msg.audio_refs, [])
         self.assertEqual(msg.media_refs, [])
 
     def test_message_list_content_with_text_only(self) -> None:
@@ -137,20 +136,6 @@ class MultimodalSchemaTest(unittest.TestCase):
         self.assertEqual(msg.text_content, "Describe this")
         self.assertEqual(len(msg.image_refs), 1)
         self.assertEqual(msg.image_refs[0].uri, "/tmp/test.jpg")
-        self.assertEqual(len(msg.media_refs), 1)
-
-    def test_message_list_content_with_audio(self) -> None:
-        ref = MediaRef(modality="audio", uri="/tmp/test.wav")
-        msg = Message(
-            role="user",
-            content=[
-                TextPart(text="Listen"),
-                MediaPart(media=ref),
-            ],
-        )
-        self.assertEqual(msg.text_content, "Listen")
-        self.assertEqual(len(msg.audio_refs), 1)
-        self.assertEqual(msg.audio_refs[0].uri, "/tmp/test.wav")
         self.assertEqual(len(msg.media_refs), 1)
 
     def test_message_image_only_is_valid(self) -> None:
@@ -254,42 +239,6 @@ class MultimodalSchemaTest(unittest.TestCase):
             "https://example.com/photo.jpg",
         )
 
-    def test_openai_audio_type_coercion(self) -> None:
-        msg = Message(
-            role="user",
-            content=[
-                {"type": "text", "text": "Check"},
-                {
-                    "type": "audio",
-                    "audio_url": "https://example.com/audio.wav",
-                },
-            ],
-        )
-        self.assertEqual(len(msg.audio_refs), 1)
-        self.assertEqual(
-            msg.audio_refs[0].uri,
-            "https://example.com/audio.wav",
-        )
-
-    def test_openai_audio_object_form_coercion(self) -> None:
-        msg = Message(
-            role="user",
-            content=[
-                {"type": "text", "text": "Check"},
-                {
-                    "type": "audio",
-                    "audio_url": {
-                        "url": "https://example.com/audio.wav",
-                    },
-                },
-            ],
-        )
-        self.assertEqual(len(msg.audio_refs), 1)
-        self.assertEqual(
-            msg.audio_refs[0].uri,
-            "https://example.com/audio.wav",
-        )
-
     def test_media_ref_fields(self) -> None:
         ref = MediaRef(
             modality="image",
@@ -301,22 +250,6 @@ class MultimodalSchemaTest(unittest.TestCase):
         self.assertEqual(ref.modality, "image")
         self.assertEqual(ref.sha256, "abc123")
         self.assertEqual(ref.width, 640)
-
-    def test_audio_media_ref_fields(self) -> None:
-        ref = MediaRef(
-            modality="audio",
-            uri="/data/audio.wav",
-            sha256="abc123",
-            mime_type="audio/wav",
-            duration_seconds=1.5,
-            sample_rate_hz=16000,
-            channels=1,
-        )
-        self.assertEqual(ref.modality, "audio")
-        self.assertEqual(ref.mime_type, "audio/wav")
-        self.assertEqual(ref.duration_seconds, 1.5)
-        self.assertEqual(ref.sample_rate_hz, 16000)
-        self.assertEqual(ref.channels, 1)
 
     def test_normalized_sample_category_labels(self) -> None:
         sample = NormalizedSample(

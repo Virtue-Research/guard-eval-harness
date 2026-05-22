@@ -318,28 +318,11 @@ _PROMPT_INJECTION_V1 = PackManifest(
     ),
 )
 
-_AUDIO_V1 = PackManifest(
-    name="audio",
-    version="v1",
-    description=(
-        "Native-audio safety benchmark for models that operate directly "
-        "on audio instead of an ASR pipeline."
-    ),
-    datasets=(
-        PresetDataset(
-            name="nemotron_content_safety_audio",
-            adapter="nemotron_content_safety_audio",
-        ),
-    ),
-)
-
 # ------------------------------------------------------------------
 # Pack registry
 # ------------------------------------------------------------------
 
 _PACKS: dict[str, PackManifest] = {
-    "audio": _AUDIO_V1,
-    "audio-v1": _AUDIO_V1,
     "core": _CORE_V1,
     "core-v1": _CORE_V1,
     "jailbreak": _JAILBREAK_V1,
