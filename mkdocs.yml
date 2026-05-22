@@ -106,7 +106,6 @@ nav:
       - Overview: datasets/overview.md
       - Text Benchmarks: datasets/text.md
       - Image Benchmarks: datasets/image.md
-      - Audio Benchmarks: datasets/audio.md
       - Local Data: datasets/local.md
   - CLI Reference: cli/reference.md
   - Metrics: metrics/overview.md

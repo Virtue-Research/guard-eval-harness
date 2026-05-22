@@ -154,7 +154,7 @@ out/my-run/
 
 ## Datasets
 
-80+ built-in safety benchmarks spanning three modalities:
+80+ built-in safety benchmarks spanning two modalities:
 
 ### Text
 
@@ -176,13 +176,6 @@ Evaluate multimodal safety models that process image+text inputs. The harness ha
 - **Cross-modal attacks**: VLSBench, MSTS (text+image multimodal safety evaluation)
 - **Benign baselines**: ImageNet-1k safe subset (measuring false positive rates on benign images)
 - **Local image data**: Load from local directories or JSONL manifests with image paths/URLs
-
-### Code
-
-Evaluate models that detect insecure or vulnerable code patterns:
-
-- **Code vulnerability detection**: Benchmarks for identifying security vulnerabilities in generated code (SQL injection, XSS, buffer overflows, etc.)
-- **Custom code datasets**: Load your own code safety datasets via local JSONL/CSV
 
 ### Local files
 

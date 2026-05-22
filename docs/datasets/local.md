@@ -10,7 +10,6 @@ Bring your own data in any modality using the local dataset adapters. No remote 
 | `local_csv` | CSV file | Text |
 | `local_image_jsonl` | JSONL manifest + images | Image + Text |
 | `local_image_dir` | Directory of images | Image |
-| `local_audio_jsonl` | JSONL manifest + audio | Audio |
 
 ## Text: JSONL
 
@@ -103,24 +102,6 @@ datasets:
     adapter: local_image_dir
     path: data/my_images/
 ```
-
-## Audio: JSONL Manifest
-
-Similar to image JSONL, but with audio file references:
-
-```json
-{"id": "audio-1", "prompt": "Classify this audio.", "audio_path": "audio/clip1.wav", "unsafe": false}
-```
-
-```yaml
-datasets:
-  - name: my_audio
-    adapter: local_audio_jsonl
-    path: data/audio_manifest.jsonl
-```
-
-!!! note
-    Audio support requires the `audio` extra: `pip install -e ".[audio]"`
 
 ## Custom Field Mapping
 

@@ -9,7 +9,7 @@ Use:
 
 - `DatasetAdapter` for simple local or bespoke loaders
 - `SourceBackedDatasetAdapter` for built-in datasets backed by a public source
-- `MultimodalDatasetAdapter` for image or audio content
+- `MultimodalDatasetAdapter` for image content
 
 ## 2. Create A Simple Adapter
 
@@ -73,7 +73,7 @@ sample finalization for you.
 
 ## 5. Multimodal Datasets
 
-For image or audio datasets, use `MultimodalDatasetAdapter`:
+For image datasets, use `MultimodalDatasetAdapter`:
 
 ```python
 from guard_eval_harness.datasets.multimodal_base import MultimodalDatasetAdapter
@@ -96,7 +96,6 @@ class MyImageDataset(MultimodalDatasetAdapter):
 Useful helpers:
 
 - `resolve_image()`
-- `resolve_audio()`
 - `build_multimodal_message()`
 - `normalize_multimodal_row()`
 

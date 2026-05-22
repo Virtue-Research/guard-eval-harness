@@ -9,12 +9,12 @@ evaluated. Every adapter turns backend-specific outputs into the same
 | Adapter | Inputs | Best fit | Start here? |
 | --- | --- | --- | --- |
 | [`mock`](#mock) | text | smoke tests, docs examples, CI | Yes |
-| [`hf`](huggingface.md) | text, code | local HuggingFace safety models | Yes |
-| [`vllm`](vllm.md) | text, image, code | high-throughput local inference | Yes |
+| [`hf`](huggingface.md) | text | local HuggingFace safety models | Yes |
+| [`vllm`](vllm.md) | text, image | high-throughput local inference | Yes |
 | [`openai_moderation`](openai-moderation.md) | text, image | hosted moderation baseline | Yes |
-| [`openai_compatible`](openai-compatible.md) | text, image, code | hosted or self-hosted OpenAI-style APIs | Yes |
-| [`anthropic`](anthropic.md) | text, image, code | Claude-based classifier flows | Situational |
-| [`http`](http.md) | text, code | custom REST moderation endpoint | Situational |
+| [`openai_compatible`](openai-compatible.md) | text, image | hosted or self-hosted OpenAI-style APIs | Yes |
+| [`anthropic`](anthropic.md) | text, image | Claude-based classifier flows | Situational |
+| [`http`](http.md) | text | custom REST moderation endpoint | Situational |
 
 ## Specialized Local Adapters
 
@@ -29,7 +29,6 @@ family or modality you want.
 | `hf_safeqwen_vlm` | text, image | advanced | SafeQwen VLM safety-head workflows |
 | `hf_image_classifier` | image | specialized | image-only classification pipelines |
 | `hf_shieldgemma2` | image | specialized | ShieldGemma2 image moderation |
-| `hf_audio_guard` | text, audio | experimental | native audio moderation and speech safety runs |
 
 ## Choosing An Adapter
 
@@ -39,7 +38,7 @@ Use this rough decision tree:
 Need the fastest first run?
   -> mock
 
-Need a local text or code model?
+Need a local text model?
   -> hf
 
 Need local throughput at scale?
@@ -54,7 +53,7 @@ Need an OpenAI-style chat/completions endpoint?
 Need your own REST API?
   -> http
 
-Need image or audio specialized local models?
+Need image specialized local models?
   -> one of the specialized HF adapters
 ```
 
@@ -71,7 +70,7 @@ stored in the run manifest:
 | `concurrency` | whether parallel requests make sense |
 | `cost_estimation` | whether cost metadata is tracked |
 | `token_accounting` | whether token usage is reported |
-| `supported_input_modalities` | valid input types such as text, image, audio, or code |
+| `supported_input_modalities` | valid input types such as text or image |
 | `supports_category_outputs` | whether category-level outputs can be preserved |
 | `notes` | adapter-specific hints or specialization tags |
 
