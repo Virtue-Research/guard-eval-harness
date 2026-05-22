@@ -1,0 +1,13 @@
+# Trim files that setuptools_scm's git-aware file finder would otherwise
+# include in the sdist. The wheel is unaffected (it only contains the
+# Python package). Keep this list minimal — assets, docs, configs,
+# examples, and tests are intentionally shipped.
+
+prune .github
+prune site
+prune logs
+prune out
+exclude .gitignore
+exclude .env.example
+exclude mkdocs.yml
+exclude gen_configs.py

@@ -1,10 +1,13 @@
 [build-system]
-requires = ["setuptools>=69", "wheel"]
+requires = ["setuptools>=69", "wheel", "setuptools_scm>=8"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "guard-eval-harness"
-version = "0.1.0"
+name = "geh"
+# Version is derived from the git tag at build time by setuptools_scm.
+# A tag of `vX.Y.Z` produces wheel version `X.Y.Z`. Configure below in
+# [tool.setuptools_scm]. Untagged dev builds get `X.Y.Z.devN+gSHA`.
+dynamic = ["version"]
 description = "CLI-first harness for safety and guardrail evaluation"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -17,6 +20,11 @@ dependencies = [
   "PyYAML>=6.0",
   "tqdm>=4.66",
 ]
+
+[project.urls]
+Homepage = "https://github.com/Virtue-Research/guard-eval-harness"
+Repository = "https://github.com/Virtue-Research/guard-eval-harness"
+Documentation = "https://github.com/Virtue-Research/guard-eval-harness#readme"
 
 [project.optional-dependencies]
 hf = [
@@ -69,6 +77,12 @@ include = ["guard_eval_harness*"]
 
 [tool.setuptools.package-data]
 "guard_eval_harness.models" = ["catalog/*.yaml"]
+
+[tool.setuptools_scm]
+# Fallback when building outside a git checkout (e.g. installs from an sdist
+# that didn't include a version stamp). Real releases get their version from
+# the git tag and override this.
+fallback_version = "0.0.0"
 
 [tool.ruff]
 line-length = 80
