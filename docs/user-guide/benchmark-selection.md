@@ -12,7 +12,6 @@ matches your deployment risk, not just the model you happen to be testing.
 | prompt injection style attacks | `prompt_injection` pack | better fit for policy override and red-team inputs |
 | moderation quality | `toxicity` or `hate_harassment` | better signal for over-blocking and abuse detection |
 | image safety | `safe_vs_unsafe_image_edits`, `unsafebench`, or local image adapters | lets you test multimodal behavior directly |
-| native audio safety | `audio` pack | built for audio-first moderation models |
 
 ## Recommended Starting Paths
 

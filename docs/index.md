@@ -11,7 +11,7 @@ CLI-first harness for benchmarking guardrail, moderation, and safety classificat
 
 <p>
   <img alt="Datasets" src="https://img.shields.io/badge/datasets-80+-9f9eff?style=flat-square">
-  <img alt="Modalities" src="https://img.shields.io/badge/modalities-text%20%7C%20image%20%7C%20audio%20%7C%20code-9f9eff?style=flat-square">
+  <img alt="Modalities" src="https://img.shields.io/badge/modalities-text%20%7C%20image-9f9eff?style=flat-square">
 </p>
 
 Evaluate any safety model — local HuggingFace, vLLM, OpenAI, Anthropic, or custom API — against **80+ built-in safety benchmarks** with a single command.
@@ -28,7 +28,7 @@ Evaluate any safety model — local HuggingFace, vLLM, OpenAI, Anthropic, or cus
 
 - :material-database: **80+ Benchmarks**
 
-    Built-in datasets covering text, image, audio, and code safety.
+    Built-in datasets covering text and image safety.
 
 - :material-swap-horizontal: **Any Backend**
 

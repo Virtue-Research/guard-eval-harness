@@ -52,14 +52,6 @@ The base install is enough for:
 
     Use this for `openai_moderation`, `openai_compatible`, `anthropic`, and `http`.
 
-=== "Audio"
-
-    ```bash
-    pip install -e ".[audio]"
-    ```
-
-    Add this when working with native audio datasets or adapters.
-
 === "Reports"
 
     ```bash
@@ -71,7 +63,7 @@ The base install is enough for:
 === "Everything"
 
     ```bash
-    pip install -e ".[hf,vllm,api,audio,report,dev]"
+    pip install -e ".[hf,vllm,api,report,dev]"
     ```
 
 ## Environment Setup

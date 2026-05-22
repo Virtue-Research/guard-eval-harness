@@ -21,7 +21,7 @@ This usually means the required extra is missing.
 
 Examples:
 
-- `hf`, `hf_vlm_guard`, `hf_audio_guard` need `pip install -e ".[hf]"`
+- `hf`, `hf_vlm_guard` need `pip install -e ".[hf]"`
 - `vllm` needs `pip install -e ".[vllm]"`
 - `openai_moderation`, `openai_compatible`, `anthropic`, and `http` need
   `pip install -e ".[api]"`
@@ -77,7 +77,7 @@ Confirm that these files exist:
 
 ## Local Multimodal Runs Fail On File Paths
 
-For `local_image_jsonl`, `local_image_dir`, and `local_audio_jsonl`:
+For `local_image_jsonl` and `local_image_dir`:
 
 - verify the path exists on disk
 - use absolute paths if you are debugging path resolution
@@ -92,8 +92,7 @@ execution:
   batch_size: auto
 ```
 
-For multimodal or audio adapters, start conservatively with batch size `1` or
-`2`.
+For multimodal adapters, start conservatively with batch size `1` or `2`.
 
 ## A Run Stops Partway Through
 

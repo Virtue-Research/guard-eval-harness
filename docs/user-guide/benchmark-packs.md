@@ -25,7 +25,6 @@ geh list packs
 | `toxicity` | 7 | moderation quality and toxicity filtering |
 | `hate_harassment` | 11 | abuse, harassment, and hate-speech detection |
 | `prompt_injection` | 6 | prompt override and policy-evasion attacks |
-| `audio` | 1 | native audio safety models |
 
 ## Pack Details
 
@@ -92,11 +91,6 @@ Representative datasets include:
 - `i_malicious_instructions`
 - `mitre`
 - `tdc_red_teaming`
-
-### `audio`
-
-A minimal audio-first entry point for models that operate directly on audio
-instead of relying on text-only moderation.
 
 ## Usage
 

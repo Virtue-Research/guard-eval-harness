@@ -85,4 +85,4 @@ geh export --run-dir out/mock/xstest --format csv --output results.csv
 - Use [Benchmark Selection](../user-guide/benchmark-selection.md) to find the
   right dataset mix.
 - Use [Common Workflows](../user-guide/common-workflows.md) for copy-paste
-  recipes across text, image, and code evaluation.
+  recipes across text and image evaluation.
