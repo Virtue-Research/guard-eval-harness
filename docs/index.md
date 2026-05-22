@@ -10,8 +10,8 @@ CLI-first harness for benchmarking guardrail, moderation, and safety classificat
 </p>
 
 <p>
-  <img alt="Datasets" src="https://img.shields.io/badge/datasets-80+-9f9eff?style=flat-square">
-  <img alt="Modalities" src="https://img.shields.io/badge/modalities-text%20%7C%20image-9f9eff?style=flat-square">
+  <img alt="Datasets" src="https://img.shields.io/badge/datasets-80+-4f46e5?style=flat-square">
+  <img alt="Modalities" src="https://img.shields.io/badge/modalities-text%20%7C%20image-4f46e5?style=flat-square">
 </p>
 
 Evaluate any safety model — local HuggingFace, vLLM, OpenAI, Anthropic, or custom API — against **80+ built-in safety benchmarks** with a single command.
