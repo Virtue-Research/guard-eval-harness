@@ -113,16 +113,34 @@
   color: var(--geh-indigo-lighter);
 }
 
-/* Search input on a soft surface. */
-.md-search__input {
+/* Search on a soft surface. The surface, border, and radius live on the
+ * form (the visual container); the input stays transparent so the rounded
+ * corners are clean — otherwise the form's near-square corner peeks out
+ * behind a rounded input. `overflow: hidden` clips any inner square edges. */
+.md-search__form {
   background-color: var(--geh-surface);
   border: 1px solid var(--geh-border);
   border-radius: var(--geh-radius);
+  box-shadow: none;
+  overflow: hidden;
 }
 
-[data-md-color-scheme="slate"] .md-search__input {
+.md-search__form:hover {
+  background-color: var(--geh-surface);
+}
+
+.md-search__input {
+  background-color: transparent;
+  border-radius: var(--geh-radius);
+}
+
+[data-md-color-scheme="slate"] .md-search__form {
   background-color: rgba(255, 255, 255, 0.06);
   border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-md-color-scheme="slate"] .md-search__form:hover {
+  background-color: rgba(255, 255, 255, 0.06);
 }
 
 /* ── Sidebar navigation ────────────────────────────────────── */
