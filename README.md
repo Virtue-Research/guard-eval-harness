@@ -21,6 +21,8 @@ Evaluate any safety model — local HuggingFace, vLLM, OpenAI, Anthropic, or cus
 
 ```bash
 pip install geh
+# or, with uv (faster):  uv pip install geh
+# or, run without installing:  uvx geh run --dataset xstest --model mock --limit 5
 
 # Run a quick eval
 geh run --dataset xstest --model mock --limit 50
@@ -52,6 +54,23 @@ pip install "geh[vllm]"
 
 # With API model support (OpenAI, Anthropic)
 pip install "geh[api]"
+```
+
+### Using uv
+
+[uv](https://docs.astral.sh/uv/) is a drop-in pip replacement that resolves
+and installs significantly faster:
+
+```bash
+# Same options as above, just via uv
+uv pip install geh
+uv pip install "geh[hf]"
+
+# Install geh as a persistent global CLI tool
+uv tool install geh
+
+# Run geh one-off without installing it at all (great for CI / quick demos)
+uvx geh run --dataset xstest --model mock --limit 5
 ```
 
 From source (for development):
