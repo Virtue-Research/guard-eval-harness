@@ -64,16 +64,6 @@ pip install -e ".[dev]"
 
 Copy `.env.example` to `.env` and fill in the API keys you need.
 
-## Documentation
-
-The deeper docs live under [`docs/`](docs/). The most useful starting points are:
-
-- [`docs/getting-started/quickstart.md`](docs/getting-started/quickstart.md)
-- [`docs/getting-started/run-modes.md`](docs/getting-started/run-modes.md)
-- [`docs/getting-started/troubleshooting.md`](docs/getting-started/troubleshooting.md)
-- [`docs/user-guide/benchmark-selection.md`](docs/user-guide/benchmark-selection.md)
-- [`docs/user-guide/common-workflows.md`](docs/user-guide/common-workflows.md)
-
 ## Usage
 
 ### Inline mode
