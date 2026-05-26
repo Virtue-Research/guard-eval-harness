@@ -40,8 +40,8 @@ theme:
     - content.tabs.link
     - toc.follow
     - header.autohide
-  logo: assets/logo.png
-  favicon: assets/logo.png
+  logo: assets/logo.svg
+  favicon: assets/logo.svg
   icon:
     repo: fontawesome/brands/github
 
