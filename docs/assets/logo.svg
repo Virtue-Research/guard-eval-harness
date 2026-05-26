@@ -1,23 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="500" height="500">
-  <defs>
-    <radialGradient id="bgGrad" cx="50%" cy="50%" r="75%">
-      <stop offset="0%"   stop-color="#181534"/>
-      <stop offset="65%"  stop-color="#08071a"/>
-      <stop offset="100%" stop-color="#000000"/>
-    </radialGradient>
-  </defs>
-
-  <rect width="500" height="500" fill="url(#bgGrad)"/>
-
   <g transform="translate(100,110)">
-    <!-- Top-left: brand indigo (anchor) -->
+    <!-- Top-left: brand indigo -->
     <g fill="#4F46E5">
       <rect x="0" y="0"   width="113" height="37"/>
       <rect x="0" y="0"   width="34"  height="108"/>
     </g>
 
-    <!-- Bottom-left: soft violet -->
-    <g fill="#A78BFA">
+    <!-- Bottom-left: warm violet -->
+    <g fill="#8B5CF6">
       <rect x="0" y="182" width="34"  height="99"/>
       <rect x="0" y="251" width="113" height="30"/>
     </g>
@@ -28,7 +18,7 @@
       <rect x="184" y="251" width="116" height="30"/>
     </g>
 
-    <!-- Middle floating line: palest lilac (highest contrast highlight) -->
-    <rect x="177" y="131" width="123" height="29" fill="#E0E7FF"/>
+    <!-- Middle floating line: pale violet -->
+    <rect x="177" y="131" width="123" height="29" fill="#DDD6FE"/>
   </g>
 </svg>
