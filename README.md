@@ -16,6 +16,7 @@
   <a href="https://github.com/Virtue-Research/guard-eval-harness/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-3DA639?style=flat-square&logo=opensourceinitiative&logoColor=white&logoSize=auto"></a>
   <a href="https://github.com/Virtue-Research/guard-eval-harness/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/Virtue-Research/guard-eval-harness/ci.yml?branch=main&label=CI&style=flat-square&logo=githubactions&logoColor=white&logoSize=auto"></a>
   <a href="https://virtue-research.github.io/guard-eval-harness/"><img alt="Docs" src="https://img.shields.io/badge/docs-online-526CFE?style=flat-square&logo=materialformkdocs&logoColor=white&logoSize=auto"></a>
+  <a href="https://pepy.tech/projects/geh"><img alt="PyPI Downloads" src="https://static.pepy.tech/personalized-badge/geh?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads"></a>
   <img alt="Made with love" src="https://img.shields.io/badge/made%20with-%E2%9D%A4-FF1493?style=flat-square">
 </p>
 
