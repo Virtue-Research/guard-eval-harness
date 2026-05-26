@@ -86,6 +86,13 @@
   border-bottom-color: rgba(255, 255, 255, 0.08);
 }
 
+/* Header logo — 20% larger than Material's default 1.2rem. */
+.md-header__button.md-logo img,
+.md-header__button.md-logo svg {
+  height: 1.44rem;
+  width: auto;
+}
+
 /* Tabs bar reads as a continuation of the header, not a colored strip. */
 .md-tabs {
   background: transparent;
