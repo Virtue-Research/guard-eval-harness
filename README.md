@@ -1,8 +1,6 @@
 <p align="center">
-  <img src="assets/logo.svg" alt="guard-eval-harness" width="200">
+  <img src="assets/polished.svg" alt="guard-eval-harness" width="550">
 </p>
-
-<h1 align="center">guard-eval-harness</h1>
 
 <p align="center">CLI-first harness for benchmarking guardrail, moderation, and safety classification models.</p>
 
