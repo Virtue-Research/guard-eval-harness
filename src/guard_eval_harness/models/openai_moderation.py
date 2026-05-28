@@ -6,6 +6,7 @@ import logging
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, Mapping, Sequence
+from urllib import error as urllib_error
 
 from guard_eval_harness.models.base import ModelAdapter
 from guard_eval_harness.models.openai_compatible import _bool_arg
@@ -25,6 +26,7 @@ from guard_eval_harness.schemas import (
 )
 
 _MAX_CONCURRENCY = 750
+_AUTH_FAILURE_CODES = {401, 403}
 _log = logging.getLogger(__name__)
 
 
@@ -87,6 +89,59 @@ class OpenAIModerationAdapter(ModelAdapter):
             )
             headers.setdefault(header_name, f"{prefix} {token}".strip())
         return headers
+
+    def _requires_api_key(self) -> bool:
+        """Return whether a missing API key should fail fast before dispatch."""
+        configured = self.config.args.get("require_api_key")
+        if configured is not None:
+            return _bool_arg(configured, arg_name="require_api_key")
+        if (
+            "api_key_env" in self.config.args
+            or "api_key" in self.config.args
+        ):
+            return True
+        return "api.openai.com" in self._endpoint().lower()
+
+    def _api_key_env_name(self) -> str:
+        """Return the env var name that supplies the API key."""
+        return str(self.config.args.get("api_key_env", "OPENAI_API_KEY"))
+
+    def _has_auth_header(self, headers: Mapping[str, str]) -> bool:
+        """Return whether headers already carry a non-empty auth token."""
+        header_name = str(
+            self.config.args.get("auth_header", "Authorization")
+        ).lower()
+        return any(
+            key.lower() == header_name and str(value).strip()
+            for key, value in headers.items()
+        )
+
+    def _validate_api_key_headers(self, headers: Mapping[str, str]) -> None:
+        """Fail fast before dispatch when a required API key is missing."""
+        if self._requires_api_key() and not self._has_auth_header(headers):
+            key_env = self._api_key_env_name()
+            raise ValueError(
+                "OpenAI moderation API key is missing or empty. "
+                f"Set {key_env} or pass api_key in model args."
+            )
+
+    def _should_probe_auth(self, headers: Mapping[str, str]) -> bool:
+        """Return whether to probe one request before a concurrent fan-out."""
+        return self._requires_api_key() or self._has_auth_header(headers)
+
+    def _raise_for_auth_error(self, exc: BaseException) -> None:
+        """Convert a 401/403 HTTP error into a clear, actionable error."""
+        if (
+            isinstance(exc, urllib_error.HTTPError)
+            and exc.code in _AUTH_FAILURE_CODES
+        ):
+            reason = exc.reason or "authentication failed"
+            key_env = self._api_key_env_name()
+            raise ValueError(
+                "OpenAI moderation API authentication failed "
+                f"(HTTP {exc.code}: {reason}). "
+                f"Check {key_env} or model args.api_key."
+            ) from exc
 
     def _request_payload(self, sample: PredictSample) -> dict[str, Any]:
         """Build one moderation request payload."""
@@ -281,6 +336,7 @@ class OpenAIModerationAdapter(ModelAdapter):
 
         endpoint = self._endpoint()
         headers = self._headers()
+        self._validate_api_key_headers(headers)
         timeout = float(self.config.args.get("timeout", 30.0))
         retries = int(self.config.args.get("retries", 0))
         backoff = float(self.config.args.get("retry_backoff", 1.0))
@@ -309,6 +365,7 @@ class OpenAIModerationAdapter(ModelAdapter):
                         )
                     )
                 except Exception as exc:
+                    self._raise_for_auth_error(exc)
                     _log.error(
                         "prediction failed for sample %s: %s",
                         sample.id,
@@ -320,6 +377,20 @@ class OpenAIModerationAdapter(ModelAdapter):
                         break
             if last_exc is not None:
                 if drop_failed_predictions:
+                    failed_ids = [
+                        sample.id
+                        for sample in samples
+                        if sample.id
+                        not in {
+                            prediction.sample_id for prediction in predictions
+                        }
+                    ]
+                    _log.warning(
+                        "%d/%d predictions dropped after retries: %s",
+                        len(failed_ids),
+                        len(samples),
+                        ", ".join(failed_ids),
+                    )
                     return predictions
                 raise RuntimeError(
                     f"prediction failed for sample {failed_id}: {last_exc}"
@@ -328,32 +399,66 @@ class OpenAIModerationAdapter(ModelAdapter):
 
         index_map: dict[int, NormalizedPrediction] = {}
         failed: list[tuple[int, str, Exception]] = []
-        with ThreadPoolExecutor(max_workers=concurrency) as pool:
-            futures = {
-                pool.submit(
-                    self._predict_one,
-                    sample,
+        start = 0
+        # Probe a single request before fanning out so an invalid key fails
+        # fast. Otherwise every sample is submitted up front and, because the
+        # ThreadPoolExecutor's context exit waits for already-queued work, a
+        # 401/403 would still fire the whole (possibly huge, high-concurrency)
+        # batch and block on the drain before the auth error surfaced.
+        if self._should_probe_auth(headers):
+            try:
+                index_map[0] = self._predict_one(
+                    samples[0],
                     endpoint=endpoint,
                     headers=headers,
                     timeout=timeout,
                     retries=retries,
                     backoff=backoff,
                     threshold=threshold,
-                ): idx
-                for idx, sample in enumerate(samples)
-            }
-            for future in as_completed(futures):
-                idx = futures[future]
-                try:
-                    index_map[idx] = future.result()
-                except Exception as exc:
-                    sample_id = samples[idx].id
-                    _log.error(
-                        "prediction failed for sample %s: %s",
-                        sample_id,
-                        exc,
-                    )
-                    failed.append((idx, sample_id, exc))
+                )
+            except Exception as exc:
+                self._raise_for_auth_error(exc)
+                sample_id = samples[0].id
+                _log.error(
+                    "prediction failed for sample %s: %s",
+                    sample_id,
+                    exc,
+                )
+                if not drop_failed_predictions:
+                    raise RuntimeError(
+                        f"prediction failed for sample {sample_id}: {exc}"
+                    ) from exc
+                failed.append((0, sample_id, exc))
+            start = 1
+
+        if start < len(samples):
+            with ThreadPoolExecutor(max_workers=concurrency) as pool:
+                futures = {
+                    pool.submit(
+                        self._predict_one,
+                        samples[idx],
+                        endpoint=endpoint,
+                        headers=headers,
+                        timeout=timeout,
+                        retries=retries,
+                        backoff=backoff,
+                        threshold=threshold,
+                    ): idx
+                    for idx in range(start, len(samples))
+                }
+                for future in as_completed(futures):
+                    idx = futures[future]
+                    try:
+                        index_map[idx] = future.result()
+                    except Exception as exc:
+                        self._raise_for_auth_error(exc)
+                        sample_id = samples[idx].id
+                        _log.error(
+                            "prediction failed for sample %s: %s",
+                            sample_id,
+                            exc,
+                        )
+                        failed.append((idx, sample_id, exc))
 
         if failed:
             ids = ", ".join(sample_id for _, sample_id, _ in failed)

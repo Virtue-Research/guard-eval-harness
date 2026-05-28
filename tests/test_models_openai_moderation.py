@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import os
 import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
+from urllib import error as urllib_error
 
 from guard_eval_harness.config.models import ResolvedModelConfig
 from guard_eval_harness.models.openai_moderation import (
@@ -264,6 +266,144 @@ class OpenAIModerationAdapterTest(unittest.TestCase):
         self.assertIn(
             "harassment", predictions[0].predicted_categories
         )
+
+
+    def test_missing_api_key_fails_fast(self) -> None:
+        sample = NormalizedSample(
+            id="sample-1",
+            dataset="demo",
+            split="test",
+            messages=[{"role": "user", "content": "Check this"}],
+            label={"unsafe": True},
+        )
+        # No url override -> default api.openai.com endpoint requires a key.
+        config = ResolvedModelConfig(
+            adapter="openai_moderation",
+            model_name="omni-moderation-latest",
+            args={},
+        )
+        adapter = OpenAIModerationAdapter.from_config(config)
+
+        with patch.dict(os.environ, {"OPENAI_API_KEY": ""}):
+            with patch(_MOCK_PATCH) as mock_post:
+                with self.assertRaises(ValueError) as ctx:
+                    adapter.predict_batch([sample], threshold=0.5)
+
+        self.assertIn("API key is missing", str(ctx.exception))
+        mock_post.assert_not_called()
+
+    def test_auth_error_raises_instead_of_dropping_serial(self) -> None:
+        sample = NormalizedSample(
+            id="sample-1",
+            dataset="demo",
+            split="test",
+            messages=[{"role": "user", "content": "Check this"}],
+            label={"unsafe": True},
+        )
+        config = ResolvedModelConfig(
+            adapter="openai_moderation",
+            model_name="omni-moderation-latest",
+            args={
+                "url": "https://api.openai.com/v1/moderations",
+                "api_key": "sk-test",
+            },
+        )
+        adapter = OpenAIModerationAdapter.from_config(config)
+
+        http_error = urllib_error.HTTPError(
+            "https://api.openai.com/v1/moderations",
+            401,
+            "Unauthorized",
+            {},
+            None,
+        )
+        # drop_failed_predictions defaults True: without the fast-fail this
+        # would silently return an empty list. It must now raise instead.
+        with patch(_MOCK_PATCH, side_effect=http_error):
+            with self.assertRaises(ValueError) as ctx:
+                adapter.predict_batch([sample], threshold=0.5)
+
+        self.assertIn("authentication failed", str(ctx.exception))
+
+    def test_auth_error_raises_in_concurrent_path(self) -> None:
+        samples = [
+            NormalizedSample(
+                id=f"sample-{index}",
+                dataset="demo",
+                split="test",
+                messages=[{"role": "user", "content": f"Check {index}"}],
+                label={"unsafe": True},
+            )
+            for index in range(2)
+        ]
+        config = ResolvedModelConfig(
+            adapter="openai_moderation",
+            model_name="omni-moderation-latest",
+            args={
+                "url": "https://api.openai.com/v1/moderations",
+                "api_key": "sk-test",
+                "concurrency": 4,
+            },
+        )
+        adapter = OpenAIModerationAdapter.from_config(config)
+
+        http_error = urllib_error.HTTPError(
+            "https://api.openai.com/v1/moderations",
+            403,
+            "Forbidden",
+            {},
+            None,
+        )
+        with patch(_MOCK_PATCH, side_effect=http_error) as mock_post:
+            with self.assertRaises(ValueError) as ctx:
+                adapter.predict_batch(samples, threshold=0.5)
+
+        self.assertIn("authentication failed", str(ctx.exception))
+        # Fail fast: the single-request probe must abort before the rest of
+        # the (concurrency=4) batch is dispatched.
+        self.assertEqual(mock_post.call_count, 1)
+
+    def test_concurrent_path_probes_then_merges_results(self) -> None:
+        samples = [
+            NormalizedSample(
+                id=f"sample-{index}",
+                dataset="demo",
+                split="test",
+                messages=[{"role": "user", "content": f"Check {index}"}],
+                label={"unsafe": True},
+            )
+            for index in range(3)
+        ]
+        config = ResolvedModelConfig(
+            adapter="openai_moderation",
+            model_name="omni-moderation-latest",
+            args={
+                "url": "https://api.openai.com/v1/moderations",
+                "api_key": "sk-test",
+                "concurrency": 4,
+            },
+        )
+        adapter = OpenAIModerationAdapter.from_config(config)
+
+        response = {
+            "results": [
+                {
+                    "flagged": True,
+                    "categories": {"violence": True},
+                    "category_scores": {"violence": 0.8},
+                }
+            ]
+        }
+        # Probe handles sample-0, the pool handles the rest; results must come
+        # back in the original sample order.
+        with patch(_MOCK_PATCH, return_value=response) as mock_post:
+            predictions = adapter.predict_batch(samples, threshold=0.5)
+
+        self.assertEqual(
+            [prediction.sample_id for prediction in predictions],
+            ["sample-0", "sample-1", "sample-2"],
+        )
+        self.assertEqual(mock_post.call_count, 3)
 
 
 if __name__ == "__main__":
