@@ -1,0 +1,26 @@
+# One guard, several datasets — the most common evaluation shape.
+#
+# Each dataset gets its own predictions/metrics under
+# out/<run-name>/datasets/<dataset>/. The summary.json rolls them up.
+version: 2
+run_name: granite-guardian-multi
+
+model:
+  profile: granite-guardian-3.2-5b
+
+datasets:
+  - name: xstest
+    limit: 100
+  - name: toxic_chat
+    limit: 100
+  - name: harmbench_behaviors
+    limit: 100
+  - name: do_not_answer
+    limit: 100
+  - name: jailbreakbench
+    split: harmful           # jailbreakbench ships under "harmful" not "test"
+    # No `limit:` → use the whole split.
+
+output:
+  run_dir: out/granite-guardian-multi
+  resume: true

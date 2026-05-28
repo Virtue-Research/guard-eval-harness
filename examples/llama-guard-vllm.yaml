@@ -1,0 +1,30 @@
+# Llama Guard 3 (8B) served via a vLLM OpenAI-compatible endpoint.
+#
+# Prerequisites:
+#   - vllm running, e.g.:
+#       vllm serve meta-llama/Llama-Guard-3-8B --port 8000
+#   - The bundled `llama-guard-3-8b` profile defaults to local HF; we
+#     override the backend to use the vLLM endpoint instead.
+version: 2
+run_name: llama-guard-vllm
+
+model:
+  profile: llama-guard-3-8b
+  backend:
+    kind: openai_compat
+    name: meta-llama/Llama-Guard-3-8B
+    args:
+      base_url: http://localhost:8000/v1
+      api_key_env: null         # vLLM doesn't require a key
+      max_new_tokens: 16
+      temperature: 0.0
+
+datasets:
+  - name: xstest
+    limit: 100
+  - name: toxic_chat
+    limit: 100
+
+output:
+  run_dir: out/llama-guard-vllm
+  resume: true

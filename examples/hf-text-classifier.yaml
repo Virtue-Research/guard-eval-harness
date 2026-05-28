@@ -1,0 +1,25 @@
+# Prompt-Guard-86M — Meta's prompt-injection text classifier.
+#
+# Uses the `hf_text_classifier` backend (no chat-completions, no
+# templating — just a classifier head returning per-label scores).
+#
+# Requires the `hf` extra: `uv sync --extra hf`.
+version: 2
+run_name: prompt-guard-86m
+
+model:
+  profile: prompt-guard-86m
+  # Run on a specific GPU:
+  # backend:
+  #   args:
+  #     device: cuda:0
+
+datasets:
+  - name: xstest
+    limit: 100
+  - name: tweet_eval_hate
+    limit: 100
+
+output:
+  run_dir: out/prompt-guard-86m
+  resume: true

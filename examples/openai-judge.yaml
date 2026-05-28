@@ -1,0 +1,27 @@
+# GPT-as-judge via the generic `llm` guard.
+#
+# The `llm` guard accepts any Policy + OutputFormat pair, so you can
+# point it at OpenAI / Anthropic / vLLM endpoints. Here we use a
+# bundled OpenAI profile and override the model id.
+#
+# Prerequisites:
+#   export OPENAI_API_KEY=sk-...
+version: 2
+run_name: gpt-judge-on-xstest
+
+model:
+  profile: gpt-4o-mini
+  # Optional: override the model id (any OpenAI chat model).
+  backend:
+    name: gpt-4o-mini
+
+datasets:
+  - name: xstest
+    # Use a dataset-scoped policy if the adapter ships one; otherwise
+    # fall back to the bundled general-safety policy.
+    policy: general_safety
+    limit: 100
+
+output:
+  run_dir: out/gpt-judge-on-xstest
+  resume: true
