@@ -99,7 +99,7 @@ def _build_list(subparsers: argparse._SubParsersAction) -> None:
     p.add_argument(
         "what",
         choices=("datasets", "guards", "backends", "policies",
-                 "output_formats", "metrics"),
+                 "profiles", "output_formats", "metrics"),
     )
     p.set_defaults(func=_cmd_list)
 
@@ -175,6 +175,9 @@ def _cmd_list(args: argparse.Namespace) -> int:
     elif args.what == "policies":
         from guard_eval_harness.policies import list_policies
         payload = {"policies": list_policies()}
+    elif args.what == "profiles":
+        from guard_eval_harness.guards.profiles import list_profiles
+        payload = {"profiles": list_profiles()}
     elif args.what == "output_formats":
         from guard_eval_harness.output_formats import list_output_formats
         payload = {"output_formats": list_output_formats()}

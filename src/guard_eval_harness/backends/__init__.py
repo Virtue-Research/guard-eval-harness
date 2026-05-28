@@ -14,6 +14,7 @@ from guard_eval_harness.backends.base import (
 from guard_eval_harness.backends import (  # noqa: F401
     hf_generate,
     hf_image_classifier,
+    hf_text_classifier,
     hf_vlm,
     mock,
     openai_compat,

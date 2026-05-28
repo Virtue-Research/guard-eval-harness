@@ -25,6 +25,12 @@ class HFGenerateBackend(GenerationBackend):
       - ``apply_chat_template`` (bool): default ``True``. Uses the
         tokenizer's chat template to render messages.
       - ``add_generation_prompt`` (bool): default ``True``.
+      - ``raw_text_input`` (bool): default ``False``. When ``True``,
+        forwards the (single) user message's text content verbatim and
+        tokenizes with ``add_special_tokens=False``. Intended for
+        guards like WildGuard whose template already embeds ``<s>``
+        and other special tokens — applying a chat template would
+        double-wrap them.
       - ``batch_size`` (int): generation batch size (default 1). HF
         generate doesn't pad-and-batch well for chat templates with
         varying lengths, so default sequential.
@@ -55,6 +61,9 @@ class HFGenerateBackend(GenerationBackend):
         )
         self.add_generation_prompt: bool = bool(
             args.get("add_generation_prompt", True)
+        )
+        self.raw_text_input: bool = bool(
+            args.get("raw_text_input", False)
         )
         self.batch_size: int = int(args.get("batch_size", 1))
 
@@ -182,8 +191,14 @@ class HFGenerateBackend(GenerationBackend):
         }
 
     def _render_prompt(self, messages: Sequence[Message]) -> str:
-        """Apply the tokenizer's chat template (or fall back to plain concat)."""
+        """Apply the tokenizer's chat template (or fall back to plain concat).
+
+        When ``raw_text_input`` is set, the (single) user message is
+        emitted verbatim — the caller's template owns BOS / role markers.
+        """
         chat_messages = [self._message_to_chat_dict(m) for m in messages]
+        if self.raw_text_input:
+            return "\n\n".join(m["content"] for m in chat_messages)
         if self.apply_chat_template and hasattr(
             self._tokenizer, "apply_chat_template"
         ):
@@ -204,27 +219,27 @@ class HFGenerateBackend(GenerationBackend):
     def generate(
         self,
         batch: Sequence[Sequence[Message]],
-        *,
-        max_new_tokens: int = 128,
-        temperature: float = 0.0,
     ) -> list[str]:
         """Generate raw text for each conversation."""
         self._load()
         outputs: list[str] = []
-        do_sample = temperature > 0.0
+        do_sample = self.temperature > 0.0
         for messages in batch:
             prompt = self._render_prompt(messages)
+            tokenizer_kwargs: dict[str, Any] = {"return_tensors": "pt"}
+            if self.raw_text_input:
+                tokenizer_kwargs["add_special_tokens"] = False
             inputs = self._tokenizer(
                 prompt,
-                return_tensors="pt",
+                **tokenizer_kwargs,
             ).to(self._device)
             gen_kwargs: dict[str, Any] = {
-                "max_new_tokens": max_new_tokens,
+                "max_new_tokens": self.max_new_tokens,
                 "do_sample": do_sample,
                 "pad_token_id": self._tokenizer.pad_token_id,
             }
             if do_sample:
-                gen_kwargs["temperature"] = temperature
+                gen_kwargs["temperature"] = self.temperature
             import torch
 
             with torch.inference_mode():

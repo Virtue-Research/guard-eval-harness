@@ -31,6 +31,16 @@ class OpenAICompatibleBackend(GenerationBackend):
       - ``max_retries`` (int): exponential-backoff retries (default 3).
       - ``concurrency`` (int): unused today (sequential generate).
       - ``extra_headers`` (dict): merged into every request.
+      - ``token_param`` (str): the body field name for the output-token
+        budget. ``"max_tokens"`` (default, classic chat/completions) or
+        ``"max_completion_tokens"`` (required for OpenAI o-series /
+        reasoning models — gpt-5.x, o1, o3, …).
+      - ``reasoning_effort`` (str | null): if set, forwarded verbatim as
+        ``reasoning_effort`` in the request body (e.g. ``"low"`` /
+        ``"medium"`` / ``"high"``). Required for reasoning models.
+      - ``omit_temperature`` (bool): default ``False``. Set ``True`` for
+        models that reject the ``temperature`` field outright
+        (some reasoning endpoints).
 
     The configured ``BackendConfig.model`` is the model name passed in
     the request body (e.g. ``gpt-4o-mini``, ``meta-llama/Llama-3.1-8B-Instruct``).
@@ -48,6 +58,17 @@ class OpenAICompatibleBackend(GenerationBackend):
         self.max_retries: int = int(args.get("max_retries", 3))
         self.extra_headers: dict[str, str] = dict(
             args.get("extra_headers", {})
+        )
+        token_param = str(args.get("token_param", "max_tokens"))
+        if token_param not in {"max_tokens", "max_completion_tokens"}:
+            raise ValueError(
+                "openai_compat.args.token_param must be 'max_tokens' "
+                f"or 'max_completion_tokens', got {token_param!r}"
+            )
+        self.token_param: str = token_param
+        self.reasoning_effort: str | None = args.get("reasoning_effort")
+        self.omit_temperature: bool = bool(
+            args.get("omit_temperature", False)
         )
 
         api_key_env = args.get("api_key_env", "OPENAI_API_KEY")
@@ -187,9 +208,6 @@ class OpenAICompatibleBackend(GenerationBackend):
     def generate(
         self,
         batch: Sequence[Sequence[Message]],
-        *,
-        max_new_tokens: int = 128,
-        temperature: float = 0.0,
     ) -> list[str]:
         """Generate raw text for each conversation in the batch.
 
@@ -198,12 +216,15 @@ class OpenAICompatibleBackend(GenerationBackend):
         """
         outputs: list[str] = []
         for messages in batch:
-            payload = {
+            payload: dict[str, Any] = {
                 "model": self.model_name,
                 "messages": self._serialize_messages(messages),
-                "max_tokens": max_new_tokens,
-                "temperature": temperature,
+                self.token_param: self.max_new_tokens,
             }
+            if not self.omit_temperature:
+                payload["temperature"] = self.temperature
+            if self.reasoning_effort is not None:
+                payload["reasoning_effort"] = self.reasoning_effort
             response = self._post_chat(payload)
             try:
                 content = response["choices"][0]["message"]["content"]

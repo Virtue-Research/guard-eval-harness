@@ -88,12 +88,41 @@ def _build_policy_payload(
     )
 
 
+def _resolve_profile(payload: dict[str, Any]) -> dict[str, Any]:
+    """Expand a ``profile:`` slug into a full ``model:`` payload.
+
+    The profile is loaded from the bundled ``guards/profiles/*.yaml``
+    and the user's remaining ``model:`` keys are deep-merged on top.
+    Returns ``payload`` unchanged when no ``profile`` field is set.
+    """
+    if "profile" not in payload:
+        return payload
+    from guard_eval_harness.guards.profiles import deep_merge, load_profile
+
+    slug = payload["profile"]
+    if not isinstance(slug, str) or not slug.strip():
+        raise ValueError(
+            "model.profile must be a non-empty string (a bundled "
+            "profile slug, e.g. 'llama-guard-3-8b')"
+        )
+    overrides = {k: v for k, v in payload.items() if k != "profile"}
+    base = load_profile(slug.strip())
+    return deep_merge(base, overrides)
+
+
 def _build_model(payload: dict[str, Any]) -> ResolvedModelConfig:
     """Validate the ``model:`` block, including guard-compat checks."""
+    payload = _resolve_profile(payload)
     if "guard" not in payload:
-        raise ValueError("model.guard is required")
+        raise ValueError(
+            "model.guard is required (either directly or via "
+            "model.profile)"
+        )
     if "backend" not in payload:
-        raise ValueError("model.backend is required")
+        raise ValueError(
+            "model.backend is required (either directly or via "
+            "model.profile)"
+        )
     backend_payload = payload["backend"]
     if not isinstance(backend_payload, dict):
         raise ValueError("model.backend must be a mapping")

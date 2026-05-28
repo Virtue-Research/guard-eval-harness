@@ -272,6 +272,50 @@ _register_virtue_general()
 _ADAPTER_DEFAULT_SOURCE_FALLBACK = "generated"
 _adapter_default_source_cache: dict[str, str] | None = None
 
+# Cache of structured policy JSON entries, keyed by the same names used
+# for ``Policy`` registration (e.g. ``dataset_toxic_chat_upstream``,
+# ``virtue_general``). Populated lazily on the first lookup.
+_raw_policy_cache: dict[str, dict[str, Any]] | None = None
+
+
+def _populate_raw_cache() -> dict[str, dict[str, Any]]:
+    cache: dict[str, dict[str, Any]] = {}
+    for filename, suffix in (
+        ("dataset_policies_upstream.json", "upstream"),
+        ("dataset_policies_generated.json", "generated"),
+    ):
+        raw = _load_package_json(filename)
+        if not isinstance(raw, dict):
+            continue
+        for dataset_name, entry in raw.items():
+            if not isinstance(entry, dict):
+                continue
+            cache[
+                f"{_DATASET_POLICY_PREFIX}{dataset_name}_{suffix}"
+            ] = entry
+    raw_vg = _load_package_json("virtue_general.json")
+    if isinstance(raw_vg, dict):
+        cache[_VIRTUE_GENERAL_NAME] = raw_vg
+    return cache
+
+
+def get_policy_raw(name: str) -> dict[str, Any] | None:
+    """Return the structured JSON entry for a bundled policy, if any.
+
+    The rendering path stores only the markdown ``Policy.text``;
+    callers that want the original ``policy_name`` /
+    ``policy_description`` / ``block_activities`` / ``safe_activities``
+    structure (e.g. a guard that builds its own system prompt from the
+    same policy data) can fetch it here. Returns ``None`` for inline
+    policies and anything not bundled (preset policies like
+    ``general_safety`` / ``mlcommons_v1`` are also not bundled JSON
+    so they return ``None``).
+    """
+    global _raw_policy_cache
+    if _raw_policy_cache is None:
+        _raw_policy_cache = _populate_raw_cache()
+    return _raw_policy_cache.get(name)
+
 
 def adapter_default_policy_source(adapter_name: str) -> str:
     """Return the bundled default `policy_source` for one adapter.
@@ -319,6 +363,7 @@ __all__ = [
     "Policy",
     "adapter_default_policy_source",
     "get_policy",
+    "get_policy_raw",
     "list_policies",
     "lookup_policy_by_source",
     "policy_registry",

@@ -1,0 +1,13 @@
+# WildGuard — AllenAI's three-axis harm classifier.
+# https://huggingface.co/allenai/wildguard
+# The WildGuard prompt embeds <s> / <|user|> / <|assistant|> literals
+# itself, so we feed it as raw text (no chat template, no extra BOS).
+guard: wildguard
+backend:
+  kind: hf_generate
+  name: allenai/wildguard
+  args:
+    apply_chat_template: false
+    raw_text_input: true
+    max_new_tokens: 32
+    temperature: 0.0

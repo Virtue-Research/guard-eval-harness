@@ -1,0 +1,18 @@
+# Gemma 4 31B-IT as LLM-as-judge via a vLLM (or any OpenAI-compatible)
+# server. The profile assumes you already serve the model:
+#
+#   vllm serve google/gemma-4-31b-it --max-model-len 32768
+#
+# and point `${VLLM_BASE_URL}` (e.g. http://localhost:8000/v1) at it.
+# vLLM endpoints typically don't require auth; override `api_key_env`
+# if your gateway does.
+guard: llm
+output_format: safe_unsafe_first_line
+backend:
+  kind: openai_compat
+  name: google/gemma-4-31b-it
+  args:
+    base_url: ${VLLM_BASE_URL}
+    api_key_env: null
+    max_new_tokens: 16
+    temperature: 0.0

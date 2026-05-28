@@ -53,6 +53,7 @@ include = ["guard_eval_harness*"]
 
 [tool.setuptools.package-data]
 "guard_eval_harness.policies" = ["*.json"]
+"guard_eval_harness.guards.profiles" = ["*.yaml"]
 
 [tool.ruff]
 line-length = 80

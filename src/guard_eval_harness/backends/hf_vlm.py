@@ -169,19 +169,18 @@ class HFVLMBackend(GenerationBackend):
             chat.append({"role": message.role, "content": parts})
         return chat, images
 
+    DEFAULT_MAX_NEW_TOKENS: int = 256
+
     def generate(
         self,
         batch: Sequence[Sequence[Message]],
-        *,
-        max_new_tokens: int = 256,
-        temperature: float = 0.0,
     ) -> list[str]:
         """Generate text for each (image + text) conversation."""
         self._load()
         import torch
 
         outputs: list[str] = []
-        do_sample = temperature > 0.0
+        do_sample = self.temperature > 0.0
         for messages in batch:
             chat, images = self._to_chat_messages(messages)
             inputs = self._processor.apply_chat_template(
@@ -193,11 +192,11 @@ class HFVLMBackend(GenerationBackend):
                 images=images if images else None,
             ).to(self._device)
             gen_kwargs: dict[str, Any] = {
-                "max_new_tokens": max_new_tokens,
+                "max_new_tokens": self.max_new_tokens,
                 "do_sample": do_sample,
             }
             if do_sample:
-                gen_kwargs["temperature"] = temperature
+                gen_kwargs["temperature"] = self.temperature
             with torch.inference_mode():
                 generated_ids = self._model.generate(
                     **inputs, **gen_kwargs

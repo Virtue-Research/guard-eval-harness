@@ -1,0 +1,12 @@
+# GPT-5.4-mini as LLM-as-judge via the OpenAI chat-completions API.
+# Same shape as gpt-4o-mini; pick one based on availability / cost.
+guard: llm
+output_format: safe_unsafe_first_line
+backend:
+  kind: openai_compat
+  name: gpt-5.4-mini
+  args:
+    base_url: https://api.openai.com/v1
+    api_key_env: OPENAI_API_KEY
+    max_new_tokens: 32
+    temperature: 0.0

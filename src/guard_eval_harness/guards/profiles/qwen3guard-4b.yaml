@@ -1,0 +1,10 @@
+# Qwen3Guard Gen (4B) — Qwen team's content-safety classifier.
+# https://huggingface.co/Qwen/Qwen3Guard-Gen-4B
+guard: qwen3guard
+backend:
+  kind: hf_generate
+  name: Qwen/Qwen3Guard-Gen-4B
+  args:
+    apply_chat_template: true
+    max_new_tokens: 32
+    temperature: 0.0

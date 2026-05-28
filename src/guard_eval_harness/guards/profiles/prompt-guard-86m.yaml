@@ -1,0 +1,13 @@
+# Prompt-Guard-86M — Meta's 3-class prompt-injection classifier.
+# Labels: BENIGN / INJECTION / JAILBREAK
+# https://huggingface.co/meta-llama/Prompt-Guard-86M
+guard: prompt_guard
+guard_args:
+  unsafe_labels:
+    - INJECTION
+    - JAILBREAK
+backend:
+  kind: hf_text_classifier
+  name: meta-llama/Prompt-Guard-86M
+  args:
+    max_length: 512

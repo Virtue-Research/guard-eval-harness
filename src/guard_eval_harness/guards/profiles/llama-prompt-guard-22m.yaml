@@ -1,0 +1,12 @@
+# Llama-Prompt-Guard 2 (22M) — Meta's lightweight prompt-injection head.
+# Labels: BENIGN / INJECTION (binary)
+# https://huggingface.co/meta-llama/Llama-Prompt-Guard-2-22M
+guard: prompt_guard
+guard_args:
+  unsafe_labels:
+    - INJECTION
+backend:
+  kind: hf_text_classifier
+  name: meta-llama/Llama-Prompt-Guard-2-22M
+  args:
+    max_length: 512

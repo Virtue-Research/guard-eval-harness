@@ -1,0 +1,13 @@
+# GPT-4o-mini as LLM-as-judge via the OpenAI chat-completions API.
+# Pair with any policy at the dataset level (defaults to general_safety
+# if a dataset declares no upstream/generated policy).
+guard: llm
+output_format: safe_unsafe_first_line
+backend:
+  kind: openai_compat
+  name: gpt-4o-mini
+  args:
+    base_url: https://api.openai.com/v1
+    api_key_env: OPENAI_API_KEY
+    max_new_tokens: 16
+    temperature: 0.0

@@ -1,0 +1,10 @@
+# Llama Guard 3 (1B) — smaller variant, same MLCommons taxonomy.
+# https://huggingface.co/meta-llama/Llama-Guard-3-1B
+guard: llama_guard
+backend:
+  kind: hf_generate
+  name: meta-llama/Llama-Guard-3-1B
+  args:
+    apply_chat_template: true
+    max_new_tokens: 16
+    temperature: 0.0

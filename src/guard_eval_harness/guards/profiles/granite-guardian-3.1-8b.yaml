@@ -1,0 +1,11 @@
+# Granite Guardian 3.1 (8B) — IBM safety classifier.
+# Emits a single Yes/No token; chat template embeds the risk taxonomy.
+# https://huggingface.co/ibm-granite/granite-guardian-3.1-8b
+guard: granite_guardian
+backend:
+  kind: hf_generate
+  name: ibm-granite/granite-guardian-3.1-8b
+  args:
+    apply_chat_template: true
+    max_new_tokens: 2
+    temperature: 0.0

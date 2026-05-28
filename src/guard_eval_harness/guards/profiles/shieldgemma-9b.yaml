@@ -1,0 +1,10 @@
+# ShieldGemma 9B (text) — Google's Gemma-2-based safety classifier.
+# https://huggingface.co/google/shieldgemma-9b
+guard: shieldgemma
+backend:
+  kind: hf_generate
+  name: google/shieldgemma-9b
+  args:
+    apply_chat_template: true
+    max_new_tokens: 8
+    temperature: 0.0

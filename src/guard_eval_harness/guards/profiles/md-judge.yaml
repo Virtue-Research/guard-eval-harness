@@ -1,0 +1,10 @@
+# MD-Judge v0.1 — OpenSafetyLab's SALAD-Bench safety classifier.
+# https://huggingface.co/OpenSafetyLab/MD-Judge-v0_1
+guard: md_judge
+backend:
+  kind: hf_generate
+  name: OpenSafetyLab/MD-Judge-v0_1
+  args:
+    apply_chat_template: true
+    max_new_tokens: 8
+    temperature: 0.0

@@ -10,11 +10,16 @@ from guard_eval_harness.output_formats import ParsedLabel
 
 # Side-effect imports: register built-in guards.
 from guard_eval_harness.guards import (  # noqa: F401
+    granite_guardian,
     hf_image_classifier,
     llama_guard,
     llavaguard,
     llm,
+    md_judge,
+    prompt_guard,
+    qwen3guard,
     shieldgemma,
+    wildguard,
 )
 
 __all__ = [

@@ -91,9 +91,6 @@ class MockGenerationBackend(GenerationBackend):
     def generate(
         self,
         batch: Sequence[Sequence[Message]],
-        *,
-        max_new_tokens: int = 128,
-        temperature: float = 0.0,
     ) -> list[str]:
         """Return a fake guard label per conversation."""
         outputs: list[str] = []
