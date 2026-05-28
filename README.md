@@ -86,6 +86,7 @@ Or build the full `model:` block from scratch — see [`examples/`](examples/).
 | [`openai-judge.yaml`](examples/openai-judge.yaml) | GPT as LLM-as-judge with a custom policy |
 | [`profile-multi-dataset.yaml`](examples/profile-multi-dataset.yaml) | One profile across several datasets |
 | [`hf-text-classifier.yaml`](examples/hf-text-classifier.yaml) | Prompt-Guard-86M HF classifier |
+| [`full-config.yaml`](examples/full-config.yaml) | Reference — every option with defaults & comments |
 
 ## Run artifacts
 

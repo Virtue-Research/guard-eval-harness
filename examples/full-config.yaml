@@ -1,0 +1,141 @@
+# Reference config — every option the harness reads, with comments.
+# Most users only need a handful of these; this file exists so you can
+# copy-paste the line you actually want.
+#
+# Sections:
+#   1. Top-level
+#   2. model:           profile-first form (recommended)
+#   3. model:           fully-inline form (guard + backend + args)
+#   4. datasets:        per-dataset selection + policy
+#   5. output:          run directory + resume/overwrite
+
+# ──────────────────────────────────────────────────────────────
+# 1. Top-level
+# ──────────────────────────────────────────────────────────────
+
+run_name: full-config-demo          # required. Used in artifact paths.
+threshold: 0.5                      # optional, default 0.5. score >= threshold => unsafe.
+metadata: {}                        # optional. Free-form dict echoed into manifest.json.
+
+# ──────────────────────────────────────────────────────────────
+# 2. model: — profile-first (recommended)
+# ──────────────────────────────────────────────────────────────
+#
+# `model.profile: <slug>` resolves to a bundled (guard + backend + args)
+# block. `geh list profiles` enumerates the 14 bundled slugs. Anything
+# you set alongside `profile:` deep-merges onto it.
+
+model:
+  profile: llama-guard-3-8b
+
+  # Optional overrides on top of the profile. Drop any keys you don't
+  # need; this block shows the full overrideable shape.
+  guard_args: {}                    # passed to the Guard constructor (see #3 below)
+  # output_format: safe_unsafe_first_line   # only valid when guard is `llm`
+  backend:
+    kind: openai_compat             # swap local HF -> vLLM endpoint
+    name: meta-llama/Llama-Guard-3-8B
+    args:
+      base_url: http://localhost:8000/v1
+      api_key_env: null             # vLLM doesn't need a key
+
+# ──────────────────────────────────────────────────────────────
+# 3. model: — fully inline (no profile)
+# ──────────────────────────────────────────────────────────────
+#
+# Use this when nothing in `geh list profiles` matches what you want.
+# Replace the `model:` block above with the one below to switch.
+
+# model:
+#   guard: llm                         # required. `geh list guards`.
+#   output_format: safe_unsafe_first_line  # only required for the `llm` guard
+#   guard_args: {}                     # optional. Guard-specific kwargs:
+#                                      #   prompt_guard: unsafe_labels=[...]  OR label_score_mapping={"X": 0.7}
+#                                      #   shieldgemma:  principle="..."  (overrides default "No Dangerous Content")
+#                                      # Most guards take none.
+#   backend:
+#     kind: hf_generate                # required. `geh list backends`.
+#                                      #   hf_generate · hf_text_classifier · hf_image_classifier · hf_vlm · openai_compat · mock · mock_classifier
+#     name: meta-llama/Llama-Guard-3-8B   # HF repo id, OpenAI model name, etc.
+#     args:
+#       # Common generation args (hf_generate + openai_compat)
+#       max_new_tokens: 16             # default 128 (from GenerationBackend.DEFAULT_MAX_NEW_TOKENS)
+#       temperature: 0.0               # default 0.0
+#
+#       # hf_generate / hf_text_classifier / hf_vlm specific
+#       device: auto                   # "auto" | "cpu" | "cuda" | "cuda:N"
+#       dtype: auto                    # "auto" | "float16" | "bfloat16" | "float32"
+#       trust_remote_code: false
+#       revision: null                 # HF model revision (commit / branch / tag)
+#       batch_size: 1                  # hf_generate only
+#
+#       # hf_generate chat-template knobs
+#       apply_chat_template: true      # set false when the guard pre-renders the full prompt
+#       add_generation_prompt: true
+#       raw_text_input: false          # if true, treat the (single) user message as raw input bytes
+#
+#       # hf_text_classifier specific
+#       max_length: 512                # truncation cap for the classifier head
+#       role_filter: ["user"]          # which message roles get joined into the classifier input
+#       join_separator: "\n\n"         # how to join multi-message inputs
+#
+#       # openai_compat specific
+#       base_url: https://api.openai.com/v1
+#       api_key_env: OPENAI_API_KEY    # env var holding the key; set to null to send no Authorization header
+#       timeout: 60.0                  # per-request seconds
+#       max_retries: 3
+#       extra_headers: {}              # appended to every request
+#       token_param: max_tokens        # set "max_completion_tokens" for GPT-5-class reasoning models
+#       omit_temperature: false        # set true for models that reject `temperature`
+#       reasoning_effort: null         # "low" | "medium" | "high" — reasoning-model only
+#
+#       # hf_vlm specific
+#       model_loader: vision2seq       # "vision2seq" | "image_text_to_text"
+
+# ──────────────────────────────────────────────────────────────
+# 4. datasets: — one or more entries
+# ──────────────────────────────────────────────────────────────
+#
+# At least one entry is required. The harness loops over them in order
+# and writes per-dataset artifacts under <run_dir>/datasets/<name>/.
+
+datasets:
+  # Minimum: built-in adapter, default split, full size.
+  - name: xstest
+
+  # The full field set with defaults shown.
+  - name: my-toxic-chat                # required. Display name + artifact dir.
+    adapter: toxic_chat                # default = `name`. `geh list datasets` for built-ins,
+                                       # plus local_jsonl / local_csv / local_image_jsonl / local_image_dir.
+    path: null                         # required only for local_* adapters.
+    split: test                        # adapter-dependent; many use "train", "harmful", "eval", etc.
+    limit: 100                         # take the first N samples.
+    sample_ids: []                     # alternative to limit — pick specific ids.
+    sample_indices: []                 # alternative to limit — pick specific row indices.
+                                       # limit / sample_ids / sample_indices are mutually exclusive.
+    policy_source: upstream            # one of `upstream` / `generated` / `virtue_general`.
+                                       # Looks up the dataset-scoped policy registered under
+                                       # `dataset_<adapter>_<policy_source>`. Most adapters
+                                       # ship a `default_policy_source` so you can omit this.
+    policy: null                       # inline override. Either a registry name (string) or
+                                       # {name: "...", text: "...", categories: ["..."]}.
+                                       # If set, beats policy_source.
+    options: {}                        # adapter-specific knobs. Most adapters ignore.
+
+  # Local JSONL (uncomment when the file exists). Each row must be either:
+  #   {"id": "...", "prompt": "...", "unsafe": true}
+  # or the full NormalizedSample shape:
+  #   {"id", "dataset", "split", "messages", "label"}.
+  # - name: my_internal
+  #   adapter: local_jsonl
+  #   path: data/refusals.jsonl        # resolved relative to THIS YAML file.
+
+# ──────────────────────────────────────────────────────────────
+# 5. output:
+# ──────────────────────────────────────────────────────────────
+
+output:
+  run_dir: out/full-config-demo       # required.
+  resume: true                        # default true. Re-runs pick up at the next unprocessed sample.
+  overwrite: false                    # mutually exclusive with `resume: true`.
+                                      # `--overwrite` on the CLI sets this.
