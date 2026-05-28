@@ -4,7 +4,6 @@
 # templating — just a classifier head returning per-label scores).
 #
 # Requires the `hf` extra: `uv sync --extra hf`.
-version: 2
 run_name: prompt-guard-86m
 
 model:

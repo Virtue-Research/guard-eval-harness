@@ -48,7 +48,6 @@ geh cache clear
 ### OpenAI Moderation on Image Datasets
 
 ```yaml title="examples/openai-moderation-safe-vs-unsafe-image-edits.yaml"
-version: 1
 run_name: openai-moderation-images
 threshold: 0.5
 
@@ -76,7 +75,6 @@ execution:
 ### ShieldGemma2 on Local Images
 
 ```yaml title="examples/shieldgemma2-local-image-dir.yaml"
-version: 1
 run_name: shieldgemma2-local-images
 
 model:
@@ -103,7 +101,6 @@ execution:
 ### LlavaGuard on Image JSONL
 
 ```yaml title="examples/llavaguard-local-image-jsonl.yaml"
-version: 1
 run_name: llavaguard-images
 
 model:

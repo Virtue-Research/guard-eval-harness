@@ -5,7 +5,6 @@
 #       vllm serve meta-llama/Llama-Guard-3-8B --port 8000
 #   - The bundled `llama-guard-3-8b` profile defaults to local HF; we
 #     override the backend to use the vLLM endpoint instead.
-version: 2
 run_name: llama-guard-vllm
 
 model:

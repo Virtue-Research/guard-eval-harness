@@ -2,7 +2,6 @@
 #
 # Each dataset gets its own predictions/metrics under
 # out/<run-name>/datasets/<dataset>/. The summary.json rolls them up.
-version: 2
 run_name: granite-guardian-multi
 
 model:

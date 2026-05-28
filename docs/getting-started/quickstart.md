@@ -51,7 +51,6 @@ uv run geh list guards       # llama_guard · llm · md_judge · qwen3guard · �
 Profiles bundle a guard + backend + sensible args under a single slug. Reference one by name:
 
 ```yaml title="run.yaml"
-version: 2
 run_name: granite-on-three
 
 model:

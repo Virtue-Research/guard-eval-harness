@@ -11,7 +11,6 @@ geh run --config path/to/run.yaml
 ## Skeleton
 
 ```yaml
-version: 2                          # config schema version (always 2)
 run_name: my-evaluation             # used in artifact paths
 threshold: 0.5                      # score >= threshold => unsafe
 

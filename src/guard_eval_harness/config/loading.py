@@ -248,10 +248,10 @@ def load_config_from_path(
     raw_payload = yaml.safe_load(config_path.read_text(encoding="utf-8"))
     if not isinstance(raw_payload, dict):
         raise ValueError("config root must be a mapping")
-    if raw_payload.get("version") != 2:
+    declared_version = raw_payload.get("version")
+    if declared_version is not None and declared_version != 2:
         raise ValueError(
-            "load_config_from_path requires `version: 2`; got "
-            f"{raw_payload.get('version')!r}"
+            f"unsupported config version: {declared_version!r}"
         )
 
     payload = _apply_expansions(raw_payload)

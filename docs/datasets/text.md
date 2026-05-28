@@ -78,7 +78,6 @@ Benchmarks for testing resistance to prompt injection attacks.
 
 ```yaml
 # minimal-run.yaml
-version: 2
 run_name: text-baseline
 model:
   profile: granite-guardian-3.2-5b

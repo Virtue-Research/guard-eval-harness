@@ -31,7 +31,6 @@ uv run geh run --config examples/mock-jsonl.yaml
 ## Real run via a bundled profile
 
 ```yaml title="my-run.yaml"
-version: 2
 run_name: llama-guard-on-xstest
 model:
   profile: llama-guard-3-8b      # one of 14 bundled profiles

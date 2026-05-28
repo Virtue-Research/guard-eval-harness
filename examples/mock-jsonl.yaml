@@ -1,4 +1,3 @@
-version: 2
 run_name: mock-demo
 threshold: 0.5
 

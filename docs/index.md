@@ -50,7 +50,6 @@ sample ──► messages ──► raw output ──► ParsedLabel ──► m
 ## Quick example
 
 ```yaml title="examples/llama-guard-vllm.yaml"
-version: 2
 run_name: llama-guard-on-xstest
 
 model:

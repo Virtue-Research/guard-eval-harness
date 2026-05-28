@@ -31,7 +31,6 @@ output:
 ### Example
 
 ```yaml title="examples/run-mock-jsonl-auto-resume.yaml"
-version: 1
 run_name: mock-jsonl-auto-resume
 threshold: 0.5
 model:
