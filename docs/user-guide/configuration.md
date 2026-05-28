@@ -1,115 +1,127 @@
 # Configuration
 
-Guard Eval Harness supports three ways to configure a run:
+Every run is driven by a single YAML config:
 
-| Mode | Command | Best For |
-|------|---------|----------|
-| **Inline** | `geh run --dataset ... --model ...` | Quick one-off evaluations |
-| **YAML Config** | `geh run --config path.yaml` | Reproducible, version-controlled runs |
-| **Benchmark Pack** | `geh run --pack core --model ...` | Curated multi-dataset evaluations |
-
-These are mutually exclusive — pick one per run.
-
-## YAML Config Reference
-
-```yaml title="full-config.yaml"
-version: 1                           # (1)!
-run_name: my-evaluation              # (2)!
-threshold: 0.5                       # (3)!
-
-model:
-  adapter: hf                        # (4)!
-  model_name: meta-llama/Llama-Guard-3-8B  # (5)!
-  args:                              # (6)!
-    apply_chat_template: true
-    drop_failed_predictions: true
-
-datasets:                            # (7)!
-  - name: xstest
-    adapter: xstest
-    split: test
-    options: {}
-
-  - name: toxic_chat
-    adapter: toxic_chat
-
-execution:
-  batch_size: 16                     # (8)!
-  concurrency: 1                     # (9)!
-  retries: 8                         # (10)!
-  retry_backoff: 2.0                 # (11)!
-  limit: null                        # (12)!
-  resume: false                      # (13)!
-
-output:
-  run_dir: out/my-evaluation         # (14)!
-  overwrite: false                   # (15)!
+```bash
+geh run --config path/to/run.yaml
 ```
 
-1. Config format version. Always `1`.
-2. Human-readable name. Used in artifact directory naming.
-3. Classification threshold (0.0–1.0). Scores above this are classified as `unsafe`.
-4. Model backend alias. Use any registered adapter returned by `geh list backends`; most users start with `mock`, `hf`, `vllm`, `openai_moderation`, `openai_compatible`, `anthropic`, or `http`.
-5. Model identifier — HuggingFace repo ID, API model name, etc.
-6. Backend-specific arguments. See [Backends](../backends/overview.md) for each adapter's options.
-7. One or more datasets to evaluate. At least one is required.
-8. Batch size for inference. Use `"auto"` for adaptive sizing (local models only).
-9. Parallel workers for API adapters.
-10. Retry attempts on transient failures.
-11. Exponential backoff multiplier between retries.
-12. Max samples per dataset. `null` = use all samples.
-13. Resume from cached predictions if the run directory exists.
-14. Output directory (required).
-15. Allow overwriting an existing run directory.
+`geh validate --config path/to/run.yaml` loads the file and confirms every dataset resolves, without running inference.
 
-## Dataset Config
+## Skeleton
 
-Each dataset entry supports these fields:
+```yaml
+version: 2                          # config schema version (always 2)
+run_name: my-evaluation             # used in artifact paths
+threshold: 0.5                      # score >= threshold => unsafe
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `name` | `str` | **required** | Name used in artifact paths |
-| `adapter` | `str` | same as `name` | Dataset adapter name |
-| `path` | `str` | `null` | Local file/directory path |
-| `split` | `str` | `"test"` | Dataset split |
-| `id_field` | `str` | `"id"` | Sample ID column |
-| `prompt_field` | `str` | `"prompt"` | Text input column |
-| `response_field` | `str` | `null` | Optional response/output column |
-| `messages_field` | `str` | `null` | Structured messages column |
-| `label_field` | `str` | `"unsafe"` | Safety label column |
-| `metadata_fields` | `list[str]` | `[]` | Extra columns to preserve |
-| `options` | `dict` | `{}` | Adapter-specific options |
+model:                              # see "Guard + backend" below
+  profile: llama-guard-3-8b
 
-## Environment Variables
+datasets:                           # one or more entries
+  - name: xstest
+    limit: 100
 
-Config values can reference environment variables with `${VAR_NAME}` syntax:
+output:
+  run_dir: out/my-evaluation        # required
+  resume: true                      # default true
+  overwrite: false                  # wipe run_dir before starting
+```
+
+## Guard + backend
+
+Two equivalent ways to describe the model.
+
+### Option A — bundled profile (recommended)
 
 ```yaml
 model:
-  adapter: openai_compatible
-  model_name: ${OPENAI_VISION_MODEL}
+  profile: granite-guardian-3.2-5b
+```
+
+`geh list profiles` shows the 14 known-good profiles. Each is a full `guard + backend + args` payload; reference it by slug and you're done.
+
+Any field you set alongside `profile:` deep-merges onto it — swap the backend, change the model id, tweak `max_new_tokens`, etc.:
+
+```yaml
+model:
+  profile: llama-guard-3-8b
+  backend:
+    kind: openai_compat
+    name: meta-llama/Llama-Guard-3-8B
+    args:
+      base_url: http://localhost:8000/v1
+      api_key_env: null
+```
+
+### Option B — full inline
+
+```yaml
+model:
+  guard: llm                          # see `geh list guards`
+  output_format: safe_unsafe_first_line
+  guard_args: {}                      # passed to the Guard constructor
+  backend:
+    kind: openai_compat               # see `geh list backends`
+    name: gpt-4o-mini
+    args:
+      base_url: https://api.openai.com/v1
+      api_key_env: OPENAI_API_KEY
+      max_new_tokens: 32
+      temperature: 0.0
+```
+
+## Datasets
+
+Each entry is a dataset to evaluate. The full field set:
+
+| Field | Default | Description |
+|---|---|---|
+| `name` | required | Display name; also adapter name unless `adapter:` is set |
+| `adapter` | same as `name` | Built-in adapter (see `geh list datasets`) or `local_jsonl`/`local_csv`/`local_image_jsonl`/`local_image_dir` |
+| `path` | `null` | Local file/directory (required for `local_*` adapters) |
+| `split` | `"test"` | Split name — varies per dataset, see `geh list datasets` |
+| `policy` | `null` | Inline `{name, text}` object or a registered policy name |
+| `policy_source` | `null` | `"upstream"` · `"generated"` · `"virtue_general"` — dataset-scoped policy lookup |
+| `limit` | `null` | Take the first N samples (mutually exclusive with `sample_*`) |
+| `sample_ids` | `()` | Run only these sample ids |
+| `sample_indices` | `()` | Run only these row indices |
+| `options` | `{}` | Adapter-specific options |
+
+Three-tier policy resolution (first match wins): explicit `policy:` → `policy_source:` registry → adapter default → guard default → none.
+
+## Environment variables
+
+Use `${VAR_NAME}` anywhere in a string value:
+
+```yaml
+backend:
   args:
-    api_key_env: OPENAI_API_KEY
+    base_url: ${VLLM_BASE_URL}
+    api_key_env: OPENAI_API_KEY        # name of the env var holding the key
 ```
 
-## Validation
-
-Validate a config file without running it:
+## CLI overrides
 
 ```bash
-geh validate --config my-eval.yaml
-```
-
-This checks that all adapters exist, required fields are present, and dataset/model configurations are valid.
-
-## CLI Overrides
-
-Several config values can be overridden from the command line:
-
-```bash
-geh run --config my-eval.yaml \
+geh run --config run.yaml \
     --threshold 0.6 \
-    --limit 100 \
-    --output-dir out/custom-dir \
-    --batch-size 32
+    --output-dir out/custom \
+    --overwrite
 ```
+
+| Flag | Effect |
+|---|---|
+| `--output-dir DIR` | Override `output.run_dir` |
+| `--threshold FLOAT` | Override `threshold` |
+| `--no-resume` | Treat the run dir as fresh (errors if non-empty) |
+| `--overwrite` | Wipe the run dir before starting |
+| `--recompute-metrics` | Skip inference; recompute metrics from existing predictions |
+
+## Resume
+
+The harness fingerprints the resolved config and writes the hash to `manifest.json`. Re-running with the same config picks up where it stopped; mixing in a different config fails fast.
+
+## Output
+
+Every run writes a self-contained directory under `output.run_dir/`. See [Run artifacts](run-artifacts.md) for the full layout.

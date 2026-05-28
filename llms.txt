@@ -1,0 +1,54 @@
+# guard-eval-harness
+
+> CLI-first harness for benchmarking safety guards (Llama Guard, ShieldGemma, Granite Guardian, Qwen3Guard, WildGuard, MD-Judge, Prompt-Guard, LLM-as-judge, …) against 80+ canonical text and image safety datasets. A run is a `guard` (prompt + parser) × a `backend` (inference engine), wired together by a single YAML.
+
+Install: `git clone https://github.com/Virtue-Research/guard-eval-harness.git && cd guard-eval-harness && uv sync --extra hf` (or `pip install -e ".[hf]"`). Python 3.10+. CLI command is `geh`.
+
+Smoke test (no GPU, no keys): `uv run geh run --config examples/mock-jsonl.yaml`.
+
+Discover: `geh list profiles | datasets | backends | guards | policies`.
+
+Run: `geh run --config <yaml>`. Validate without running: `geh validate --config <yaml>`. Inspect a run: `geh inspect --run-dir <dir>`.
+
+Profiles (14 bundled, recommended starting point): `prompt-guard-86m`, `llama-prompt-guard-22m`, `llama-guard-3-1b`, `llama-guard-3-8b`, `granite-guardian-3.1-8b`, `granite-guardian-3.2-5b`, `qwen3guard-0.6b`, `qwen3guard-4b`, `shieldgemma-9b`, `wildguard`, `md-judge`, `gemma4-31b-it`, `gpt-4o-mini`, `gpt-5.4-mini`. Reference by slug under `model.profile:`; deep-merge overrides anywhere in the `model:` block.
+
+Backends: `hf_generate`, `hf_text_classifier`, `hf_image_classifier`, `hf_vlm`, `openai_compat`, `mock`, `mock_classifier`.
+
+Guards: `llama_guard`, `llm`, `md_judge`, `prompt_guard`, `qwen3guard`, `shieldgemma`, `wildguard`, `granite_guardian`, `llavaguard`, `hf_image_classifier`.
+
+Policies: three-tier resolution per dataset — explicit `policy:` → `policy_source:` (`upstream`/`generated`/`virtue_general`) → adapter default → guard default → none.
+
+Run artifacts: `out/<run-name>/{manifest,resolved-config,summary}.json` plus `datasets/<name>/{predictions.jsonl,metrics.json,dataset-manifest.json}`. Resumable by SHA-256 config hash.
+
+## Docs
+
+- [README](README.md): install, 30-second demo, profile pattern, examples table, artifact layout
+- [Quickstart](docs/getting-started/quickstart.md): fresh-checkout → real run in 2 minutes
+- [Installation](docs/getting-started/installation.md): uv + pip, extras (`hf`, `api`, `dev`)
+- [Configuration](docs/user-guide/configuration.md): full YAML schema, profile overrides, env vars, CLI flags
+- [Run artifacts](docs/user-guide/run-artifacts.md): on-disk layout, resume model
+- [Common workflows](docs/user-guide/common-workflows.md): copy-paste recipes
+- [Benchmark selection](docs/user-guide/benchmark-selection.md): which datasets when
+- [Resume](docs/user-guide/resume.md): config-hash resume semantics
+
+## Catalog
+
+- [Guards](docs/guards/overview.md): bundled guards + profile slugs
+- [Backends](docs/backends/overview.md): inference engines
+- [Datasets](docs/datasets/overview.md): 80+ text + image safety benchmarks
+- [Metrics](docs/metrics/overview.md): supported metrics
+
+## Developer
+
+- [Architecture](docs/developer/architecture.md): guard × backend split, sample/policy/output-format flow
+- [Adding a guard](docs/developer/adding-guards.md): ~30 lines for a new safety model
+- [Adding a backend](docs/developer/adding-backends.md): new inference engine
+- [Adding a dataset](docs/developer/adding-datasets.md): new benchmark adapter
+
+## Examples
+
+- [`examples/mock-jsonl.yaml`](examples/mock-jsonl.yaml): zero-dep smoke test
+- [`examples/llama-guard-vllm.yaml`](examples/llama-guard-vllm.yaml): Llama Guard 3 served over vLLM
+- [`examples/openai-judge.yaml`](examples/openai-judge.yaml): GPT-as-judge with a policy
+- [`examples/profile-multi-dataset.yaml`](examples/profile-multi-dataset.yaml): one profile across several datasets
+- [`examples/hf-text-classifier.yaml`](examples/hf-text-classifier.yaml): Prompt-Guard-86M classifier head

@@ -76,16 +76,24 @@ Benchmarks for testing resistance to prompt injection attacks.
 
 ## Usage Examples
 
+```yaml
+# minimal-run.yaml
+version: 2
+run_name: text-baseline
+model:
+  profile: granite-guardian-3.2-5b
+datasets:
+  - name: xstest
+  - name: toxic_chat
+    limit: 500
+  - name: harmful_qa
+    limit: 1000
+output:
+  run_dir: out/text-baseline
+```
+
 ```bash
-# Single dataset
-geh run --dataset xstest --model mock
-
-# Multiple datasets
-geh run --dataset xstest,toxic_chat,harmful_qa --model hf \
-    --model-name meta-llama/Llama-Guard-3-8B
-
-# With sample limit
-geh run --dataset beaver_tails_330k --model mock --limit 1000
+uv run geh run --config minimal-run.yaml
 ```
 
 ```yaml

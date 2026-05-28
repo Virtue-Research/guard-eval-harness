@@ -1,44 +1,41 @@
 # Run Artifacts
 
-Every evaluation run produces a **self-contained output directory** with all predictions, metrics, and reports. This directory is portable and can be inspected, compared, or exported without re-running the evaluation.
+Every run writes a self-contained directory: predictions, metrics, and a
+resume signature.
 
-## Directory Layout
+## Layout
 
 ```
-out/my-run/
-├── manifest.json              # Run metadata
-├── resolved-config.json       # Exact config snapshot (sanitized)
-├── resume-signature.json      # Hash for resume validation
-├── summary.json               # Aggregated metrics across all datasets
-├── report.html                # Static HTML report
+out/<run-name>/
+├── manifest.json              # run metadata + status + config hash
+├── resolved-config.json       # exact config snapshot
+├── summary.json               # aggregated metrics across datasets
 └── datasets/
     ├── xstest/
-    │   ├── predictions.jsonl      # Per-sample predictions
-    │   ├── metrics.json           # Dataset-level metrics
-    │   └── dataset-manifest.json  # Dataset metadata
+    │   ├── predictions.jsonl     # one record per sample
+    │   ├── metrics.json          # per-dataset metrics
+    │   └── dataset-manifest.json # adapter version + source URI
     └── toxic_chat/
         ├── predictions.jsonl
         ├── metrics.json
         └── dataset-manifest.json
 ```
 
-## File Formats
+## File formats
 
 ### `manifest.json`
 
-Top-level run metadata including:
+Top-level run metadata:
 
-- Tool version and run name
-- Run status: `"completed"`, `"failed"`, or `"partial"`
-- Start and end timestamps
-- Resolved config hash
-- Model and execution configuration
-- Per-dataset metadata and adapter capabilities
-- Environment info (Python version, platform, hostname)
+- harness version, run name, status (`completed` / `partial` / `failed`)
+- `config_hash` — SHA-256 used to gate resume
+- start / end timestamps
+- resolved model + dataset entries
+- environment (Python, platform, hostname)
 
 ### `predictions.jsonl`
 
-One JSON object per line, each representing a `NormalizedPrediction`:
+One JSON object per sample:
 
 ```json
 {
@@ -49,13 +46,14 @@ One JSON object per line, each representing a `NormalizedPrediction`:
   "latency_ms": 42.3,
   "predicted_categories": ["violence"],
   "category_scores": {"violence": 0.87, "sexual": 0.02},
+  "raw_output": "...",
   "metadata": {}
 }
 ```
 
 ### `metrics.json`
 
-Dataset-level binary classification metrics:
+Per-dataset binary-classification metrics:
 
 ```json
 {
@@ -67,52 +65,40 @@ Dataset-level binary classification metrics:
   "auprc": 0.96,
   "fpr": 0.11,
   "fnr": 0.05,
-  "tp": 190,
-  "tn": 230,
-  "fp": 28,
-  "fn": 10
+  "tp": 190, "tn": 230, "fp": 28, "fn": 10,
+  "count": 458,
+  "evaluated_sample_count": 458,
+  "failed_sample_count": 0,
+  "threshold_sweep": [ /* per-threshold breakdown */ ]
 }
 ```
 
 ### `summary.json`
 
-Aggregated metrics across all datasets in the run.
+`{"datasets": [...]}` with one entry per dataset — same keys as `metrics.json`
+plus `name`.
 
-### `report.html`
-
-A static, single-file HTML report with:
-
-- Per-dataset metrics table
-- Sortable columns
-- Responsive design — open in any browser, no server needed
-
-## Inspecting Runs
+## Inspecting a run
 
 ```bash
-# View run manifest, summary, and artifacts
 geh inspect --run-dir out/my-run
-
-# Rebuild the HTML report
-geh report --run-dir out/my-run
 ```
 
-## Comparing Runs
+Prints the manifest + summary as JSON, ready for `jq`.
+
+## Resume
+
+`manifest.json` records a SHA-256 hash of the resolved config. Re-running with
+the same config picks up at the next unprocessed sample. Running with a
+different config in a non-empty run dir fails fast — use `--overwrite` to
+wipe it.
+
+## Recomputing metrics
+
+If you change the threshold or add a metric, you don't need to re-run inference:
 
 ```bash
-geh compare --run-a out/run1 --run-b out/run2
+geh run --config run.yaml --recompute-metrics
 ```
 
-Produces a side-by-side diff of metrics for datasets present in both runs, with deltas highlighted.
-
-## Exporting
-
-```bash
-# Export to CSV
-geh export --run-dir out/my-run --format csv --output results.csv
-
-# Export to Excel
-geh export --run-dir out/my-run --format xlsx --output results.xlsx
-
-# Export to JSON
-geh export --run-dir out/my-run --format json --output results.json
-```
+This re-scores existing `predictions.jsonl` files and rewrites the metric files.

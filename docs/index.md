@@ -49,12 +49,12 @@ sample ──► messages ──► raw output ──► ParsedLabel ──► m
 
 ## Quick example
 
-```yaml title="examples/llama-guard.yaml"
+```yaml title="examples/llama-guard-vllm.yaml"
 version: 2
-run_name: llama-guard-3-on-xstest
+run_name: llama-guard-on-xstest
 
 model:
-  guard: llama_guard
+  profile: llama-guard-3-8b
   backend:
     kind: openai_compat
     name: meta-llama/Llama-Guard-3-8B
@@ -64,15 +64,14 @@ model:
 
 datasets:
   - name: xstest
-    adapter: xstest
-    limit: 50
+    limit: 100
 
 output:
-  run_dir: out/llama-guard-3-on-xstest
+  run_dir: out/llama-guard-on-xstest
 ```
 
 ```bash
-geh run --config examples/llama-guard.yaml
+geh run --config examples/llama-guard-vllm.yaml
 ```
 
 Streams one record per sample to

@@ -1,80 +1,55 @@
-# Benchmark Selection
+# Benchmark selection
 
-The fastest way to get useful results is to choose a benchmark path that
-matches your deployment risk, not just the model you happen to be testing.
+There's no `--pack` shortcut — pick the datasets you actually care about and
+list them under `datasets:` in your YAML. Use this page as the cheat-sheet
+mapping from "what I care about" to "which datasets cover it."
 
-## Start Here
+## Cheat sheet
 
-| If you care about... | Start with | Why |
-| --- | --- | --- |
-| broad text-safety coverage | `core` pack | balanced baseline across jailbreak, toxicity, harmful Q&A, and abuse |
-| jailbreak resistance | `jailbreak` pack | focuses on adversarial prompts and refusal robustness |
-| prompt injection style attacks | `prompt_injection` pack | better fit for policy override and red-team inputs |
-| moderation quality | `toxicity` or `hate_harassment` | better signal for over-blocking and abuse detection |
-| image safety | `safe_vs_unsafe_image_edits`, `unsafebench`, or local image adapters | lets you test multimodal behavior directly |
+| If you care about… | Start with these datasets |
+| --- | --- |
+| **Broad text-safety baseline** | `xstest`, `toxic_chat`, `harmbench_behaviors`, `do_not_answer`, `beaver_tails_330k` |
+| **Jailbreak / adversarial resistance** | `harmbench_behaviors`, `jbb_behaviors`, `jailbreakbench`, `advbench_behaviors`, `wildjailbreak`, `strong_reject_instructions` |
+| **Prompt injection** | `prompt_guard` (model name; pair with prompt-injection datasets), `guardrailsai_jailbreak`, `do_anything_now_questions` |
+| **Toxicity / moderation** | `jigsaw_toxicity`, `toxic_chat`, `toxigen`, `civil_comments`, `real_toxicity_prompts`, `tweet_eval_hate` |
+| **Hate & harassment** | `hatecheck`, `hatemoji_check`, `implicit_hate`, `measuring_hate_speech`, `social_bias_frames`, `convabuse` |
+| **General Q&A safety** | `harmful_qa`, `harmful_q`, `do_not_answer`, `pku_safe_rlhf`, `sorry_bench`, `salad_bench` |
+| **Refusal calibration (over-blocking)** | `xstest`, `or_bench`, `i_controversial`, `safe_text` |
+| **Image safety** | `unsafebench`, `holisafebench`, `jailbreakv`, `mm_safetybench`, `vlsbench` |
+| **Local / bring-your-own** | `local_jsonl`, `local_csv`, `local_image_jsonl`, `local_image_dir` |
 
-## Recommended Starting Paths
+Run `uv run geh list datasets` for the full list of 80+ adapters, and check
+[`docs/datasets/`](../datasets/overview.md) for adapter-by-adapter details.
 
-### Broad OSS Baseline
+## Pick a profile to match
 
-```bash
-geh run --pack core --model mock
+| Task shape | Recommended profile |
+| --- | --- |
+| Fast text classifier (small, GPU) | `prompt-guard-86m`, `llama-prompt-guard-22m`, `qwen3guard-0.6b` |
+| Strong general-purpose safety classifier | `granite-guardian-3.2-5b`, `qwen3guard-4b`, `wildguard` |
+| Llama Guard family | `llama-guard-3-1b`, `llama-guard-3-8b` |
+| Single-axis policy expert | `shieldgemma-9b` (override its principle) |
+| LLM-as-judge | `gpt-4o-mini`, `gpt-5.4-mini`, or build your own with `guard: llm` |
+| Image safety | `llavaguard` guard, `hf_image_classifier` backend |
+
+`uv run geh list profiles` shows everything bundled.
+
+## Mix built-in and local data
+
+The harness is strongest when public benchmarks and your real traffic share
+one config:
+
+```yaml
+datasets:
+  - name: xstest
+    limit: 100
+  - name: my_internal_refusals
+    adapter: local_jsonl
+    path: data/refusals.jsonl
 ```
 
-Good when you need a first benchmark suite before optimizing anything.
+## Related
 
-### Prompt Attack Or Red-Team Work
-
-```bash
-geh run --pack prompt_injection --model openai_compatible \
-    --model-name gpt-4.1-mini
-```
-
-Use this when your system is vulnerable to instruction overrides, tool misuse,
-or retrieval-time prompt attacks.
-
-### Policy Moderation Work
-
-```bash
-geh run --pack toxicity --model openai_moderation
-```
-
-Use `hate_harassment` when the core deployment risk is abusive language and
-bias-sensitive content.
-
-### Multimodal Safety
-
-Start with a single dataset before scaling up:
-
-- `safe_vs_unsafe_image_edits` for image-edit request moderation
-- `unsafebench` for broader unsafe image safety checks
-- `local_image_jsonl` when you already have internal or bespoke image prompts
-
-## How To Decide Between Packs And Individual Datasets
-
-Choose packs when:
-
-- you want a stable shared starting point
-- you are benchmarking several models the same way
-- you want a named suite in reports or docs
-
-Choose individual datasets when:
-
-- you need one domain only
-- you are doing targeted debugging
-- you want to mix built-ins with local data
-
-## Mix Built-In And Local Data
-
-The harness is strongest when you pair public benchmarks with the data your
-system actually sees.
-
-Examples:
-
-- `xstest` plus `local_jsonl` for a refusal model
-- `unsafebench` plus `local_image_jsonl` for a multimodal guardrail
-
-## Related References
-
-- [Datasets Overview](../datasets/overview.md)
-- [Common Workflows](common-workflows.md)
+- [Datasets overview](../datasets/overview.md)
+- [Common workflows](common-workflows.md)
+- [Configuration reference](configuration.md)

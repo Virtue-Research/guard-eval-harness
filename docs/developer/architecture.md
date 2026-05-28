@@ -1,119 +1,121 @@
 # Architecture
 
-Guard Eval Harness is a modular evaluation pipeline with two primary extension
-surfaces:
+A run is exactly four things glued by the runner:
 
-- dataset adapters
-- model adapters
+```
+       Guard               Backend
+   (prompt + parser)   (inference engine)
+        │                    │
+        ▼                    ▼
+sample ──► messages ──► raw output ──► ParsedLabel ──► metrics
+                                            ▲
+                                            │
+                                       Policy + OutputFormat
+                                       (LLM-as-guard only)
+```
 
-Benchmark packs and presets sit above those layers as reusable run definitions,
-while the CLI and execution pipeline handle config resolution, orchestration,
-artifacts, and reporting.
+- **Guard** — owns prompt construction and output parsing. Fixed-taxonomy
+  guards (Llama Guard, ShieldGemma) embed their taxonomy. The generic `llm`
+  guard accepts any Policy + OutputFormat combo.
+- **Backend** — the inference engine (`hf_generate`, `openai_compat`,
+  `hf_text_classifier`, `hf_image_classifier`, `hf_vlm`, `mock`). It knows
+  nothing about safety taxonomies.
+- **Dataset** — loads samples in a normalized shape (`NormalizedSample`).
+- **Runner** — glues them together, streams predictions to disk, and
+  computes metrics. Resumable by default.
 
-## Project Structure
+## Project layout
 
 ```text
 src/guard_eval_harness/
-  cli/
-    main.py               # argparse-based CLI entry point
+  cli.py                  # argparse entry point (`geh`)
   config/
-    loading.py            # YAML/dict config resolution
-    models.py             # resolved config models
-  datasets/
-    base.py               # DatasetAdapter base class
-    source_backed.py      # SourceBackedDatasetAdapter
-    multimodal_base.py    # MultimodalDatasetAdapter
-    ...                   # concrete dataset adapters
-  models/
-    base.py               # ModelAdapter base class
-    templates.py          # prompt and score helpers
-    ...                   # concrete model adapters
-  registry/
-    core.py               # thread-safe registries and entry-point loading
-  execution/
-    runner.py             # run_benchmark() orchestration
-  benchmarks/
-    packs.py              # user-facing pack definitions
-    presets.py            # reproducible benchmark preset definitions
-  reports/
-    summary.py            # HTML and summary rebuild logic
-  exports/
-    summary.py            # CSV, XLSX, and JSON export helpers
-  schemas/
-    core.py               # normalized contracts and run manifest models
-  plugins/
-    discovery.py          # built-in module import helper
+    loading.py            # YAML resolution + profile expansion
+    schema.py             # resolved-config Pydantic models
+  registry.py             # thread-safe registries (datasets/guards/backends/...)
+  schemas.py              # NormalizedSample, PredictSample, ParsedLabel, …
+  datasets/               # one module per adapter
+  guards/
+    base.py               # Guard base class
+    profiles/             # bundled `model:` blocks (slug -> YAML)
+  backends/               # hf_generate, openai_compat, hf_text_classifier, …
+  output_formats/         # parsers for guard outputs
+  policies/               # built-in policies + dataset-scoped registries
+  runner.py               # run_from_config orchestration
+  metrics/                # binary-classification metrics
 ```
 
-## Runtime Flow
+## Runtime flow
 
 ```text
-CLI flags or YAML config
-  -> config resolution
-  -> registry loading
-  -> dataset normalization
-  -> model prediction
-  -> metrics computation
-  -> artifact writing
-  -> report / compare / export workflows
+YAML config
+  -> ensure_builtin_registrations()
+  -> profile expansion (deep-merge model overrides)
+  -> resolved config + SHA-256 hash
+  -> for each dataset:
+       load samples -> apply subset filter -> stream predictions
+       -> parse output -> compute per-dataset metrics
+  -> write manifest, summary, dataset artifacts
 ```
 
-## Registries And Discovery
+## Registries and discovery
 
-The harness maintains separate registries for dataset and model adapters.
+A single `Registry[T]` class backs each component type. `ensure_builtin_registrations()` imports the built-in modules (side-effect registers each class) and then loads any entry points published under:
 
-At startup, `ensure_builtin_registrations()`:
+- `guard_eval_harness.datasets`
+- `guard_eval_harness.guards`
+- `guard_eval_harness.backends`
+- `guard_eval_harness.output_formats`
 
-1. imports built-in dataset modules
-2. imports built-in model modules
-3. loads entry points from `guard_eval_harness.datasets`
-4. loads entry points from `guard_eval_harness.models`
+External plugins can ship new adapters without forking — declare an entry
+point and the harness picks it up.
 
-That means external plugins can register new adapters without changing the core
-repository, as long as they expose the correct entry points.
+## Profiles
 
-## Packs Vs Presets
+A profile is a complete `model:` block stored as YAML under
+`guards/profiles/<slug>.yaml`. The config loader resolves
+`model.profile: <slug>` to a full payload, then deep-merges any sibling keys
+on top. This is the recommended user-facing path; the underlying
+`guard + backend` schema is always available for fully inline configs.
 
-These concepts are related but not the same:
+## Three-tier policy resolution
 
-- packs are user-facing suites meant for `geh run --pack ...`
-- presets are code-defined benchmark suites exposed through `geh list presets`
+For each dataset, the effective policy is the first of these that resolves:
 
-Packs optimize for fast, named starter evaluations. Presets are better thought
-of as reproducible benchmark definitions used by higher-level workflows and
-reproduction efforts.
+1. `policy:` set on the dataset entry (inline or registry name)
+2. `policy_source: upstream|generated|virtue_general` → registry lookup
+3. adapter's `default_policy_source`
+4. guard's `default_policy`
+5. none
 
-## Core Contracts
+## Core contracts (Pydantic models)
 
-The most important shared schemas are:
+- `NormalizedSample` — adapter output (id, messages, label, metadata)
+- `PredictSample` — sample minus label (handed to guards/backends; structurally label-free)
+- `ParsedLabel` — `(unsafe: bool, score: float, categories: list[str])`
+- `Message`, `Part` — chat-message + multimodal parts
+- `RunManifest` — top-level run metadata + config hash
 
-- `NormalizedSample`
-- `Message`
-- `NormalizedPrediction`
-- `DatasetMetadata`
-- `AdapterCapabilities`
-- `RunManifest`
+## Design choices worth knowing
 
-These are Pydantic models defined in `schemas/core.py`, not dataclasses.
+### Artifact-centric execution
 
-## Design Choices Worth Knowing
+The run directory is the source of truth. Metrics, comparisons, and exports
+operate on stored predictions, not in-memory state.
 
-### Artifact-Centric Execution
+### Ground-truth leak-proof
 
-The run directory is the source of truth. Most follow-up workflows operate on
-stored artifacts instead of recomputing the benchmark.
+`PredictSample` structurally excludes labels. A
+`PREDICT_METADATA_FIELD_DENYLIST` rejects label-shaped metadata fields at the
+config boundary so they can't be smuggled to a model.
 
-### Deterministic Sample IDs
+### Deterministic sample IDs
 
-Dataset adapters generate stable IDs so resume, comparison, and debugging stay
-predictable.
+Adapters generate stable IDs. Resume, comparison, and debugging stay
+predictable across runs.
 
-### Capability-Driven Execution
+### Resume by config hash
 
-The runner inspects each adapter's declared capabilities to decide how batching,
-concurrency, and modality handling should behave.
-
-### Local And Hosted Backends Share The Same Output Contract
-
-This is what makes comparisons between `hf`, `vllm`, `openai_moderation`,
-`openai_compatible`, and plugin-provided adapters practical.
+`manifest.json` carries a SHA-256 of the resolved config. Re-running with the
+same config picks up at the next unprocessed sample; running with a different
+config in a non-empty dir fails fast.

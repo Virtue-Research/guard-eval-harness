@@ -1,106 +1,77 @@
 # Common Workflows
 
-These recipes use the configs and commands already present in the repository,
-so they are good starting points for repeatable runs.
+Copy-paste recipes. Every example is a YAML config under [`examples/`](../../examples/).
 
-## 1. Smoke Test The Harness
-
-```bash
-pip install -e "."
-geh run --dataset xstest --model mock --limit 50
-```
-
-Use this first on a fresh machine or CI job.
-
-## 2. Run A Local HuggingFace Model Against Local JSONL
-
-Config file:
-
-```text
-examples/run-hf-mock-jsonl.yaml
-```
-
-Run it with:
+## 1. Smoke-test the harness
 
 ```bash
-pip install -e ".[hf]"
-geh run --config examples/run-hf-mock-jsonl.yaml
+uv run geh run --config examples/mock-jsonl.yaml
 ```
 
-This is a good bridge between the simplest `mock` setup and a real local
-backend.
+No GPU, no API keys. Use on a fresh machine or in CI.
 
-## 3. Run OpenAI Moderation On An Image-Safety Dataset
-
-Config file:
-
-```text
-examples/openai-moderation-safe-vs-unsafe-image-edits.yaml
-```
-
-Run it with:
+## 2. Llama Guard via vLLM
 
 ```bash
-pip install -e ".[api]"
+# Start the model server first:
+vllm serve meta-llama/Llama-Guard-3-8B --port 8000
+
+uv run geh run --config examples/llama-guard-vllm.yaml
+```
+
+The profile `llama-guard-3-8b` defaults to local HF; the example overrides the
+backend to point at the vLLM endpoint.
+
+## 3. GPT-as-judge
+
+```bash
 export OPENAI_API_KEY=sk-...
-geh run --config examples/openai-moderation-safe-vs-unsafe-image-edits.yaml
+uv run geh run --config examples/openai-judge.yaml
 ```
 
-Use this when you want a hosted multimodal moderation baseline quickly.
+The generic `llm` guard pairs any chat model with a Policy + OutputFormat —
+swap `model.backend.name` for any OpenAI / Anthropic / vLLM chat model.
 
-## 4. Run A Local Image JSONL Workflow
-
-Hosted OpenAI-compatible path:
+## 4. One profile across several datasets
 
 ```bash
-export LOCAL_IMAGE_JSONL_PATH=/abs/path/to/images.jsonl
-export OPENAI_API_KEY=sk-...
-export OPENAI_VISION_MODEL=gpt-4.1-mini
-geh run --config examples/openai-compatible-local-image-jsonl.yaml
+uv run geh run --config examples/profile-multi-dataset.yaml
 ```
 
-Local HuggingFace VLM path:
+Each dataset gets its own `predictions.jsonl` and `metrics.json`; the
+`summary.json` rolls them up.
+
+## 5. HF text classifier (no chat template)
 
 ```bash
-export LOCAL_IMAGE_JSONL_PATH=/abs/path/to/images.jsonl
-geh run --config examples/llavaguard-local-image-jsonl.yaml
+uv run geh run --config examples/hf-text-classifier.yaml
 ```
 
-## 5. Run A Curated Pack Instead Of Picking Datasets Manually
+`hf_text_classifier` is a non-generative backend — it reads the classifier
+head's per-label scores directly. Use for Prompt-Guard-86M,
+Llama-Prompt-Guard-22M, and any compatible HF model.
+
+## 6. Pre-flight a config
 
 ```bash
-geh list packs
-geh run --pack core --model mock
-geh run --pack jailbreak --model hf --model-name meta-llama/Llama-Guard-3-8B
+uv run geh validate --config examples/profile-multi-dataset.yaml
 ```
 
-Choose this when the question is "how does this model do on a standard starter
-suite?" rather than "how does it do on one dataset?"
+Loads the config and confirms every dataset materializes — no inference, no
+network calls beyond resolving HF datasets. Run this before any long job.
 
-## 6. Run Code Vulnerability Evaluation
-
-Config file:
-
-```text
-examples/code-vuln/run-vulnllm-r-openai.yaml
-```
-
-Run it with:
+## 7. Resume / overwrite
 
 ```bash
-pip install -e ".[api]"
-export OPENAI_API_KEY=sk-...
-geh run --config examples/code-vuln/run-vulnllm-r-openai.yaml
+uv run geh run --config run.yaml                  # resumes (default)
+uv run geh run --config run.yaml --overwrite      # wipe + start fresh
+uv run geh run --config run.yaml --recompute-metrics   # re-score predictions only
 ```
 
-This is the cleanest starting point for repository-level and function-level
-code security benchmarks.
-
-## 7. Validate A Config Before Spending GPU Or API Time
+## 8. Inspect a finished run
 
 ```bash
-geh validate --config examples/run-mock-jsonl.yaml
+uv run geh inspect --run-dir out/my-run
 ```
 
-This is especially useful when you are working with local paths or
-adapter-specific args.
+Prints the manifest + summary as JSON for piping into `jq`.

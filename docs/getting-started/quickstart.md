@@ -1,87 +1,108 @@
 # Quickstart
 
-This guide gets you from a fresh checkout to a finished evaluation run
-quickly, then shows the cleanest next step for a real backend.
+Go from a fresh checkout to a finished evaluation run in two minutes.
 
-## 1. Install The Base Package
-
-```bash
-pip install -e "."
-```
-
-## 2. Run A Smoke Test
+## 1. Install
 
 ```bash
-geh run --dataset xstest --model mock --limit 50
+git clone https://github.com/Virtue-Research/guard-eval-harness.git
+cd guard-eval-harness
+uv sync --extra hf            # base + local HuggingFace inference
 ```
 
-Why this first:
+`uv sync` creates `.venv/` and installs the locked deps. Use `pip install -e ".[hf]"` if you prefer pip.
 
-- no GPU required
-- no API keys required
-- you get the full artifact layout immediately
-
-## 3. Inspect The Output
-
-The command prints a JSON payload with the run directory and artifact paths.
-The output directory looks like this:
-
-```text
-out/mock/xstest/
-  manifest.json
-  resolved-config.json
-  summary.json
-  report.html
-  datasets/
-    xstest/
-      predictions.jsonl
-      metrics.json
-      dataset-manifest.json
-```
-
-Follow it with:
+## 2. Smoke test — no GPU, no keys
 
 ```bash
-geh inspect --run-dir out/mock/xstest
+uv run geh run --config examples/mock-jsonl.yaml
 ```
 
-## 4. Try A Real Backend
+This uses the bundled `mock` backend on a tiny local JSONL. It exists to confirm the pipeline runs and to show the artifact layout:
 
-### Local HuggingFace
+```
+out/mock-demo/
+  manifest.json          # run metadata + config hash (resume-keyed)
+  resolved-config.json   # exact config snapshot
+  summary.json           # aggregated metrics
+  datasets/<name>/
+    predictions.jsonl    # one row per sample
+    metrics.json
+    dataset-manifest.json
+```
+
+Inspect with:
 
 ```bash
-pip install -e ".[hf]"
-geh run --dataset xstest,toxic_chat \
-    --model hf \
-    --model-name meta-llama/Llama-Guard-3-8B \
-    --batch-size 16
+uv run geh inspect --run-dir out/mock-demo
 ```
 
-### OpenAI Moderation
+## 3. Discover what's available
 
 ```bash
-pip install -e ".[api]"
-export OPENAI_API_KEY=sk-...
-geh run --pack core --model openai_moderation --limit 100
+uv run geh list profiles     # 14 known-good guards (Llama Guard, ShieldGemma, …)
+uv run geh list datasets     # 80+ safety benchmarks
+uv run geh list backends     # hf_generate · openai_compat · hf_text_classifier · hf_vlm · mock
+uv run geh list guards       # llama_guard · llm · md_judge · qwen3guard · …
 ```
 
-### Reproducible YAML Run
+## 4. Real run via a bundled profile
+
+Profiles bundle a guard + backend + sensible args under a single slug. Reference one by name:
+
+```yaml title="run.yaml"
+version: 2
+run_name: granite-on-three
+
+model:
+  profile: granite-guardian-3.2-5b
+
+datasets:
+  - name: xstest
+    limit: 100
+  - name: toxic_chat
+    limit: 100
+  - name: harmbench_behaviors
+    limit: 100
+
+output:
+  run_dir: out/granite-on-three
+  resume: true
+```
 
 ```bash
-geh run --config examples/run-mock-jsonl.yaml
+uv run geh validate --config run.yaml      # optional: load + dry-run
+uv run geh run --config run.yaml
 ```
 
-## 5. Compare Or Export Results
+## 5. Swap the backend
+
+Profiles are deep-merged with anything you put in the config. To run Llama Guard via vLLM instead of local HF:
+
+```yaml
+model:
+  profile: llama-guard-3-8b
+  backend:
+    kind: openai_compat
+    name: meta-llama/Llama-Guard-3-8B
+    args:
+      base_url: http://localhost:8000/v1
+      api_key_env: null
+```
+
+## 6. Resume after a crash
+
+Re-run the same config. The harness checks `manifest.json` against a SHA-256 hash of the resolved config and continues from the last completed sample.
 
 ```bash
-geh compare --run-a out/run-a --run-b out/run-b
-geh export --run-dir out/mock/xstest --format csv --output results.csv
+uv run geh run --config run.yaml               # resumes automatically
+uv run geh run --config run.yaml --overwrite   # wipe the run dir and start fresh
 ```
 
-## What To Do Next
+## What to do next
 
-- Use [Configuration](../user-guide/configuration.md) for the full YAML reference.
-- Use [Benchmark Selection](../user-guide/benchmark-selection.md) to find the
-  right dataset mix.
-- Use [Common Workflows](../user-guide/common-workflows.md) for copy-paste
-  recipes across text, image, and code evaluation.
+- **[Configuration](../user-guide/configuration.md)** — full YAML schema
+- **[Guards](../guards/overview.md)** — bundled guards & profiles
+- **[Backends](../backends/overview.md)** — supported inference engines
+- **[Common workflows](../user-guide/common-workflows.md)** — copy-paste recipes
+- **[Adding a guard](../developer/adding-guards.md)** — ~30 lines for a new safety model

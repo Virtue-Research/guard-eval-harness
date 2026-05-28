@@ -1,115 +1,93 @@
 # Troubleshooting
 
-This page focuses on the issues most likely to block a first OSS user: missing
-extras, auth problems, path mistakes, and backend expectations that are easy to
-miss.
+The issues most likely to bite a first-time user: missing extras, auth, path
+resolution, and resource limits.
 
-## `geh` Command Not Found
+## `geh` command not found
 
-Make sure you installed the project in the environment you are actively using:
+Make sure you ran the install in the venv you're using right now:
 
 ```bash
-pip install -e "."
-geh --help
+uv sync --extra hf            # or: pip install -e ".[hf]"
+uv run geh --help             # or activate the venv and run `geh --help`
 ```
 
-If that still fails, activate the right virtual environment and try again.
+## A backend or guard isn't listed by `geh list ...`
 
-## Adapter Exists In Docs But Not In `geh list backends`
+You probably need an extra. Inspect what's available:
 
-This usually means the required extra is missing.
+```bash
+uv run geh list backends
+uv run geh list guards
+uv run geh list profiles
+```
 
-Examples:
+Common extras:
 
-- `hf`, `hf_vlm_guard`, `hf_audio_guard` need `pip install -e ".[hf]"`
-- `vllm` needs `pip install -e ".[vllm]"`
-- `openai_moderation`, `openai_compatible`, `anthropic`, and `http` need
-  `pip install -e ".[api]"`
+- `--extra hf` → `hf_generate`, `hf_text_classifier`, `hf_image_classifier`, `hf_vlm` backends
+- `--extra api` → tenacity-based retry for hosted endpoints (OpenAI / vLLM / any `openai_compat`)
+- `--extra dev` → tests + lint
 
-## OpenAI, Anthropic, Or Gated HuggingFace Auth Fails
+## OpenAI or gated HuggingFace auth fails
 
-Check the environment variables first:
+Check the relevant env vars are exported in the same shell as `geh`:
 
 ```bash
 echo "$OPENAI_API_KEY"
-echo "$ANTHROPIC_API_KEY"
 echo "$HF_TOKEN"
 ```
 
-Common fixes:
+For gated HF repos (Llama Guard, WildGuard, …) you also need to accept the
+license on the model's HuggingFace page once.
 
-- export the key in the current shell before running `geh`
-- copy `.env.example` to `.env` and source it in your shell tooling
-- make sure the selected model or dataset is actually accessible to your account
+## Reasoning OpenAI models reject `temperature` / `max_tokens`
 
-## `geh validate --config ...` Fails On A Local Path
-
-Local dataset paths in YAML are resolved relative to the config file location,
-not the shell directory you happened to run the command from.
-
-If a config lives in `examples/`, use paths that make sense relative to that
-file.
-
-## Pack Name Confusion
-
-These are both valid:
-
-```bash
-geh run --pack core --model mock
-geh run --pack core-v1 --model mock
-```
-
-The stable shorthand resolves to the current versioned pack alias.
-
-## Report Or Export Steps Fail After A Run
-
-The safest way to debug is to inspect the run directory first:
-
-```bash
-geh inspect --run-dir out/my-run
-```
-
-Confirm that these files exist:
-
-- `manifest.json`
-- `summary.json`
-- `datasets/<dataset>/metrics.json`
-
-## Local Multimodal Runs Fail On File Paths
-
-For `local_image_jsonl`, `local_image_dir`, and `local_audio_jsonl`:
-
-- verify the path exists on disk
-- use absolute paths if you are debugging path resolution
-- confirm the manifest fields point to files the current machine can read
-
-## GPU Backends OOM Or Run Too Slowly
-
-Start by reducing batch size. For local text models, prefer:
+GPT-5-class reasoning models use `max_completion_tokens` and don't accept
+`temperature`. Override in the backend args:
 
 ```yaml
-execution:
-  batch_size: auto
+backend:
+  kind: openai_compat
+  args:
+    token_param: max_completion_tokens
+    omit_temperature: true
+    reasoning_effort: medium       # optional
 ```
 
-For multimodal or audio adapters, start conservatively with batch size `1` or
-`2`.
+## `geh validate` fails on a local dataset path
 
-## A Run Stops Partway Through
+Paths in YAML are resolved **relative to the YAML file**, not the shell's
+working directory. If `examples/foo.yaml` says `path: data/x.jsonl`, the file
+must live at `examples/data/x.jsonl`. Use absolute paths to remove ambiguity.
 
-Use resume mode for long-running jobs:
+## Dataset split errors
 
-```yaml
-execution:
-  resume: true
+Many adapters don't ship a `test` split — set `split:` explicitly if you see
+`Unknown split 'test'. Should be one of [...]`. `geh list datasets` shows the
+supported splits per adapter.
+
+## GPU OOM / runs too slow
+
+- Pick a smaller profile (e.g. `granite-guardian-3.2-5b` instead of `gemma4-31b-it`).
+- For local models, set `device: cuda:N` in `backend.args` to pin to a specific GPU.
+- For HF text generation, reduce `max_new_tokens` if the guard only needs a
+  short verdict.
+
+## A run stops partway through
+
+Just re-run with the same config — `resume: true` is the default. The harness
+hashes the resolved config and only resumes if it matches.
+
+```bash
+geh run --config run.yaml                   # resumes
+geh run --config run.yaml --overwrite       # wipe + restart
+geh run --config run.yaml --no-resume       # error if non-empty
 ```
 
-Then rerun the same config with the same `output.run_dir`.
+## Known-good smoke tests
 
-## Need A Known-Good Starting Point
-
-Use one of these first:
-
-- `geh run --dataset xstest --model mock --limit 50`
-- `geh run --config examples/run-mock-jsonl.yaml`
-- `geh run --pack core --model openai_moderation --limit 100`
+```bash
+uv run geh run --config examples/mock-jsonl.yaml          # no GPU, no keys
+uv run geh run --config examples/hf-text-classifier.yaml  # GPU, ~30s
+uv run geh run --config examples/openai-judge.yaml        # needs OPENAI_API_KEY
+```
