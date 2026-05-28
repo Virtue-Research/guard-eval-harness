@@ -15,7 +15,7 @@ datasets:
   - name: mock_first_4
     adapter: local_jsonl
     path: datasets/mock_samples.jsonl
-    limit: 4
+    n_samples: 4
     policy: general_safety
 
 output:

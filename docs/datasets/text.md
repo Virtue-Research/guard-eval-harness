@@ -84,9 +84,9 @@ model:
 datasets:
   - name: xstest
   - name: toxic_chat
-    limit: 500
+    n_samples: 500
   - name: harmful_qa
-    limit: 1000
+    n_samples: 1000
 output:
   run_dir: out/text-baseline
 ```

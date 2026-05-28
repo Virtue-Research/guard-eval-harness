@@ -58,11 +58,11 @@ model:
 
 datasets:
   - name: xstest
-    limit: 100
+    n_samples: 100
   - name: toxic_chat
-    limit: 100
+    n_samples: 100
   - name: harmbench_behaviors
-    limit: 100
+    n_samples: 100
 
 output:
   run_dir: out/granite-on-three

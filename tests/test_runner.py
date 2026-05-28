@@ -236,12 +236,12 @@ class RunnerV2Test(unittest.TestCase):
             result = run_from_config(cfg)
             self.assertEqual(result.completed_predictions, 2)
 
-    def test_limit_subset(self) -> None:
+    def test_n_samples_subset(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmpdir = Path(tmp)
             cfg = self._build_config(
                 tmpdir,
-                dataset_kwargs={"limit": 2},
+                dataset_kwargs={"n_samples": 2},
             )
             result = run_from_config(cfg)
             self.assertEqual(result.completed_predictions, 2)

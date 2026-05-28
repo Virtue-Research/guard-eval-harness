@@ -42,7 +42,7 @@ one config:
 ```yaml
 datasets:
   - name: xstest
-    limit: 100
+    n_samples: 100
   - name: my_internal_refusals
     adapter: local_jsonl
     path: data/refusals.jsonl

@@ -85,7 +85,7 @@ class ConfigV2LoaderTest(unittest.TestCase):
         payload = self._base_payload()
         payload["datasets"] = [
             {"name": "xstest"},   # adapter omitted → "xstest"
-            {"name": "alias-quick", "adapter": "local_jsonl", "limit": 5},
+            {"name": "alias-quick", "adapter": "local_jsonl", "n_samples": 5},
         ]
         cfg = load_config(payload)
         self.assertEqual(cfg.datasets[0].adapter, "xstest")
@@ -112,11 +112,12 @@ class ConfigV2LoaderTest(unittest.TestCase):
     def test_rejects_multiple_subset_selectors(self) -> None:
         payload = self._base_payload()
         payload["datasets"][0].update(
-            limit=5,
+            n_samples=5,
             sample_indices=[0, 1],
         )
         with self.assertRaisesRegex(
-            ValidationError, "at most one of\\s+limit/sample_ids/sample_indices"
+            ValidationError,
+            "at most one of\\s+n_samples/sample_ids/sample_indices",
         ):
             load_config(payload)
 

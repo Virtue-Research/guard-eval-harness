@@ -19,7 +19,7 @@ model:                              # see "Guard + backend" below
 
 datasets:                           # one or more entries
   - name: xstest
-    limit: 100
+    n_samples: 100
 
 output:
   run_dir: out/my-evaluation        # required
@@ -82,7 +82,7 @@ Each entry is a dataset to evaluate. The full field set:
 | `split` | `"test"` | Split name — varies per dataset, see `geh list datasets` |
 | `policy` | `null` | Inline `{name, text}` object or a registered policy name |
 | `policy_source` | `null` | `"upstream"` · `"generated"` · `"virtue_general"` — dataset-scoped policy lookup |
-| `limit` | `null` | Take the first N samples (mutually exclusive with `sample_*`) |
+| `n_samples` | `null` | Take the first N samples (mutually exclusive with `sample_*`) |
 | `sample_ids` | `()` | Run only these sample ids |
 | `sample_indices` | `()` | Run only these row indices |
 | `options` | `{}` | Adapter-specific options |

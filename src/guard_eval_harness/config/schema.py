@@ -206,7 +206,7 @@ class ResolvedDatasetSelection(ConfigModel):
     policy_source: str | None = None
     path: str | None = None
     split: str = "test"
-    limit: int | None = Field(default=None, ge=1)
+    n_samples: int | None = Field(default=None, ge=1)
     sample_ids: tuple[str, ...] = ()
     sample_indices: tuple[int, ...] = ()
     options: dict[str, Any] = Field(default_factory=dict)
@@ -276,7 +276,7 @@ class ResolvedDatasetSelection(ConfigModel):
         self,
     ) -> "ResolvedDatasetSelection":
         selectors = [
-            ("limit", self.limit is not None),
+            ("n_samples", self.n_samples is not None),
             ("sample_ids", bool(self.sample_ids)),
             ("sample_indices", bool(self.sample_indices)),
         ]
@@ -285,7 +285,7 @@ class ResolvedDatasetSelection(ConfigModel):
             joined = ", ".join(active)
             raise ValueError(
                 f"dataset {self.name!r}: at most one of "
-                f"limit/sample_ids/sample_indices may be set "
+                f"n_samples/sample_ids/sample_indices may be set "
                 f"(got {joined})"
             )
         return self

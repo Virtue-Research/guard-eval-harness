@@ -36,7 +36,7 @@ model:
   profile: llama-guard-3-8b      # one of 14 bundled profiles
 datasets:
   - name: xstest
-    limit: 100
+    n_samples: 100
 output:
   run_dir: out/llama-guard-on-xstest
 ```
@@ -51,7 +51,6 @@ Predictions stream to disk per sample. Re-run the same config and it resumes whe
 uv run geh list profiles     # 14 known-good guards (Llama Guard, ShieldGemma, …)
 uv run geh list datasets     # 80+ safety benchmarks
 uv run geh list backends     # hf_generate · openai_compat · hf_text_classifier · hf_vlm · mock
-uv run geh list guards       # llama_guard · llm · md_judge · qwen3guard · …
 ```
 
 ## Pick a profile or roll your own

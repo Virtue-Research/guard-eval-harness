@@ -357,7 +357,7 @@ def _canonical_config_view(config: ResolvedRunConfig) -> dict[str, Any]:
                 "policy": _policy_view(dataset.policy),
                 "path": dataset.path,
                 "split": dataset.split,
-                "limit": dataset.limit,
+                "n_samples": dataset.n_samples,
                 "sample_ids": list(dataset.sample_ids),
                 "sample_indices": list(dataset.sample_indices),
                 "options": dict(dataset.options),
@@ -427,8 +427,8 @@ def _select_samples(
                 f"in dataset: {preview}{extra}"
             )
         return out
-    if selection.limit is not None:
-        return list(samples[: selection.limit])
+    if selection.n_samples is not None:
+        return list(samples[: selection.n_samples])
     return list(samples)
 
 

@@ -63,7 +63,7 @@ model:
 
 datasets:
   - name: xstest
-    limit: 100
+    n_samples: 100
 
 output:
   run_dir: out/llama-guard-on-xstest

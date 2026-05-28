@@ -109,10 +109,10 @@ datasets:
                                        # plus local_jsonl / local_csv / local_image_jsonl / local_image_dir.
     path: null                         # required only for local_* adapters.
     split: test                        # adapter-dependent; many use "train", "harmful", "eval", etc.
-    limit: 100                         # take the first N samples.
-    sample_ids: []                     # alternative to limit — pick specific ids.
-    sample_indices: []                 # alternative to limit — pick specific row indices.
-                                       # limit / sample_ids / sample_indices are mutually exclusive.
+    n_samples: 100                     # take the first N samples.
+    sample_ids: []                     # alternative — pick specific ids.
+    sample_indices: []                 # alternative — pick specific row indices.
+                                       # n_samples / sample_ids / sample_indices are mutually exclusive.
     policy_source: upstream            # one of `upstream` / `generated` / `virtue_general`.
                                        # Looks up the dataset-scoped policy registered under
                                        # `dataset_<adapter>_<policy_source>`. Most adapters

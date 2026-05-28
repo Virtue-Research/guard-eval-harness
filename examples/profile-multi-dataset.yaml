@@ -9,16 +9,16 @@ model:
 
 datasets:
   - name: xstest
-    limit: 100
+    n_samples: 100
   - name: toxic_chat
-    limit: 100
+    n_samples: 100
   - name: harmbench_behaviors
-    limit: 100
+    n_samples: 100
   - name: do_not_answer
-    limit: 100
+    n_samples: 100
   - name: jailbreakbench
     split: harmful           # jailbreakbench ships under "harmful" not "test"
-    # No `limit:` → use the whole split.
+    # No `n_samples:` → use the whole split.
 
 output:
   run_dir: out/granite-guardian-multi

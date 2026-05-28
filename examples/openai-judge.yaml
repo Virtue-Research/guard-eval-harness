@@ -19,7 +19,7 @@ datasets:
     # Use a dataset-scoped policy if the adapter ships one; otherwise
     # fall back to the bundled general-safety policy.
     policy: general_safety
-    limit: 100
+    n_samples: 100
 
 output:
   run_dir: out/gpt-judge-on-xstest
