@@ -195,6 +195,11 @@ Bring your own data in any modality:
 
 Run `geh list datasets` for the full list.
 
+## About
+
+`guard-eval-harness` is built and maintained by the research team at
+**[Virtue AI](https://www.virtueai.com)** — one security solution for your entire AI stack.
+
 ## License
 
 [MIT](LICENSE)
