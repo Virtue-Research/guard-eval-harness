@@ -18,6 +18,11 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+# The jobs only check out the repo and run ruff/pytest; they never write to
+# the repo, so the token needs nothing beyond read access.
+permissions:
+  contents: read
+
 jobs:
   lint:
     name: Lint
