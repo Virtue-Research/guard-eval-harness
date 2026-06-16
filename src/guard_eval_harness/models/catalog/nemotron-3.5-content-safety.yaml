@@ -1,0 +1,14 @@
+adapter: vllm
+model_name: nvidia/Nemotron-3.5-Content-Safety
+args:
+  task: text-generation
+  apply_chat_template: true
+  add_generation_prompt: true
+  chat_template_profile: nemotron_content_safety
+  max_new_tokens: 32
+  temperature: 0
+  dtype: bfloat16
+  max_model_len: 32768
+  gpu_memory_utilization: 0.3
+  tensor_parallel_size: 1
+  trust_remote_code: true

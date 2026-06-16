@@ -25,6 +25,11 @@ from guard_eval_harness.models.llama_guard import (
     prepare_llama_guard_chat_messages,
     uses_llama_guard_chat_template,
 )
+from guard_eval_harness.models.nemotron_safety import (
+    prepare_nemotron_content_safety_chat_messages,
+    score_nemotron_content_safety_sample,
+    uses_nemotron_content_safety_chat_template,
+)
 from guard_eval_harness.models.templates import (
     _openai_image_url,
     extract_judge_categories,
@@ -604,6 +609,10 @@ class VLLMAdapter(ModelAdapter):
                     sample,
                     tokenizer=tokenizer,
                 )
+            elif uses_nemotron_content_safety_chat_template(self.config):
+                messages = prepare_nemotron_content_safety_chat_messages(
+                    sample,
+                )
             else:
                 user_prompt_template = self.config.args.get("user_prompt_template")
                 if user_prompt_template:
@@ -1099,10 +1108,22 @@ class VLLMAdapter(ModelAdapter):
         predictions: list[NormalizedPrediction] = []
         drop_failed = self.allow_partial_predictions
 
+        nemotron_profile = uses_nemotron_content_safety_chat_template(
+            self.config
+        )
         for sample, output in zip(samples, outputs):
             generated_text = output.outputs[0].text
             try:
-                score = self._unsafe_score_from_generated_text(generated_text)
+                score: float | None = None
+                if nemotron_profile:
+                    score = score_nemotron_content_safety_sample(
+                        generated_text,
+                        sample,
+                    )
+                if score is None:
+                    score = self._unsafe_score_from_generated_text(
+                        generated_text,
+                    )
             except Exception:
                 if drop_failed:
                     _log.warning(

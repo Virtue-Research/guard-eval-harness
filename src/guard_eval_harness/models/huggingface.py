@@ -18,6 +18,12 @@ from guard_eval_harness.models.llama_guard import (
     prepare_llama_guard_chat_messages,
     uses_llama_guard_chat_template,
 )
+from guard_eval_harness.models.nemotron_safety import (
+    generated_text_from_output,
+    prepare_nemotron_content_safety_chat_messages,
+    score_nemotron_content_safety_sample,
+    uses_nemotron_content_safety_chat_template,
+)
 from guard_eval_harness.models.templates import (
     extract_judge_categories,
     render_template,
@@ -194,6 +200,10 @@ class HuggingFaceAdapter(ModelAdapter):
                 messages = prepare_llama_guard_chat_messages(
                     sample,
                     tokenizer=tokenizer,
+                )
+            elif uses_nemotron_content_safety_chat_template(self.config):
+                messages = prepare_nemotron_content_safety_chat_messages(
+                    sample,
                 )
             return tokenizer.apply_chat_template(
                 messages,
@@ -1095,14 +1105,26 @@ class HuggingFaceAdapter(ModelAdapter):
 
         predictions: list[NormalizedPrediction] = []
         drop_failed = self.allow_partial_predictions
+        nemotron_profile = uses_nemotron_content_safety_chat_template(
+            self.config
+        )
         for sample, output in zip(samples, outputs):
             try:
-                if isinstance(output, list):
-                    score = self._unsafe_score_from_output_list(
-                        output,
-                    )
-                else:
-                    score = self._unsafe_score_from_output(output)
+                score: float | None = None
+                if nemotron_profile:
+                    generated_text = generated_text_from_output(output)
+                    if generated_text is not None:
+                        score = score_nemotron_content_safety_sample(
+                            generated_text,
+                            sample,
+                        )
+                if score is None:
+                    if isinstance(output, list):
+                        score = self._unsafe_score_from_output_list(
+                            output,
+                        )
+                    else:
+                        score = self._unsafe_score_from_output(output)
             except Exception:
                 if drop_failed:
                     _log.warning(
