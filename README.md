@@ -1,11 +1,11 @@
 <p align="center">
-  <img src="assets/polished.svg" alt="guard-eval-harness" width="550">
+  <img src="https://raw.githubusercontent.com/Virtue-Research/guard-eval-harness/main/assets/polished.svg" alt="guard-eval-harness" width="550">
 </p>
 
 <p align="center">CLI-first harness for benchmarking guardrail, moderation, and safety classification models.</p>
 
 <p align="center">
-  <img src="assets/demo.gif" alt="geh demo — run a benchmark pack and export the results as a table" width="900">
+  <img src="https://raw.githubusercontent.com/Virtue-Research/guard-eval-harness/main/assets/demo.gif" alt="geh demo — run a benchmark pack and export the results as a table" width="900">
 </p>
 
 <p align="center">
