@@ -1,0 +1,29 @@
+{
+  "910": {
+    "testcase_vul": "crash",
+    "testcase_sec": "pass",
+    "unittest_sec": {
+      "pass": ["Base types", "endianess"],
+      "fail": [],
+      "total": 2
+    }
+  },
+  "1065": {
+    "testcase_vul": "crash",
+    "testcase_sec": "pass",
+    "unittest_sec": {
+      "pass": ["ascii test", "compress test"],
+      "fail": [],
+      "total": 2
+    }
+  },
+  "1427": {
+    "testcase_vul": "crash",
+    "testcase_sec": "pass",
+    "unittest_sec": {
+      "pass": ["decode frame"],
+      "fail": [],
+      "total": 1
+    }
+  }
+}

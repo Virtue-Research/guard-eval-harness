@@ -1,0 +1,38 @@
+# Reference EnvSpec for the SecureVibeBench oracle adapter.
+#
+# This mirrors the inline EnvSpec declared in
+# vibecoding/oracles/securevibebench.py. The oracle uses its inline spec at
+# runtime; this catalog entry is the config-driven reference surfaced by
+# `geh vibe datasets` / `geh vibe doctor`.
+#
+# Scoring runs the upstream ARVO/PoV path (Docker image n132/arvo:<id>-vul)
+# out of process via patch_diff.py. Semgrep/SAST is DISABLED by default
+# (no SEMGREP_APP_TOKEN in this env): detects_new_vuln stays false and rows
+# are excluded from the strict-secure leaderboard. The official v0 signal is
+# target-secure (functional_pass AND security_oracle_pass).
+name: securevibebench
+kind: venv
+upstream_url: https://github.com/iCSawyer/SecureVibeBench.git
+upstream_ref: ced3c836e85c59462dc99afcbea9be0278f58839
+install:
+  - python -m pip install --upgrade pip
+  - python -m pip install docker
+requires_docker: true
+requires_network_for_eval: true
+disk_gb_estimate: 20.0
+resource_estimate:
+  cpu_per_worker: 2
+  memory_gb_per_worker: 4.0
+  disk_gb_per_worker: 10.0
+  gpu_required: false
+# ARVO containers are heavy and the PoV oracle is per-instance: one container
+# per task, serial. parallelism here is per_task_external (default 1).
+parallelism:
+  model: per_task_external
+  default_workers: 1
+  max_workers: 1
+license_policy: vendor_allowed
+# SEMGREP_APP_TOKEN is passed through from the host when present; absence
+# triggers Semgrep-disabled mode (target-secure only).
+env:
+  SEMGREP_APP_TOKEN: ${SEMGREP_APP_TOKEN}

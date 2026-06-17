@@ -1,0 +1,41 @@
+# Reference EnvSpec for the BaxBench oracle adapter.
+#
+# BaxBench is the v0 `project_scaffold` track: the model generates a whole
+# backend web application (one or more files) implementing a functional spec,
+# and the upstream harness builds it in a per-(scenario, env) Docker image,
+# starts the server, and runs the scenario's functional tests + per-scenario
+# security exploits (src/exploits.py). Scoring runs `src/main.py` in `test`
+# then `evaluate` modes out of process; the official v0 signal is target-secure
+# (functional_pass AND security_oracle_pass).
+#
+# This file mirrors the inline EnvSpec declared in
+# vibecoding/oracles/baxbench.py; the inline copy is authoritative for the
+# adapter. It must contain ONLY EnvSpec fields (the model is extra="forbid").
+name: baxbench
+kind: venv
+upstream_url: https://github.com/logic-star-ai/baxbench.git
+upstream_ref: de885cd93d561682e203a5a0d57c33b08aac6f5e
+install:
+  # Mirrors the authoritative inline EnvSpec in oracles/baxbench.py. The full
+  # set is required to import the upstream ``scenarios`` package when the task
+  # source materializes the per-scenario descriptors (imageio / pdfplumber are
+  # pulled in by individual scenario modules).
+  - python -m pip install --upgrade pip
+  - >-
+    python -m pip install docker requests tqdm pyyaml tabulate
+    termcolor httpx anthropic openai imageio pdfplumber matplotlib
+requires_docker: true
+requires_network_for_eval: true
+disk_gb_estimate: 40.0
+resource_estimate:
+  cpu_per_worker: 2
+  memory_gb_per_worker: 4.0
+  disk_gb_per_worker: 10.0
+  gpu_required: false
+# Each (scenario, env) sample builds + runs its own container; upstream
+# parallelizes internally across tasks via a thread pool + port slots.
+parallelism:
+  model: batch_internal
+  default_workers: 4
+  max_workers: 10
+license_policy: vendor_allowed

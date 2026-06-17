@@ -1,0 +1,35 @@
+# Reference EnvSpec for the SecRepoBench repo-completion oracle.
+#
+# SecRepoBench is the v0 `vibecoding_safety_repo_completion_v0` track: the
+# model fills a masked code region in a real C/C++ project, and the upstream
+# harness scores it with ARVO Docker images (security testcase + project
+# unit tests). No upstream LICENSE was found during research, so this is an
+# `external_only` checkout: the user supplies the SecRepoBench tree and GEH
+# invokes its `run_eval.py` out of process.
+#
+# This file mirrors the EnvSpec defined inline in
+# `oracles/secrepobench.py`; the inline copy is authoritative for the adapter.
+name: secrepobench
+kind: venv
+# Placeholder; the real checkout is external (external_only). Override `root`
+# (or GEH_CACHE_DIR/.geh/upstreams/secrepobench) to point at a local tree.
+upstream_url: https://example.invalid/secrepobench
+upstream_ref: 029e753dc25ef4751e03ba0031434cd953c82d80
+install:
+  - pip install -r requirements.txt
+requires_docker: true
+requires_network_for_eval: true
+disk_gb_estimate: 200.0
+resource_estimate:
+  cpu_per_worker: 8
+  memory_gb_per_worker: 8.0
+  disk_gb_per_worker: 20.0
+  gpu_required: false
+parallelism:
+  model: batch_internal
+  default_workers: 4
+  max_workers: 25
+license_policy: external_only
+env:
+  # Upstream reads ground-truth + metadata from these repo-root files.
+  __dataset_files__: "sample_metadata.json,report.json,assets/ids.txt"

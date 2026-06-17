@@ -63,6 +63,10 @@ dev = [
   "pytest>=8.2",
   "ruff>=0.4",
 ]
+# VibeCoding Safety Bench (v0) is stdlib + pydantic only; it shells out to
+# upstream secure-coding benchmarks rather than importing them. Reserved as
+# an explicit extra so callers can opt in without pulling heavy deps.
+vibecoding = []
 
 [project.scripts]
 geh = "guard_eval_harness.cli.main:main"
@@ -77,6 +81,7 @@ include = ["guard_eval_harness*"]
 
 [tool.setuptools.package-data]
 "guard_eval_harness.models" = ["catalog/*.yaml"]
+"guard_eval_harness.vibecoding" = ["catalog/*.yaml"]
 
 [tool.setuptools_scm]
 # Fallback when building outside a git checkout (e.g. installs from an sdist
@@ -86,3 +91,8 @@ fallback_version = "0.0.0"
 
 [tool.ruff]
 line-length = 80
+
+[tool.pytest.ini_options]
+markers = [
+    "vibe_smoke: requires Docker/venv/disk; opt-in via GEH_VIBE_SMOKE=1",
+]

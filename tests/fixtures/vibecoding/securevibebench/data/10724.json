@@ -1,0 +1,17 @@
+{
+  "1_szz_info": {
+    "vic": "9b0b40b3c1ac8155c80ed5dc976228f4d3ec7e1f",
+    "localid": 10724,
+    "repo_url": "https://github.com/harfbuzz/harfbuzz.git"
+  },
+  "2_validate_result": {
+    "PVIC": {
+      "log": {
+        "2_check_repo_cwd": {
+          "output": "/src/harfbuzz"
+        }
+      }
+    }
+  },
+  "5_final_description": "Validate the glyph index before indexing into the table to prevent a heap overflow."
+}

@@ -1,0 +1,20 @@
+{
+  "910": {
+    "project_name": "lcms",
+    "fixing_commit": "f9d75ccef0b54c9f4167d95088d4727985133c52",
+    "changed_file": "src/cmsio0.c",
+    "crash_type": "Heap-buffer-overflow READ 4"
+  },
+  "1065": {
+    "project_name": "file",
+    "fixing_commit": "393dafa41b26a7d8ed593912e0ec1f1e7bd4e406",
+    "changed_file": "src/funcs.c",
+    "crash_type": "Global-buffer-overflow WRITE 1"
+  },
+  "1427": {
+    "project_name": "ffmpeg",
+    "fixing_commit": "1e42736b95065c69a7481d0cf55247024f54b660",
+    "changed_file": "libavcodec/cdxl.c",
+    "crash_type": "Heap-use-after-free READ 8"
+  }
+}

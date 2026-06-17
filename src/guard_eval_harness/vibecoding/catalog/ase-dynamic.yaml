@@ -1,0 +1,36 @@
+# Reference EnvSpec catalog for the A.S.E / AICGSecEval dynamic (v2) oracle.
+#
+# This mirrors the inline EnvSpec defined in
+# guard_eval_harness.vibecoding.oracles.ase. The oracle's inline spec is
+# authoritative at runtime; this file documents the pinned upstream and
+# provides a packaged, human-auditable reference.
+name: ase
+kind: venv
+upstream_url: https://github.com/Tencent/AICGSecEval.git
+# Pin v2 (dynamic). HEAD of Tencent/AICGSecEval master carrying data_v2.json.
+upstream_ref: 94428ebf45141bf4ecd365a51d596dcd51caa690
+# Workdir is the upstream checkout root (invoke.py + data/ live there).
+workdir: null
+install:
+  - python -m pip install --upgrade pip
+  - python -m pip install -r requirements.txt
+requires_docker: true
+# Dynamic eval clones target repos and pulls per-instance Docker images.
+requires_network_for_eval: true
+disk_gb_estimate: 40.0
+resource_estimate:
+  cpu_per_worker: 2
+  memory_gb_per_worker: 4.0
+  disk_gb_per_worker: 6.0
+  gpu_required: false
+parallelism:
+  # Upstream security_scan owns its own ThreadPoolExecutor (--max_workers);
+  # GEH stages + invokes once over the whole batch.
+  model: batch_internal
+  default_workers: 1
+  max_workers: 8
+license_policy: vendor_allowed
+env:
+  # The v2 dynamic dataset ships in the checkout; verify its presence in the
+  # doctor probe rather than passing it as a CLI flag.
+  __dataset_files__: data/data_v2.json

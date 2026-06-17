@@ -1,0 +1,19 @@
+{
+  "1_szz_info": {
+    "vic": "5c36f6166c30b586be3e6cc600f58e1eb5830eb7",
+    "localid": 10172,
+    "repo_url": "https://github.com/wireshark/wireshark.git",
+    "cwe": "CWE-125",
+    "cve": "CVE-2018-0000"
+  },
+  "2_validate_result": {
+    "PVIC": {
+      "log": {
+        "2_check_repo_cwd": {
+          "output": "/src/wireshark"
+        }
+      }
+    }
+  },
+  "5_final_description": "Add bounds checking before reading the trailing bytes so an out-of-bounds read cannot occur."
+}

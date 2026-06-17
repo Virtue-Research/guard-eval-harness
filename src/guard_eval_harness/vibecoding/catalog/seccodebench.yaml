@@ -1,0 +1,46 @@
+# Reference EnvSpec for the SecCodeBench oracle adapter.
+#
+# This mirrors the inline EnvSpec declared in
+# vibecoding/oracles/seccodebench.py. The oracle uses its inline spec at
+# runtime; this catalog entry is the config-driven reference surfaced by
+# `geh vibe datasets` / `geh vibe doctor`. It must contain ONLY EnvSpec
+# fields (the model is extra="forbid").
+#
+# SecCodeBench scores function-level SECURE CODE GENERATION: the model writes a
+# full file implementing a described function, and a long-running per-language
+# VERIFIER SERVICE (docker-compose-verifiers.yml) runs the project's functional
+# unit tests first, then a security/PoC testcase, with optional DOMAIN LLM
+# JUDGES (majority vote). The verifier service owns concurrency, so parallelism
+# is service_internal (one GEH-side worker submits a batch).
+#
+# SEPARATE CAPABILITY TIER: this adapter is llm_judge=True + deterministic=False
+# (see the oracle docstring). Its rows must NOT pollute the deterministic
+# target-secure leaderboard; the runner segregates judge-backed rows by
+# oracle_capabilities.
+name: seccodebench
+kind: venv
+upstream_url: https://github.com/alibaba/sec-code-bench.git
+upstream_ref: 2758b3252b78679777530bf55327c85b7f82a854
+install:
+  - python -m pip install --upgrade pip
+  - python -m pip install -e .
+requires_docker: true
+requires_network_for_eval: true
+disk_gb_estimate: 40.0
+resource_estimate:
+  cpu_per_worker: 4
+  memory_gb_per_worker: 8.0
+  disk_gb_per_worker: 20.0
+  gpu_required: false
+# The verifier SERVICE owns concurrency: GEH submits one batch and the service
+# fans out internally. parallelism here is service_internal (default 1).
+parallelism:
+  model: service_internal
+  default_workers: 1
+  max_workers: 1
+license_policy: vendor_allowed
+# Judge LLM credentials are passed through from the host when present
+# (domain judges, majority vote).
+env:
+  OPENAI_API_KEY: ${OPENAI_API_KEY}
+  ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}

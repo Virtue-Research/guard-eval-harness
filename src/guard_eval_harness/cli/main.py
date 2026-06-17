@@ -95,6 +95,7 @@ class HarnessCLI:
         self._build_inspect(subparsers)
         self._build_export(subparsers)
         self._build_cache(subparsers)
+        self._build_vibe(subparsers)
 
     def _print_help(self, args: argparse.Namespace) -> int:
         self._parser.print_help()
@@ -377,6 +378,95 @@ class HarnessCLI:
             help="Show cache size and entry count.",
         )
         parser.set_defaults(func=self._cache)
+
+    def _build_vibe(
+        self, subparsers: argparse._SubParsersAction,
+    ) -> None:
+        parser = subparsers.add_parser(
+            "vibe",
+            help="Run repository-level secure-coding benchmarks.",
+            description=(
+                "VibeCoding Safety Bench: drive coding agents (or score "
+                "BYO predictions) and evaluate functional correctness and "
+                "security via out-of-process upstream oracles."
+            ),
+        )
+        vibe_sub = parser.add_subparsers(
+            dest="vibe_action", metavar="ACTION",
+        )
+
+        run_p = vibe_sub.add_parser(
+            "run", help="Live-agent generation + oracle eval.",
+        )
+        run_p.add_argument("--dataset", required=True)
+        run_p.add_argument("--agent", required=True)
+        run_p.add_argument("--model")
+        run_p.add_argument("--limit", type=int)
+        run_p.add_argument("--concurrency", type=int, default=1)
+        run_p.add_argument("--trials", type=int, default=1)
+        run_p.add_argument("--run-id", dest="run_id")
+        run_p.add_argument("--run-dir", dest="run_dir")
+        run_p.add_argument("--cache-dir", dest="cache_dir")
+        run_p.add_argument("--no-cache", dest="no_cache", action="store_true")
+        run_p.add_argument(
+            "--allow-empty", dest="allow_empty", action="store_true",
+            help="Permit a run that loads zero tasks (default: fail loudly).",
+        )
+
+        eval_p = vibe_sub.add_parser(
+            "eval", help="Score BYO predictions (no live agent).",
+        )
+        eval_p.add_argument("--dataset", required=True)
+        eval_p.add_argument("--predictions", required=True)
+        eval_p.add_argument("--run-id", dest="run_id")
+        eval_p.add_argument("--run-dir", dest="run_dir")
+        eval_p.add_argument("--cache-dir", dest="cache_dir")
+        eval_p.add_argument("--model")
+        eval_p.add_argument("--limit", type=int)
+        eval_p.add_argument("--no-cache", dest="no_cache", action="store_true")
+        eval_p.add_argument(
+            "--allow-empty", dest="allow_empty", action="store_true",
+            help="Permit a run that loads zero tasks (default: fail loudly).",
+        )
+
+        vibe_sub.add_parser(
+            "datasets",
+            help="List registered vibecoding sources/oracles.",
+        )
+
+        acquire_p = vibe_sub.add_parser(
+            "acquire",
+            help="Clone + build a dataset's upstream env so run/eval can use "
+                 "it.",
+        )
+        acquire_p.add_argument("--dataset", required=True)
+        acquire_p.add_argument("--cache-dir", dest="cache_dir")
+        acquire_p.add_argument(
+            "--force", action="store_true",
+            help="Re-clone / rebuild even if the checkout + venv exist.",
+        )
+
+        doctor_p = vibe_sub.add_parser(
+            "doctor", help="Check upstream env, Docker, and conformance.",
+        )
+        doctor_p.add_argument("--dataset")
+        doctor_p.add_argument(
+            "--skip-docker", dest="skip_docker", action="store_true",
+            help="Skip Docker daemon/image probes (default: check when the "
+                 "dataset requires Docker).",
+        )
+
+        report_p = vibe_sub.add_parser(
+            "report", help="Rebuild summary.json + report.md for a run.",
+        )
+        report_p.add_argument("--run-dir", dest="run_dir", required=True)
+
+        parser.set_defaults(func=self._vibe)
+
+    def _vibe(self, args: argparse.Namespace) -> int:
+        from guard_eval_harness.vibecoding import cli as vibe_cli
+
+        return vibe_cli.dispatch(args)
 
     def parse_args(
         self, argv: Sequence[str] | None = None,

@@ -195,6 +195,14 @@ Bring your own data in any modality:
 
 Run `geh list datasets` for the full list.
 
+### Secure-coding agents
+
+Beyond classification, the harness also runs repository-level secure-coding
+benchmarks under `geh vibe`: a coding agent writes or completes real code, and
+an out-of-process oracle builds it in a container to score functional
+correctness and security. See the [VibeCoding Bench guide](docs/vibecoding.md)
+and `geh vibe datasets`.
+
 ## About
 
 `guard-eval-harness` is built and maintained by the research team at

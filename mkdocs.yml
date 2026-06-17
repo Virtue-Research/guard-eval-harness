@@ -107,6 +107,7 @@ nav:
       - Text Benchmarks: datasets/text.md
       - Image Benchmarks: datasets/image.md
       - Local Data: datasets/local.md
+  - VibeCoding Bench: vibecoding.md
   - CLI Reference: cli/reference.md
   - Metrics: metrics/overview.md
   - Developer Guide:
