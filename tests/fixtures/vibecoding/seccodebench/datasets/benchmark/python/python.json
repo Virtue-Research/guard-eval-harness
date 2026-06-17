@@ -1,0 +1,40 @@
+{
+  "SSRFUrllib": {
+    "language": "python",
+    "FuncTester": "UnitTester",
+    "SecTester": "UnitTester",
+    "template": "2_1_0/SSRFUrllib",
+    "prompt": "2_1_0/SSRFUrllib",
+    "scenarios": ["fix", "fix-hints", "gen", "gen-hints"],
+    "params": {
+      "social_media_scraper.py": "src/social_media_scraper/social_media_scraper.py"
+    },
+    "severity": "high",
+    "locale": "en-US",
+    "verify_urls": {
+      "gen": "http://python-verifier:5000/verify/ssrf/social_media_scraper_repo"
+    },
+    "remote_prompt_paths": {
+      "gen": "python_bench/ssrf/social_media_scraper_repo/resources/generate.md"
+    }
+  },
+  "SQLInjectionSQLite3": {
+    "language": "python",
+    "FuncTester": "UnitTester",
+    "SecTester": "UnitTester",
+    "template": "2_1_0/SQLInjectionSQLite3",
+    "prompt": "2_1_0/SQLInjectionSQLite3",
+    "scenarios": ["fix", "fix-hints", "gen", "gen-hints"],
+    "params": {
+      "user_store.py": "src/user_store/user_store.py"
+    },
+    "severity": "high",
+    "locale": "en-US",
+    "verify_urls": {
+      "gen": "http://python-verifier:5000/verify/sqli/user_store_repo"
+    },
+    "remote_prompt_paths": {
+      "gen": "python_bench/sqli/user_store_repo/resources/generate.md"
+    }
+  }
+}

@@ -108,7 +108,7 @@ def ensure_run_layout(run_dir: str | Path) -> Path:
 
 
 @contextmanager
-def _atomic_text_writer(path: str | Path) -> Iterator[TextIO]:
+def atomic_text_writer(path: str | Path) -> Iterator[TextIO]:
     """Yield a temp-file text handle and atomically replace on success."""
     destination = Path(path)
     destination.parent.mkdir(parents=True, exist_ok=True)
@@ -124,9 +124,15 @@ def _atomic_text_writer(path: str | Path) -> Iterator[TextIO]:
             tmp_path.unlink()
 
 
+# Backward-compat alias for the pre-public name. Existing imports of
+# `_atomic_text_writer` keep working; new callers should use the public
+# `atomic_text_writer` (e.g. the vibecoding run-store).
+_atomic_text_writer = atomic_text_writer
+
+
 def _write_text_atomic(path: str | Path, payload: str) -> None:
     """Write a UTF-8 text payload atomically."""
-    with _atomic_text_writer(path) as handle:
+    with atomic_text_writer(path) as handle:
         handle.write(payload)
 
 
@@ -140,7 +146,7 @@ def dump_json(path: str | Path, payload: Any) -> None:
 
 def dump_jsonl(path: str | Path, rows: Iterable[dict[str, Any]]) -> None:
     """Write JSONL deterministically."""
-    with _atomic_text_writer(path) as handle:
+    with atomic_text_writer(path) as handle:
         for row in rows:
             handle.write(json.dumps(row, sort_keys=True))
             handle.write("\n")

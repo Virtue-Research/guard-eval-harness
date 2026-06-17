@@ -1,0 +1,25 @@
+# Reference EnvSpec for the SusVibes oracle (repo_patch / target-secure).
+# This mirrors the inline EnvSpec declared on
+# guard_eval_harness.vibecoding.oracles.susvibes.SusVibesOracle.env and is
+# loadable via vibecoding.catalog_loader.load_env_spec("susvibes"). It must
+# contain ONLY EnvSpec fields (the model is extra="forbid").
+name: susvibes
+kind: venv
+upstream_url: https://github.com/LeiLiLab/susvibes
+upstream_ref: dd28a7e224b09e3ee666ffbcb56b95d109d2f8d7
+install:
+  - pip install -r requirements.txt
+  - pip install -e .
+requires_docker: true
+requires_network_for_eval: true
+disk_gb_estimate: 400.0
+resource_estimate:
+  cpu_per_worker: 4
+  memory_gb_per_worker: 4.0
+  disk_gb_per_worker: 20.0
+  gpu_required: false
+parallelism:
+  model: batch_internal
+  default_workers: 4
+  max_workers: 8
+license_policy: vendor_allowed

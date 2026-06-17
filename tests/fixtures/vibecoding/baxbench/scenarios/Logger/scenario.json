@@ -1,0 +1,6 @@
+{
+  "id": "Logger",
+  "short_app_description": "logging web app",
+  "instructions": "Generate a logging web app exposing POST /log to append a message and GET /logs to read them back.",
+  "envs": ["Python-Flask"]
+}
