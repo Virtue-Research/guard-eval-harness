@@ -460,6 +460,69 @@ class RunnerEndToEndTest(unittest.TestCase):
                 {t.id for t in tasks},
             )
 
+    def test_shard_filters_byo_artifacts_to_slice(self) -> None:
+        # GEH_VIBE_SHARD slices the loaded tasks, but a full BYO predictions
+        # file still carries every artifact. Each shard must score ONLY its
+        # slice: out-of-shard artifacts must not become ``unsupported`` rows
+        # (which would inflate every shard's results + corrupt metrics).
+        with tempfile.TemporaryDirectory() as tmp:
+            tasks = MockTaskSource().load(limit=4)
+            preds = [_patch_artifact(t.id) for t in tasks]  # full file
+            ordered = sorted(t.id for t in tasks)
+            prev = os.environ.get("GEH_VIBE_SHARD")
+            seen: list[set[str]] = []
+            try:
+                for idx in range(2):
+                    os.environ["GEH_VIBE_SHARD"] = f"{idx}/2"
+                    runner = VibeRunner(cache_dir=Path(tmp) / f"geh{idx}")
+                    result = runner.run(
+                        "mock",
+                        "mock",
+                        predictions=preds,
+                        limit=4,
+                        env_provider=InMemoryEnvProvider(),
+                        run_dir=Path(tmp) / f"run{idx}",
+                    )
+                    expected = set(ordered[idx::2])
+                    got = {r.task_id for r in result.results}
+                    self.assertEqual(got, expected)
+                    self.assertEqual(len(result.results), len(expected))
+                    seen.append(got)
+            finally:
+                if prev is None:
+                    os.environ.pop("GEH_VIBE_SHARD", None)
+                else:
+                    os.environ["GEH_VIBE_SHARD"] = prev
+            # the two shards partition the dataset cleanly (no overlap/gap)
+            self.assertEqual(seen[0] | seen[1], set(ordered))
+            self.assertEqual(seen[0] & seen[1], set())
+
+    def test_shard_empty_slice_does_not_raise(self) -> None:
+        # A shard slice that is empty because there are more shards than tasks
+        # (here shard 3 of 4 over 2 loaded tasks) must NOT trip the zero-task
+        # "missing upstream" guard: the source loaded fine, this worker just has
+        # no assigned tasks -> an explicit empty run, not an error.
+        with tempfile.TemporaryDirectory() as tmp:
+            prev = os.environ.get("GEH_VIBE_SHARD")
+            try:
+                os.environ["GEH_VIBE_SHARD"] = "3/4"
+                runner = VibeRunner(cache_dir=Path(tmp) / "geh")
+                result = runner.run(
+                    "mock",
+                    "mock",
+                    predictions=[],
+                    limit=2,
+                    env_provider=InMemoryEnvProvider(),
+                    run_dir=Path(tmp) / "run",
+                )
+            finally:
+                if prev is None:
+                    os.environ.pop("GEH_VIBE_SHARD", None)
+                else:
+                    os.environ["GEH_VIBE_SHARD"] = prev
+            self.assertEqual(list(result.tasks), [])
+            self.assertEqual(list(result.results), [])
+
     def test_run_dir_artifacts_written(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             run_dir = Path(tmp) / "run"

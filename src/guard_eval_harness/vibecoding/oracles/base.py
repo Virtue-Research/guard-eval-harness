@@ -44,6 +44,12 @@ class OracleAdapter(ABC):
     parallelism: ClassVar[OracleParallelism]
     parser_version: ClassVar[str]
 
+    # Set by the runner to the active run's cache dir (``--cache-dir``) so
+    # ``stage``/``evaluate`` resolve upstream assets (e.g. per-case verifier
+    # URLs) under the same checkout the source + env provider use. ``None``
+    # falls back to the canonical default cache.
+    run_cache_dir: str | Path | None = None
+
     @abstractmethod
     def stage(
         self,

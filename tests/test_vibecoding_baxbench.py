@@ -34,6 +34,7 @@ from guard_eval_harness.vibecoding.interfaces import (
 )
 from guard_eval_harness.vibecoding.oracles.baxbench import (
     BaxBenchOracle,
+    _parse_single_file,
     esc,
 )
 from guard_eval_harness.vibecoding.registry import (
@@ -638,6 +639,37 @@ def test_task_id_helpers_roundtrip() -> None:
     )
 
 
+# --- code extraction ---------------------------------------------------
+
+
+def test_parse_strips_code_tags_from_fence_wrapping_code() -> None:
+    """A model may wrap its file in BOTH a markdown fence and the upstream
+    ``<CODE>`` sentinel (observed for sonnet-4.5). The fence is extracted
+    first, so the residual ``<CODE>``/``</CODE>`` wrapper lines must still be
+    stripped -- otherwise they reach the staged file and break compilation
+    (Go's ``goimports`` and Rust reject them, deflating every such task to a
+    spurious build failure).
+    """
+    # fence-wrapping-CODE: the real deflation case.
+    files = _parse_single_file(
+        "```go\n<CODE>\npackage main\nfunc main() {}\n</CODE>\n```", "main.go"
+    )
+    assert files is not None
+    assert "<CODE>" not in files["main.go"]
+    assert "</CODE>" not in files["main.go"]
+    assert files["main.go"].startswith("package main")
+    # bare <CODE> (no fence) stays clean.
+    bare = _parse_single_file(
+        "<CODE>\npackage main\nfunc main() {}\n</CODE>", "main.go"
+    )
+    assert "<CODE>" not in bare["main.go"]
+    # an inner <CODE> inside a string literal must be preserved.
+    lit = _parse_single_file(
+        '```go\npackage main\nvar s = "x<CODE>y"\n```', "main.go"
+    )
+    assert "<CODE>" in lit["main.go"]
+
+
 # --- staging -----------------------------------------------------------
 
 
@@ -856,6 +888,54 @@ def test_evaluate_builds_expected_argv_and_honors_budget(
     assert raw.task_ids == ["baxbench/Calculator__Python-Flask"]
     assert raw.exit_code == 0
     assert raw.metadata["per_task"]
+
+
+def test_evaluate_derives_disjoint_port_base_for_shards(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """A sharded run without an explicit GEH_VIBE_PORT_BASE still gets a
+    disjoint --min_port per shard (derived from the shard index), so concurrent
+    BaxBench shards never collide on the process-local SlotManager's ports."""
+    monkeypatch.delenv("GEH_VIBE_PORT_BASE", raising=False)
+    monkeypatch.delenv("GEH_VIBE_NUM_PORTS", raising=False)
+    monkeypatch.setenv("GEH_VIBE_SHARD", "2/4")  # idx=2
+    oracle = BaxBenchOracle()
+    task = _task("Calculator", "Python-Flask")
+    artifact = _artifact("Calculator", "Python-Flask")
+    staged = oracle.stage([task], [artifact], tmp_path)
+    stub = _StubEnvProvider()
+    oracle.evaluate(
+        staged,
+        OracleRunConfig(run_id="t", run_dir=str(tmp_path)),
+        ResourceBudget(max_workers=2),
+        stub,
+    )
+    test_argv = stub.run_calls[0]
+    # idx=2, default window 1000 -> base = 12345 + 2*1000 = 14345.
+    assert "--min_port" in test_argv
+    assert test_argv[test_argv.index("--min_port") + 1] == "14345"
+    assert test_argv[test_argv.index("--num_ports") + 1] == "1000"
+
+
+def test_evaluate_unsharded_uses_upstream_default_ports(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """Without sharding (and no explicit base) evaluate omits --min_port, so the
+    upstream default port range is used -- no behavior change for single runs."""
+    monkeypatch.delenv("GEH_VIBE_PORT_BASE", raising=False)
+    monkeypatch.delenv("GEH_VIBE_SHARD", raising=False)
+    oracle = BaxBenchOracle()
+    task = _task("Calculator", "Python-Flask")
+    artifact = _artifact("Calculator", "Python-Flask")
+    staged = oracle.stage([task], [artifact], tmp_path)
+    stub = _StubEnvProvider()
+    oracle.evaluate(
+        staged,
+        OracleRunConfig(run_id="t", run_dir=str(tmp_path)),
+        ResourceBudget(max_workers=2),
+        stub,
+    )
+    assert "--min_port" not in stub.run_calls[0]
 
 
 def test_parallelism_declares_batch_internal() -> None:

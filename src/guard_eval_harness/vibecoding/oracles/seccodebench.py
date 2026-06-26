@@ -36,6 +36,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import time
 from collections.abc import Callable
@@ -50,6 +51,7 @@ from guard_eval_harness.vibecoding.artifacts import (
 )
 from guard_eval_harness.vibecoding.cache import resolve_cache_dir
 from guard_eval_harness.vibecoding.interfaces import (
+    GenerationSpec,
     OracleRunConfig,
     RawOracleResult,
     StagedOracleInput,
@@ -63,7 +65,10 @@ from guard_eval_harness.vibecoding.results import (
     VibeTaskResult,
     derive_task_metrics,
 )
-from guard_eval_harness.vibecoding.safe_path import safe_relpath
+from guard_eval_harness.vibecoding.safe_path import (
+    assert_relpath_within,
+    safe_relpath,
+)
 from guard_eval_harness.vibecoding.schema import (
     EnvSpec,
     OracleCapabilities,
@@ -150,17 +155,30 @@ _VERIFIER_ERROR_KINDS = frozenset(
 )
 
 
-def _benchmark_path(language: str) -> Path:
-    """Resolve the upstream benchmark JSON path for ``language``."""
+def _benchmark_path(language: str, cache_dir: str | None = None) -> Path:
+    """Resolve the upstream benchmark JSON path for ``language``.
+
+    ``cache_dir`` (the run's ``.geh`` root) takes precedence over the canonical
+    default so a run launched with ``--cache-dir`` reads the benchmark JSONs
+    from the same checkout its tasks were loaded + acquired under. The
+    ``GEH_SECCODEBENCH_UPSTREAM`` env override still wins outright.
+    """
     override = os.environ.get("GEH_SECCODEBENCH_UPSTREAM")
-    root = Path(override) if override else _default_upstream()
+    if override:
+        root = Path(override)
+    elif cache_dir:
+        root = Path(cache_dir) / "upstreams" / "seccodebench"
+    else:
+        root = _default_upstream()
     filename = _BENCHMARK_FILENAME.get(language, f"{language}.json")
     return root / "datasets" / "benchmark" / language / filename
 
 
-def _load_verify_urls(language: str, case_id: str) -> dict[str, str]:
+def _load_verify_urls(
+    language: str, case_id: str, cache_dir: str | None = None
+) -> dict[str, str]:
     """Read the per-scenario ``verify_urls`` for one case (best effort)."""
-    path = _benchmark_path(language)
+    path = _benchmark_path(language, cache_dir)
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
@@ -170,6 +188,76 @@ def _load_verify_urls(language: str, case_id: str) -> dict[str, str]:
         return {}
     urls = entry.get("verify_urls")
     return urls if isinstance(urls, dict) else {}
+
+
+def _load_target_path(
+    language: str, case_id: str, cache_dir: str | None = None
+) -> str:
+    """Read the single target file path one gen case must write.
+
+    Mirrors :func:`_load_verify_urls`: reads the case entry's ``params`` from
+    the upstream benchmark JSON (resolved under ``cache_dir``). The first param
+    value is the relative path of the file the verifier scores -- the same key
+    the staged ``full_file`` artifact must use. Returns ``""`` when the
+    benchmark JSON or params are unavailable.
+    """
+    path = _benchmark_path(language, cache_dir)
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return ""
+    entry = data.get(case_id) if isinstance(data, dict) else None
+    if not isinstance(entry, dict):
+        return ""
+    params = entry.get("params")
+    if isinstance(params, dict) and params:
+        return str(next(iter(params.values())))
+    return ""
+
+
+# Upstream gen output: an XML ``<result>`` with one ``<code>`` block per file,
+# the source carried inside ``<content><![CDATA[ ... ]]></content>``. The gen
+# prompt (-> ``task.instructions``) embeds this format spec, so a model that
+# follows it returns the XML wrapper, NOT a bare code fence.
+_GEN_CODE_BLOCK_RE = re.compile(
+    r"<path>(?P<path>[^<]*)</path>.*?<!\[CDATA\[(?P<code>.*?)\]\]>",
+    re.DOTALL,
+)
+_GEN_CDATA_RE = re.compile(r"<!\[CDATA\[(?P<code>.*?)\]\]>", re.DOTALL)
+
+
+def _extract_gen_code(text: str, target: str) -> str:
+    """Pull the generated source out of an upstream gen response.
+
+    Returns the ``<![CDATA[ ... ]]>`` body for ``target`` (else the first
+    block) so the RAW source -- not the XML wrapper -- is staged. Falls back to
+    bare CDATA, then to the engine's fenced-block parser for a model that
+    ignores the XML format and emits a plain code fence.
+    """
+    blocks = list(_GEN_CODE_BLOCK_RE.finditer(text))
+    for match in blocks:
+        if target and match.group("path").strip() == target:
+            return match.group("code").strip()
+    if blocks:
+        return blocks[0].group("code").strip()
+    bare = _GEN_CDATA_RE.search(text)
+    if bare:
+        return bare.group("code").strip()
+    from guard_eval_harness.vibecoding.agents._engine import parse_fenced_block
+
+    fenced = parse_fenced_block(text).strip()
+    if fenced:
+        return fenced
+    # A wrapper (XML/CDATA/fence) was present but extracted empty -> an empty
+    # generation; emit "" so the engine records an in-denominator model failure
+    # (and never stage a malformed wrapper as code). Only a response with NO
+    # wrapper at all is taken as a plain source file -- a model handed a prompt
+    # with no output-format contract (e.g. the task source's synthesized
+    # fallback instructions) may reply with a bare file, which is a scoreable
+    # generation, not a failure.
+    if "<![CDATA[" in text or "<result>" in text or "```" in text:
+        return ""
+    return text.strip()
 
 
 def _to_host_url(url: str) -> str:
@@ -485,6 +573,21 @@ class SecCodeBenchOracle(OracleAdapter):
                 f"target file, got {len(artifact.files or {})} (task_id="
                 f"{artifact.task_id!r})"
             )
+        # The target file key is candidate-supplied; ``stage`` confines it with
+        # ``safe_relpath`` (which raises ValueError on a ``..``/absolute/symlink
+        # escape). Validate it here so a malformed key becomes a per-candidate
+        # unsupported row (the runner demotes UnsupportedArtifactError per
+        # artifact) instead of a ValueError that aborts the whole batch at stage
+        # time (mirrors BaxBench).
+        for relpath in (artifact.files or {}):
+            try:
+                assert_relpath_within(
+                    relpath, what="seccodebench full_file key"
+                )
+            except ValueError as exc:
+                raise UnsupportedArtifactError(
+                    f"{exc} for task {artifact.task_id!r}"
+                ) from exc
 
     # --- staging ------------------------------------------------------
 
@@ -508,6 +611,65 @@ class SecCodeBenchOracle(OracleAdapter):
             )
         rel_path, contents = next(iter(files.items()))
         return rel_path, contents
+
+    # --- generation ----------------------------------------------------
+
+    def generation_spec(
+        self, task: VibeTask, cache_dir: str | None = None
+    ) -> GenerationSpec:
+        """Frame live generation as one secure source file (``full_file``).
+
+        SecCodeBench scores exactly one target file per case, so the engine's
+        default ``patch``/``completion`` contract cannot serve it (it would
+        emit a ``patch`` every candidate scores as ``unsupported``). This
+        override passes through the upstream gen prompt the task source already
+        loaded into ``task.instructions`` -- which carries its OWN output-format
+        spec (an XML ``<result>`` with the source in ``<content><![CDATA[..]]>``)
+        -- and parses that CDATA body via :func:`_extract_gen_code` (with a bare
+        fenced-block fallback for a model that ignores the format). The raw
+        source -- not the XML wrapper -- is staged into a one-entry file map
+        keyed by the case's target path, resolved from the benchmark ``params``
+        under ``cache_dir`` (mirroring :func:`_load_verify_urls`); the oracle
+        re-wraps it for the verifier. An empty/garbled body or an unresolved
+        target yields ``None`` so the engine records an in-denominator model
+        failure rather than dropping the row.
+        """
+        language, case_id = case_parts_from_task_id(task.id)
+        target = _load_target_path(language, case_id, cache_dir)
+
+        def prompt(_task: VibeTask, _snapshot: str) -> tuple[str, str]:
+            # Match the upstream's exact single-shot method verbatim
+            # (sec_code_bench/eval.py::get_llm_response): the system prompt is
+            # "You are a professional programmer." and the user prompt is the
+            # scenario gen prompt -- which the task source loads byte-for-byte
+            # from the upstream prompt file into ``task.instructions``. Do NOT
+            # add any GEH-authored system prompt or output directive here, or
+            # the live numbers diverge from the upstream method.
+            return "You are a professional programmer.", _task.instructions
+
+        def parse(
+            _task: VibeTask, model: str, text: str
+        ) -> AgentArtifact | None:
+            if not target:
+                # Unresolved target path: nothing to key a file to -> let the
+                # engine emit its generic empty sentinel.
+                return None
+            code = _extract_gen_code(text, target)
+            # Resolved target but empty/empty-wrapper output: stage a BLANK file
+            # at the REAL target path (not the generic ``__empty__`` sentinel),
+            # so the verifier scores a real model failure on the correct file
+            # rather than classifying an unknown target as unscoreable.
+            return AgentArtifact(
+                task_id=_task.id,
+                model=model,
+                kind="full_file",
+                files={target: code or " "},
+                metadata={} if code else {"empty": True},
+            )
+
+        return GenerationSpec(
+            artifact_kind="full_file", prompt=prompt, parse=parse,
+        )
 
     def stage(
         self,
@@ -578,7 +740,9 @@ class SecCodeBenchOracle(OracleAdapter):
             # Resolve the per-case verifier URL from the upstream benchmark
             # JSON and rewrite the docker-internal hostname to the host port
             # so GEH (on the host) can reach the compose-managed service.
-            verify_urls = _load_verify_urls(language, case_id)
+            verify_urls = _load_verify_urls(
+                language, case_id, self.run_cache_dir
+            )
             verify_url = verify_urls.get(_BASE_SCENARIO, "")
             if verify_url:
                 verify_url = _to_host_url(verify_url)
@@ -657,21 +821,29 @@ class SecCodeBenchOracle(OracleAdapter):
             verify_url = str(meta.get("verify_url") or "")
 
             contents = ""
+            readable = False
             if code_path:
                 try:
                     contents = Path(code_path).read_text(encoding="utf-8")
+                    readable = True
                 except OSError:
-                    contents = ""
+                    readable = False
 
-            if not verify_url or not contents:
-                # No verifier URL or no code -> leave the per-case JSON absent
-                # so parse() attributes an honest infra failure (the verifier
-                # produced no scoreable result for this task).
+            if not verify_url or not readable:
+                # No verifier URL, or the staged file is genuinely unreadable
+                # (vanished/corrupted) -> no scoreable input; leave the per-case
+                # JSON absent so parse() attributes an honest infra failure.
                 verified[task_id] = {"error": "missing_verify_url_or_code"}
                 continue
 
+            # A present-but-BLANK file is a (degenerate) submission, not infra:
+            # an offline `geh vibe eval` prediction may carry the right target
+            # file with empty contents. Score it as a model failure by sending
+            # it to the verifier (it will not compile / pass tests), normalizing
+            # empty to the same single-space sentinel the live parser stages so
+            # the verifier path is identical for live + BYO empties.
             outcome = _verify_one(
-                verify_url, target_path, contents, timeout_s=timeout_s
+                verify_url, target_path, contents or " ", timeout_s=timeout_s
             )
             verified[task_id] = outcome
             if outcome.get("error"):

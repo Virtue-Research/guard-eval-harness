@@ -28,6 +28,7 @@ task) so they stay out of the model-score denominators.
 from __future__ import annotations
 
 import logging
+import os
 from collections import defaultdict, deque
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Sequence
@@ -376,6 +377,11 @@ class VibeRunner:
         ensure_vibe_registrations()
         source = task_source_registry.get(source_name)()
         oracle = oracle_registry.get(oracle_name)()
+        # Thread the run's cache dir into the oracle too, so stage/evaluate
+        # resolve upstream assets (e.g. SecCodeBench per-case verifier URLs)
+        # under the same checkout the source loads from (matters for
+        # `geh vibe run/eval --cache-dir <dir>`).
+        oracle.run_cache_dir = self._cache_dir
 
         # Thread the run's cache dir into task loading so a source that
         # resolves its checkout under .geh uses the same dir as the oracle's
@@ -383,6 +389,22 @@ class VibeRunner:
         tasks = source.load(
             split=split, limit=limit, cache_dir=self._cache_dir
         )
+        # Optional sharding for parallel runs: ``GEH_VIBE_SHARD="<idx>/<num>"``
+        # slices the loaded tasks strided (``idx::num``) so N processes (each a
+        # distinct ``--run-id``) cover the dataset in parallel -- the CLI's own
+        # guidance for a serial live run that is otherwise too slow. Sort first
+        # so every shard sees the same deterministic order.
+        _shard = os.environ.get("GEH_VIBE_SHARD")
+        if _shard:
+            _idx, _num = (int(x) for x in _shard.split("/"))
+            _n_loaded = len(tasks)
+            tasks = sorted(tasks, key=lambda t: t.id)[_idx::_num]
+            # A shard slice can be legitimately empty (more shards than tasks,
+            # or a debug --limit < num shards) even though the source loaded
+            # fine. That is an empty run for THIS worker, not a missing-upstream
+            # error, so don't trip the zero-task guard below.
+            if not tasks and _n_loaded > 0:
+                allow_empty = True
         if not tasks and not allow_empty:
             raise ValueError(
                 f"source {source_name!r} loaded 0 tasks (split={split!r}, "
@@ -415,6 +437,20 @@ class VibeRunner:
             )
         else:
             artifact_list = self._resolve_artifacts(predictions, artifacts)
+
+        # Under sharding, ``tasks`` was sliced to this shard but a full BYO
+        # predictions file still carries every artifact; drop the out-of-shard
+        # ones so _classify_artifacts does not mark them ``unsupported`` (their
+        # task is intentionally not loaded here) and corrupt this shard's
+        # metrics -- the other shards score them. Only when sharding is active:
+        # otherwise an artifact with no loaded task is a real anomaly that
+        # should still surface as unsupported. (live_agent generates only for
+        # the sharded tasks, so this is a no-op there.)
+        if _shard:
+            _shard_ids = {t.id for t in tasks}
+            artifact_list = [
+                a for a in artifact_list if a.task_id in _shard_ids
+            ]
 
         budget = resource_budget or self._default_budget(oracle)
 
@@ -594,6 +630,7 @@ class VibeRunner:
         )
 
         driver = get_agent_driver(agent)
+        driver.run_cache_dir = self._cache_dir
         materializer = Materializer(self._cache_dir, run_dir)
         live_base = getattr(oracle, "live_base", None)
         # The oracle frames generation (artifact kind + optional prompt/parse)
@@ -1065,12 +1102,20 @@ class VibeRunner:
         run_dir: str | Path | None,
         run_config: OracleRunConfig,
     ) -> Path:
-        """Resolve the run directory from arg / config / default layout."""
+        """Resolve the run directory from arg / config / default layout.
+
+        Always returns an ABSOLUTE path. Upstream verifiers run with their
+        cwd set to their own upstream dir, so a relative run/results dir
+        would resolve against the wrong base and the verifier would silently
+        find no staged code -- e.g. baxbench's test mode skips any sample
+        whose code dir is absent, yielding a false ``verifier_unavailable``
+        rather than a real score.
+        """
         if run_dir is not None:
-            return Path(run_dir)
+            return Path(run_dir).resolve()
         if run_config.run_dir:
-            return Path(run_config.run_dir)
-        return Path("runs") / "vibecoding" / run_config.run_id
+            return Path(run_config.run_dir).resolve()
+        return (Path("runs") / "vibecoding" / run_config.run_id).resolve()
 
 
 __all__ = ["VibeRunner", "VibeRunResult"]

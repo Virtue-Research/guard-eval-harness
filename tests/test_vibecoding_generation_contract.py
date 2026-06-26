@@ -75,25 +75,29 @@ def test_default_spec_kinds_match_task_type():
     assert svb.generation_spec(_task(task_type="repo_patch")).artifact_kind == (
         "patch"
     )
-    # SecRepoBench uses the inherited default for its repo_completion tasks.
+    # SecRepoBench ships an explicit upstream-method generation_spec for its
+    # repo_completion tasks (blind-gen: the model sees the masked file via the
+    # upstream INFILE prompt), so it provides prompt + parse rather than the
+    # inherited default.
     spec = secrepo.generation_spec(_task(task_type="repo_completion"))
     assert spec.artifact_kind == "completion"
-    assert spec.prompt is None
-    assert spec.parse is None
+    assert spec.prompt is not None
+    assert spec.parse is not None
 
 
 def test_default_spec_fails_loud_for_unscoreable_kind():
     """An oracle scoring only a richer kind (no patch/completion) and no
     override gets a loud, actionable error from the default -- not a patch every
-    candidate would score as unsupported."""
+    candidate would score as unsupported.
+
+    A.S.E (``repo_dir``) is the remaining such oracle; baxbench and seccodebench
+    also score ``full_file`` but now ship a ``generation_spec`` override (covered
+    by their own tests), so they are no longer fail-loud examples.
+    """
     ensure_vibe_registrations()
-    for name, task_type in (
-        ("ase", "repo_dir"),
-        ("seccodebench", "project_scaffold"),
-    ):
-        oracle = oracle_registry.get(name)()
-        with pytest.raises(ValueError, match=f"not supported for the {name!r}"):
-            oracle.generation_spec(_task(f"{name}/x", task_type))
+    oracle = oracle_registry.get("ase")()
+    with pytest.raises(ValueError, match="not supported for the 'ase'"):
+        oracle.generation_spec(_task("ase/x", "repo_dir"))
 
 
 def test_generate_with_no_spec_is_legacy_patch():

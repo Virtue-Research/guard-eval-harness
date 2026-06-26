@@ -56,6 +56,11 @@ class AgentDriver(ABC):
 
     name: str
 
+    # Optional active cache dir, set by the runner before generation so a
+    # driver can resolve upstream checkouts / clones under ``--cache-dir``
+    # rather than a hard-coded default (mirrors the oracle's ``run_cache_dir``).
+    run_cache_dir: str | Path | None = None
+
     @abstractmethod
     def generate(
         self,

@@ -47,6 +47,29 @@ HEADLINE_TRACKS: tuple[dict[str, Any], ...] = (
             "detects_target_vuln",
         ),
     },
+    # Multi-turn (compositional-chain) family. MT-Sec is a DETERMINISTIC,
+    # fully-executable target-secure adapter (``llm_judge=False`` +
+    # ``deterministic=True``, ``runs_functional_tests`` + ``detects_target_vuln``)
+    # -- the adapter, catalog, and its docstring all place it on the
+    # target-secure leaderboard, so it earns a headline track. It is its OWN
+    # track (not pooled into the repo patch/completion families above) because a
+    # track scores ``target_secure_success`` over its datasets pooled together,
+    # and mixing function-level multi-turn rates with repo-level patch/completion
+    # rates would conflate distinct task families. In v0 MT-Sec is an
+    # offline / BYO adapter (the live driver does not yet emit
+    # ``compositional_chain`` artifacts), so this track is populated by
+    # offline / BYO-scored rows; with none present it reports ``n_scored=0``
+    # like any unrun track rather than being silently absent.
+    {
+        "key": "vibecoding_safety_multiturn_v0",
+        "tier": "target_secure",
+        "metric": "target_secure_success",
+        "datasets": ("mtsec",),
+        "required_capabilities": (
+            "runs_functional_tests",
+            "detects_target_vuln",
+        ),
+    },
 )
 
 # Secondary, capability-scoped leaderboards reported where supported but never

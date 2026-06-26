@@ -18,6 +18,7 @@ token-usage extraction is the only other provider-specific logic.
 
 from __future__ import annotations
 
+import concurrent.futures
 import os
 import re
 import time
@@ -42,7 +43,23 @@ _OPENROUTER_BASE = "https://openrouter.ai/api/v1"
 # for SecRepoBench/SecureVibeBench completions was truncating at 8k, corrupting
 # the candidate on large source files. Opus 4.8 supports far larger outputs.
 _DEFAULT_MAX_TOKENS = int(os.environ.get("GEH_VIBE_MAX_TOKENS", "32000"))
-_HTTP_TIMEOUT = 180.0
+# Per-request HTTP timeout (env-overridable). The 180s default suits short
+# completions, but a large ``GEH_VIBE_MAX_TOKENS`` budget on a slow reasoning
+# model can exceed it and degrade the request into an empty/timeout artifact, so
+# ``geh vibe run`` (which uses these providers directly) honors
+# ``GEH_VIBE_HTTP_TIMEOUT`` -- the same knob the host launcher scripts set.
+_HTTP_TIMEOUT = float(os.environ.get("GEH_VIBE_HTTP_TIMEOUT", "180"))
+# Hard wall-clock per-request cap (env-overridable; 0 = disabled, the default).
+# ``_HTTP_TIMEOUT`` is httpx's read timeout: it only fires when NO body bytes
+# arrive within the window, so a server (observed with gpt-5.5 on a pathological
+# SecRepoBench prompt) that dribbles periodic keepalive bytes resets the read
+# timer indefinitely and the request hangs forever. When set, this caps the
+# whole request in wall-clock time -- independent of read activity -- by running
+# the post in a worker thread and abandoning it past the deadline, surfacing a
+# ``httpx.ReadTimeout`` so the existing transient-retry path handles it (and,
+# on exhaustion, degrades to an in-denominator model failure that lets the run
+# advance past the stuck task rather than wedging the whole model).
+_HARD_TIMEOUT = float(os.environ.get("GEH_VIBE_HARD_TIMEOUT", "0"))
 
 # Default models (always overridable via ``--model`` / ``GEH_VIBE_MODEL``).
 _DEFAULT_ANTHROPIC_MODEL = "claude-opus-4-8"
@@ -127,7 +144,27 @@ def _post_with_retry(
     for attempt in range(1, _RETRY_MAX_ATTEMPTS + 1):
         backoff = _RETRY_BACKOFF_BASE_S * (2 ** (attempt - 1))
         try:
-            response = httpx.post(url, json=json, headers=headers, timeout=timeout)
+            if _HARD_TIMEOUT > 0:
+                # Run the post in a worker thread and cap it in wall-clock time;
+                # a hung request that defeats the read timeout is abandoned (the
+                # thread leaks until httpx itself gives up) and surfaced as a
+                # ReadTimeout so the retry policy below treats it as transient.
+                ex = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+                try:
+                    fut = ex.submit(
+                        httpx.post, url, json=json, headers=headers, timeout=timeout
+                    )
+                    response = fut.result(timeout=_HARD_TIMEOUT)
+                except concurrent.futures.TimeoutError as exc:
+                    raise httpx.ReadTimeout(
+                        f"hard wall-clock timeout {_HARD_TIMEOUT}s exceeded"
+                    ) from exc
+                finally:
+                    ex.shutdown(wait=False)
+            else:
+                response = httpx.post(
+                    url, json=json, headers=headers, timeout=timeout
+                )
             response.raise_for_status()
             return response.json()
         except httpx.TransportError:
@@ -347,6 +384,20 @@ def _call_openai_chat(
         "messages": chat_messages,
         token_field: max_tokens,
     }
+    # Forward reasoning effort for direct OpenAI reasoning models (gpt-5.x /
+    # o-series), which take ``reasoning_effort`` on /chat/completions. Gated on
+    # ``token_field == "max_completion_tokens"`` (the direct-OpenAI marker) so
+    # OpenRouter routes are untouched. Without this the OpenAI path silently
+    # runs at the model default regardless of GEH_VIBE_REASONING_EFFORT.
+    effort = os.environ.get("GEH_VIBE_REASONING_EFFORT", "").strip().lower()
+    if effort:
+        if token_field == "max_completion_tokens":
+            # direct OpenAI reasoning models (gpt-5.x / o-series)
+            payload["reasoning_effort"] = effort
+        else:
+            # OpenRouter unified reasoning control (per-model support varies;
+            # smoke before trusting -- some routes 400 or ignore it)
+            payload["reasoning"] = {"effort": effort}
     return _post_with_retry(
         f"{base_url.rstrip('/')}/chat/completions",
         json=payload,
@@ -552,6 +603,8 @@ _ALIAS_FACTORIES: dict[str, Any] = {
     "codex": lambda: openai_provider("gpt-5.1-codex"),
     "deepseek": lambda: openrouter_provider("deepseek/deepseek-v4-flash"),
     "gemini": lambda: openrouter_provider("google/gemini-2.5-pro"),
+    "qwen": lambda: openrouter_provider("qwen/qwen3.7-max"),
+    "glm": lambda: openrouter_provider("z-ai/glm-5.2"),
     "openrouter": openrouter_provider,
 }
 
@@ -573,6 +626,7 @@ _OPENROUTER_VENDORS = {
     "gemini": "google",
     "deepseek": "deepseek",
     "qwen": "qwen",
+    "glm": "z-ai",
     "llama": "meta-llama",
     "mistral": "mistralai",
     "mixtral": "mistralai",
@@ -584,12 +638,16 @@ def _namespace_openrouter(model: str) -> str:
     """Ensure an OpenRouter model id is vendor-namespaced, else raise loudly.
 
     OpenRouter requires ``vendor/model`` ids; a bare third-party name is
-    normalized via :data:`_OPENROUTER_VENDORS`. An unknown bare name raises
-    rather than letting OpenRouter 404 into a silent empty artifact.
+    normalized via :data:`_OPENROUTER_VENDORS`. The vendor key is the leading
+    alphabetic run of the id, so dot/dash-versioned bare slugs resolve too --
+    ``qwen3.7-max`` and ``qwen-3-235b`` both map to the ``qwen`` vendor (a plain
+    ``model.split("-")[0]`` would yield ``qwen3.7`` and miss). An unknown bare
+    name raises rather than letting OpenRouter 404 into a silent empty artifact.
     """
     if "/" in model:
         return model
-    vendor = _OPENROUTER_VENDORS.get(model.split("-", 1)[0].lower())
+    head = re.match(r"[a-z]+", model.lower())
+    vendor = _OPENROUTER_VENDORS.get(head.group(0)) if head else None
     if vendor is None:
         raise ValueError(
             "OpenRouter model ids must be vendor-namespaced (e.g. "
