@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="500" height="500">
+  <g transform="translate(100,110)">
+    <!-- Top-left: brand indigo -->
+    <g fill="#4F46E5">
+      <rect x="0" y="0"   width="113" height="37"/>
+      <rect x="0" y="0"   width="34"  height="108"/>
+    </g>
+
+    <!-- Bottom-left: warm violet -->
+    <g fill="#8B5CF6">
+      <rect x="0" y="182" width="34"  height="99"/>
+      <rect x="0" y="251" width="113" height="30"/>
+    </g>
+
+    <!-- Bottom-right: lavender -->
+    <g fill="#C4B5FD">
+      <rect x="266" y="182" width="34"  height="99"/>
+      <rect x="184" y="251" width="116" height="30"/>
+    </g>
+
+    <!-- Middle floating line: pale violet -->
+    <rect x="177" y="131" width="123" height="29" fill="#DDD6FE"/>
+  </g>
+</svg>

@@ -1,0 +1,535 @@
+/* =============================================================================
+ * Guard Eval Harness — documentation theme
+ *
+ * Light-first, indigo accent, Inter (body) + JetBrains Mono (code).
+ * Light gray code/table surfaces with hairline borders, a clean white
+ * header, soft-tinted sidebar, and 0.4rem corners throughout.
+ * ========================================================================== */
+
+:root {
+  /* Indigo scale (Tailwind indigo) — primary accent. */
+  --geh-indigo:         #4f46e5;  /* indigo-600 */
+  --geh-indigo-dark:    #4338ca;  /* indigo-700 */
+  --geh-indigo-darker:  #3730a3;  /* indigo-800 — links */
+  --geh-indigo-darkest: #312e81;  /* indigo-900 — link hover */
+  --geh-indigo-light:   #6366f1;  /* indigo-500 */
+  --geh-indigo-lighter: #818cf8;  /* indigo-400 — dark-mode links */
+  --geh-indigo-wash:    rgba(79, 70, 229, 0.05);
+
+  /* Neutral slate scale. */
+  --geh-text:    #262626;
+  --geh-heading: #404040;
+  --geh-muted:   #525252;
+  --geh-faint:   #737373;
+  --geh-line:    #d4d4d4;
+  --geh-border:  #e5e5e5;
+  --geh-surface: #f5f5f5;
+  --geh-sidebar: #fafafa;
+
+  --md-text-font: "Inter";
+  --md-code-font: "JetBrains Mono";
+
+  /* Global corner radius — matches the reference's 0.4rem. */
+  --geh-radius: 0.4rem;
+}
+
+/* ── Light mode (default) ──────────────────────────────────── */
+
+[data-md-color-scheme="default"] {
+  /* White header with dark contents. */
+  --md-primary-fg-color: #ffffff;
+  --md-primary-fg-color--light: #ffffff;
+  --md-primary-fg-color--dark: #ffffff;
+  --md-primary-bg-color: var(--geh-text);
+  --md-primary-bg-color--light: var(--geh-muted);
+
+  --md-accent-fg-color: var(--geh-indigo);
+  --md-typeset-a-color: var(--geh-indigo-darker);
+
+  --md-default-fg-color: var(--geh-text);
+  --md-default-bg-color: #ffffff;
+  --md-code-bg-color: var(--geh-surface);
+  --md-code-fg-color: #171717;
+
+  --md-footer-bg-color: #000000;
+  --md-footer-bg-color--dark: #000000;
+}
+
+/* ── Dark mode (slate) — coherent dark counterpart ─────────── */
+
+[data-md-color-scheme="slate"] {
+  --md-primary-fg-color: #111114;
+  --md-primary-fg-color--light: #1a1a1f;
+  --md-primary-fg-color--dark: #0b0b0d;
+  --md-primary-bg-color: #e5e5e5;
+  --md-primary-bg-color--light: #a3a3a3;
+
+  --md-accent-fg-color: var(--geh-indigo-lighter);
+  --md-typeset-a-color: var(--geh-indigo-lighter);
+
+  --md-default-bg-color: #0b0b0d;
+  --md-default-fg-color--light: #a3a3a3;
+  --md-code-bg-color: #16161a;
+
+  --md-footer-bg-color: #000000;
+  --md-footer-bg-color--dark: #000000;
+}
+
+/* ── Header ────────────────────────────────────────────────── */
+
+.md-header {
+  box-shadow: none;
+  border-bottom: 1px solid var(--geh-border);
+}
+
+[data-md-color-scheme="slate"] .md-header {
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Header logo — 20% larger than Material's default 1.2rem. */
+.md-header__button.md-logo img,
+.md-header__button.md-logo svg {
+  height: 1.44rem;
+  width: auto;
+}
+
+/* Tabs bar reads as a continuation of the header, not a colored strip. */
+.md-tabs {
+  background: transparent;
+  border-bottom: 1px solid var(--geh-border);
+  color: var(--md-default-fg-color);
+}
+
+[data-md-color-scheme="slate"] .md-tabs {
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.md-tabs__link {
+  opacity: 0.85;
+  font-weight: 500;
+}
+
+.md-tabs__link--active,
+.md-tabs__link:hover {
+  opacity: 1;
+  color: var(--geh-indigo);
+}
+
+[data-md-color-scheme="slate"] .md-tabs__link--active,
+[data-md-color-scheme="slate"] .md-tabs__link:hover {
+  color: var(--geh-indigo-lighter);
+}
+
+/* Search on a soft surface. The surface, border, and radius live on the
+ * form (the visual container); the input stays transparent so the rounded
+ * corners are clean — otherwise the form's near-square corner peeks out
+ * behind a rounded input. `overflow: hidden` clips any inner square edges. */
+.md-search__form {
+  background-color: var(--geh-surface);
+  border: 1px solid var(--geh-border);
+  border-radius: var(--geh-radius);
+  box-shadow: none;
+  overflow: hidden;
+}
+
+.md-search__form:hover {
+  background-color: var(--geh-surface);
+}
+
+.md-search__input {
+  background-color: transparent;
+  border-radius: var(--geh-radius);
+}
+
+[data-md-color-scheme="slate"] .md-search__form {
+  background-color: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-md-color-scheme="slate"] .md-search__form:hover {
+  background-color: rgba(255, 255, 255, 0.06);
+}
+
+/* ── Sidebar navigation ────────────────────────────────────── */
+
+@media screen and (min-width: 76.25em) {
+  .md-sidebar--primary {
+    background-color: var(--geh-sidebar);
+    box-shadow: 1px 0 0 0 var(--geh-border);
+  }
+
+  [data-md-color-scheme="slate"] .md-sidebar--primary {
+    background-color: #0d0d10;
+    box-shadow: 1px 0 0 0 rgba(255, 255, 255, 0.06);
+  }
+}
+
+/* Top-level section labels → uppercase eyebrows, like the reference. */
+.md-nav__item--section > .md-nav__link {
+  text-transform: uppercase;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--geh-faint);
+}
+
+.md-nav__link {
+  font-size: 0.78rem;
+  font-weight: 500;
+  border-radius: 0;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.md-nav__link:is([href]):hover {
+  color: var(--geh-indigo);
+}
+
+/* Active item — indigo text + left-bar accent, not a pill. */
+.md-nav__item .md-nav__link--active {
+  color: var(--geh-indigo);
+  font-weight: 600;
+  background-color: var(--geh-indigo-wash);
+  border-left: 2px solid var(--geh-indigo);
+  padding-left: 0.55rem;
+}
+
+[data-md-color-scheme="slate"] .md-nav__link:is([href]):hover,
+[data-md-color-scheme="slate"] .md-nav__item .md-nav__link--active {
+  color: var(--geh-indigo-lighter);
+  border-left-color: var(--geh-indigo-lighter);
+}
+
+[data-md-color-scheme="slate"] .md-nav__item .md-nav__link--active {
+  background-color: rgba(129, 140, 248, 0.1);
+}
+
+/* ── Table of contents (right) ─────────────────────────────── */
+
+.md-nav--secondary .md-nav__title {
+  text-transform: uppercase;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--geh-faint);
+}
+
+.md-nav--secondary .md-nav__link--active {
+  color: var(--geh-indigo);
+  font-weight: 600;
+}
+
+[data-md-color-scheme="slate"] .md-nav--secondary .md-nav__link--active {
+  color: var(--geh-indigo-lighter);
+}
+
+/* ── Typography ────────────────────────────────────────────── */
+
+.md-typeset {
+  line-height: 1.7;
+}
+
+.md-typeset h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--geh-heading);
+  margin-bottom: 1.25rem;
+}
+
+.md-typeset h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.005em;
+  color: var(--geh-heading);
+  margin-top: 2rem;
+}
+
+.md-typeset h3 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--geh-heading);
+  margin-top: 1.5rem;
+}
+
+.md-typeset h4 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--geh-heading);
+}
+
+[data-md-color-scheme="slate"] .md-typeset h1,
+[data-md-color-scheme="slate"] .md-typeset h2,
+[data-md-color-scheme="slate"] .md-typeset h3,
+[data-md-color-scheme="slate"] .md-typeset h4 {
+  color: #e5e5e5;
+}
+
+/* ── Links ─────────────────────────────────────────────────── */
+
+.md-typeset a {
+  font-weight: 500;
+}
+
+.md-typeset a:hover {
+  color: var(--geh-indigo-darkest);
+  text-decoration: underline;
+}
+
+[data-md-color-scheme="slate"] .md-typeset a:hover {
+  color: #c4c3ff;
+}
+
+/* ── Inline code ───────────────────────────────────────────── */
+
+.md-typeset code {
+  border-radius: var(--geh-radius);
+  font-size: 0.85em;
+  padding: 0.06rem 0.32rem;
+  background-color: var(--md-code-bg-color);
+  border: 1px solid rgba(23, 23, 23, 0.06);
+}
+
+[data-md-color-scheme="slate"] .md-typeset code {
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+/* ── Code blocks ───────────────────────────────────────────── */
+
+.md-typeset pre > code,
+.md-typeset .highlight {
+  border-radius: var(--geh-radius);
+}
+
+.md-typeset pre > code {
+  border: 1px solid var(--geh-border);
+}
+
+[data-md-color-scheme="slate"] .md-typeset pre > code {
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.md-typeset .highlight .filename {
+  background: var(--geh-surface);
+  border: 1px solid var(--geh-border);
+  border-bottom: none;
+  border-top-left-radius: var(--geh-radius);
+  border-top-right-radius: var(--geh-radius);
+}
+
+[data-md-color-scheme="slate"] .md-typeset .highlight .filename {
+  background: #16161a;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.md-clipboard:hover {
+  color: var(--geh-indigo);
+}
+
+/* ── Tables — rounded, light header strip, hairline rows ───── */
+
+.md-typeset table:not([class]) {
+  border: 1px solid var(--geh-border);
+  border-radius: var(--geh-radius);
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+}
+
+.md-typeset table:not([class]) th {
+  background-color: var(--geh-surface);
+  color: var(--geh-text);
+  font-weight: 700;
+  text-align: center;
+  border: none;
+  border-bottom: 1px solid var(--geh-border);
+}
+
+.md-typeset table:not([class]) td {
+  border: none;
+  border-bottom: 1px solid var(--geh-border);
+  vertical-align: top;
+}
+
+.md-typeset table:not([class]) tr:last-child td {
+  border-bottom: none;
+}
+
+.md-typeset table:not([class]) tbody tr:hover {
+  background-color: var(--geh-indigo-wash);
+}
+
+[data-md-color-scheme="slate"] .md-typeset table:not([class]) {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-md-color-scheme="slate"] .md-typeset table:not([class]) th {
+  background-color: rgba(255, 255, 255, 0.04);
+  color: #ffffff;
+}
+
+[data-md-color-scheme="slate"] .md-typeset table:not([class]) th,
+[data-md-color-scheme="slate"] .md-typeset table:not([class]) td {
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+/* ── Admonitions / callouts ────────────────────────────────── */
+
+.md-typeset .admonition,
+.md-typeset details {
+  border-radius: var(--geh-radius);
+  border-width: 1px;
+  border-left-width: 4px;
+  font-size: 0.78rem;
+}
+
+.md-typeset .admonition.tip,
+.md-typeset details.tip {
+  border-color: var(--geh-indigo-light);
+}
+
+.md-typeset .tip > .admonition-title,
+.md-typeset .tip > summary {
+  background-color: var(--geh-indigo-wash);
+}
+
+.md-typeset .tip > .admonition-title::before,
+.md-typeset .tip > summary::before {
+  background-color: var(--geh-indigo);
+}
+
+.md-typeset .admonition.info,
+.md-typeset details.info {
+  border-color: var(--geh-indigo);
+}
+
+.md-typeset .info > .admonition-title,
+.md-typeset .info > summary {
+  background-color: var(--geh-indigo-wash);
+}
+
+/* ── Content tabs ──────────────────────────────────────────── */
+
+.md-typeset .tabbed-labels > label:hover,
+.md-typeset .tabbed-set > input:checked + label {
+  color: var(--geh-indigo);
+}
+
+.md-typeset .tabbed-set > input:checked + label {
+  border-color: var(--geh-indigo);
+}
+
+[data-md-color-scheme="slate"] .md-typeset .tabbed-labels > label:hover,
+[data-md-color-scheme="slate"] .md-typeset .tabbed-set > input:checked + label {
+  color: var(--geh-indigo-lighter);
+  border-color: var(--geh-indigo-lighter);
+}
+
+/* ── Buttons ───────────────────────────────────────────────── */
+
+.md-typeset .md-button {
+  border-radius: var(--geh-radius);
+  font-weight: 600;
+}
+
+.md-typeset .md-button--primary {
+  background-color: var(--geh-indigo);
+  border-color: var(--geh-indigo);
+  color: #ffffff;
+}
+
+.md-typeset .md-button--primary:hover {
+  background-color: var(--geh-indigo-dark);
+  border-color: var(--geh-indigo-dark);
+  box-shadow: 0 4px 12px -4px rgba(79, 70, 229, 0.45);
+}
+
+/* ── Home page feature cards ───────────────────────────────── */
+
+.md-typeset .grid.cards > ul > li,
+.md-typeset .grid > .card {
+  background: #ffffff;
+  border: 1px solid var(--geh-border);
+  border-radius: var(--geh-radius);
+  padding: 1.2rem 1.25rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease,
+    transform 0.15s ease;
+}
+
+.md-typeset .grid.cards > ul > li:hover,
+.md-typeset .grid > .card:hover {
+  border-color: rgba(79, 70, 229, 0.4);
+  box-shadow: 0 8px 22px -14px rgba(79, 70, 229, 0.35);
+  transform: translateY(-1px);
+}
+
+.md-typeset .grid.cards > ul > li > hr {
+  margin: 0.6rem 0;
+}
+
+.md-typeset .grid.cards .twemoji,
+.md-typeset .grid.cards .md-typeset .twemoji {
+  color: var(--geh-indigo);
+}
+
+[data-md-color-scheme="slate"] .md-typeset .grid.cards > ul > li,
+[data-md-color-scheme="slate"] .md-typeset .grid > .card {
+  background: #16161a;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-md-color-scheme="slate"] .md-typeset .grid.cards > ul > li:hover,
+[data-md-color-scheme="slate"] .md-typeset .grid > .card:hover {
+  border-color: rgba(129, 140, 248, 0.4);
+}
+
+/* ── Footer ────────────────────────────────────────────────── */
+
+.md-footer-meta {
+  background-color: #000000;
+}
+
+/* ── Scrollbar (subtle) ────────────────────────────────────── */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--geh-line);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--geh-indigo-light);
+}
+
+[data-md-color-scheme="slate"] ::-webkit-scrollbar-thumb {
+  background: #2b2c2c;
+}
+
+[data-md-color-scheme="slate"] ::-webkit-scrollbar-thumb:hover {
+  background: var(--geh-indigo);
+}
+
+/* ── Progress bar (navigation.instant.progress) ────────────── */
+
+.md-progress {
+  background: linear-gradient(90deg, var(--geh-indigo), var(--geh-indigo-light));
+}
+
+/* ── Mermaid diagrams ──────────────────────────────────────── */
+
+.mermaid {
+  background: transparent;
+}
+
+/* ── Home page badges ──────────────────────────────────────── */
+
+.md-typeset img[alt="PyPI"],
+.md-typeset img[alt="License"],
+.md-typeset img[alt="Datasets"],
+.md-typeset img[alt="Modalities"] {
+  display: inline;
+  margin: 0 2px;
+}

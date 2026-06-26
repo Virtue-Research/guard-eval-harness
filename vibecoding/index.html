@@ -1,0 +1,2528 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="CLI-first harness for benchmarking guardrail, moderation, and safety classification models">
+      
+      
+      
+        <link rel="canonical" href="https://virtue-research.github.io/guard-eval-harness/vibecoding/">
+      
+      
+        <link rel="prev" href="../datasets/local/">
+      
+      
+        <link rel="next" href="../cli/reference/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/logo-dark.svg">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>VibeCoding Bench - Guard Eval Harness</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#vibecoding-safety-bench" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Guard Eval Harness" class="md-header__button md-logo" aria-label="Guard Eval Harness" data-md-component="logo">
+      
+  <img src="../assets/logo-dark.svg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Guard Eval Harness
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              VibeCoding Bench
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/Virtue-Research/guard-eval-harness" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Virtue-Research/guard-eval-harness
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+    
+      
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../getting-started/installation/" class="md-tabs__link">
+          
+  
+  
+  Getting Started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../user-guide/configuration/" class="md-tabs__link">
+          
+  
+  
+  User Guide
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../models/overview/" class="md-tabs__link">
+          
+  
+  
+  Models
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../datasets/overview/" class="md-tabs__link">
+          
+  
+  
+  Datasets
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    <li class="md-tabs__item md-tabs__item--active">
+      <a href="./" class="md-tabs__link">
+        
+  
+  
+    
+  
+  VibeCoding Bench
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../cli/reference/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  CLI Reference
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../metrics/overview/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Metrics
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../developer/architecture/" class="md-tabs__link">
+          
+  
+  
+  Developer Guide
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Guard Eval Harness" class="md-nav__button md-logo" aria-label="Guard Eval Harness" data-md-component="logo">
+      
+  <img src="../assets/logo-dark.svg" alt="logo">
+
+    </a>
+    Guard Eval Harness
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/Virtue-Research/guard-eval-harness" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Virtue-Research/guard-eval-harness
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quickstart
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/run-modes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Run Modes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user-guide/configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user-guide/benchmark-selection/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Benchmark Selection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user-guide/benchmark-packs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Benchmark Packs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user-guide/run-artifacts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Run Artifacts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user-guide/resume/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Resuming Runs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user-guide/common-workflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Common Workflows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Models
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Models
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../models/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../models/huggingface/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    HuggingFace
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../models/vllm/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    vLLM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../models/openai-moderation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OpenAI Moderation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../models/openai-compatible/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OpenAI Compatible
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../models/anthropic/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Anthropic
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../models/http/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    HTTP Endpoint
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Datasets
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Datasets
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../datasets/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../datasets/text/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Text Benchmarks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../datasets/image/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Image Benchmarks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../datasets/local/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Local Data
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    VibeCoding Bench
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    VibeCoding Bench
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#install" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Install
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quickstart" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quickstart
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-it-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How it works
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#datasets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Datasets
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#models-and-providers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Models and providers
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Models and providers">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#routing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Routing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#openrouter-vendor-namespacing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OpenRouter vendor-namespacing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reasoning-effort" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reasoning effort
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#environment-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Environment variables
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Commands
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#bring-your-own-predictions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bring-your-own predictions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#metrics-and-scoring" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Metrics and scoring
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Metrics and scoring">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#leaderboard-tracks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Leaderboard tracks
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../metrics/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Metrics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Developer Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Developer Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developer/architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developer/adding-datasets/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Adding a Dataset Adapter
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developer/adding-models/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Adding a Model Adapter
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developer/plugins-and-presets/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plugins and Presets
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#install" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Install
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quickstart" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quickstart
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-it-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How it works
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#datasets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Datasets
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#models-and-providers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Models and providers
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Models and providers">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#routing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Routing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#openrouter-vendor-namespacing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OpenRouter vendor-namespacing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reasoning-effort" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reasoning effort
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#environment-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Environment variables
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Commands
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#bring-your-own-predictions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bring-your-own predictions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#metrics-and-scoring" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Metrics and scoring
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Metrics and scoring">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#leaderboard-tracks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Leaderboard tracks
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+                
+
+
+
+  
+
+
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="vibecoding-safety-bench">VibeCoding Safety Bench<a class="headerlink" href="#vibecoding-safety-bench" title="Permanent link">&para;</a></h1>
+<p>A repository-level <strong>secure-coding</strong> benchmark family. Each task asks a model to
+write, complete, or patch real-world code; an out-of-process <strong>oracle</strong> then
+builds the result in a container and scores two things:</p>
+<ul>
+<li><strong>functional correctness</strong> — does the code build and pass the task's tests?</li>
+<li><strong>security</strong> — is the target vulnerability absent (and, where supported, no
+  new vulnerability introduced)?</li>
+</ul>
+<p>It is exposed under the <code>geh vibe</code> command group and is independent of the
+classification benchmarks documented elsewhere. Because scoring runs candidate
+code, <strong>Docker is required</strong> for every dataset below.</p>
+<div class="admonition note">
+<p class="admonition-title">Single-shot, not agentic</p>
+<p>This distribution ships only <strong>single-shot</strong> model drivers (one prompt →
+one completion → score). There is no multi-step / tool-using agent driver
+here; agentic and bring-your-own runs are supported via
+<a href="#bring-your-own-predictions">pre-generated predictions</a>.</p>
+</div>
+<h2 id="install">Install<a class="headerlink" href="#install" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;.[vibecoding]&quot;</span>
+</code></pre></div>
+<p>The subsystem is pure-Python (stdlib + pydantic); it shells out to each upstream
+benchmark rather than importing it.</p>
+<h2 id="quickstart">Quickstart<a class="headerlink" href="#quickstart" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># 0. (optional) put the cache + upstream checkouts somewhere with disk</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GEH_CACHE_DIR</span><span class="o">=</span>/scratch/<span class="nv">$USER</span>/.geh
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="c1"># 1. clone + build a dataset&#39;s upstream environment (one-time)</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>geh<span class="w"> </span>vibe<span class="w"> </span>acquire<span class="w"> </span>--dataset<span class="w"> </span>baxbench
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="c1"># 2. drive a model end-to-end, then score (functional + security)</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="nb">export</span><span class="w"> </span><span class="nv">OPENAI_API_KEY</span><span class="o">=</span>sk-...
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>geh<span class="w"> </span>vibe<span class="w"> </span>run<span class="w"> </span>--dataset<span class="w"> </span>baxbench<span class="w"> </span>--agent<span class="w"> </span>llm<span class="w"> </span>--model<span class="w"> </span>gpt-5.5<span class="w"> </span>--limit<span class="w"> </span><span class="m">5</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="c1"># 3. (re)build summary.json + report.md for the run dir it printed</span>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>geh<span class="w"> </span>vibe<span class="w"> </span>report<span class="w"> </span>--run-dir<span class="w"> </span>runs/vibecoding/&lt;run-id&gt;
+</code></pre></div>
+<p><code>geh vibe datasets</code> lists every registered dataset with its artifact kind and
+capabilities as JSON; <code>geh vibe doctor --dataset &lt;d&gt;</code> probes Docker, the upstream
+checkout, the venv, disk, and secrets before you commit to a run.</p>
+<h2 id="how-it-works">How it works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h2>
+<p>Every dataset wires together a <strong>task source</strong> (loads tasks), an <strong>agent driver</strong>
+(produces a candidate — code, completion, or patch), and an <strong>oracle</strong> (stages
+the candidate into the upstream harness, runs it in Docker, and parses verdicts):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>source.load → agent (live model | BYO) → oracle.stage → oracle.evaluate (Docker) → oracle.parse → metrics
+</code></pre></div>
+<p>Two ways to produce candidates:</p>
+<ul>
+<li><strong>Live</strong> (<code>geh vibe run --agent ...</code>) — a model is driven for each task.</li>
+<li><strong>BYO</strong> (<code>geh vibe eval --predictions file.jsonl</code>) — you supply candidates you
+  generated yourself (any agent framework). This is the only path for <code>ase</code>, and
+  is available for every dataset.</li>
+</ul>
+<h2 id="datasets">Datasets<a class="headerlink" href="#datasets" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Dataset</th>
+<th>What it checks</th>
+<th>Task type</th>
+<th style="text-align: center;">Live (<code>run</code>)?</th>
+<th>Heavy deps</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>baxbench</code></td>
+<td>Full backend-app scaffolds: functional tests + security exploits</td>
+<td><code>project_scaffold</code></td>
+<td style="text-align: center;">yes</td>
+<td>Docker; 392 tasks (28 scenarios × 14 envs)</td>
+</tr>
+<tr>
+<td><code>seccodebench</code></td>
+<td>Function-level secure code (5 languages) via verifier services</td>
+<td><code>project_scaffold</code></td>
+<td style="text-align: center;">yes</td>
+<td>Docker + verifier services; LLM judges (Java)</td>
+</tr>
+<tr>
+<td><code>secrepobench</code></td>
+<td>Secure completion of a masked region in real C/C++ repos</td>
+<td><code>repo_completion</code></td>
+<td style="text-align: center;">yes</td>
+<td>Docker (ARVO); <strong>external checkout you supply</strong></td>
+</tr>
+<tr>
+<td><code>securevibebench</code></td>
+<td>Repo <strong>patch</strong> scored against the target vuln at PVIC</td>
+<td><code>repo_patch</code></td>
+<td style="text-align: center;">yes</td>
+<td>Docker (ARVO); 105 tasks (HF <code>iCSawyer/SecureVibeBench</code>)</td>
+</tr>
+<tr>
+<td><code>susvibes</code></td>
+<td>SWE-bench-style patch: fix the issue <strong>and</strong> remove the CWE/CVE</td>
+<td><code>repo_patch</code></td>
+<td style="text-align: center;">yes</td>
+<td>Docker; heaviest (~400 GB images)</td>
+</tr>
+<tr>
+<td><code>ase</code></td>
+<td>Whole-repo edits scored by A.S.E / AICGSecEval</td>
+<td><code>repo_dir</code></td>
+<td style="text-align: center;">no — BYO/agentic only</td>
+<td>Docker; needs materialized worktrees</td>
+</tr>
+</tbody>
+</table>
+<p>"Live" means <code>geh vibe run</code> can drive a model end-to-end. <code>ase</code> scores a
+<code>repo_dir</code> artifact, which a single-shot driver cannot produce — score it with
+<code>geh vibe eval --predictions</code> instead.</p>
+<p>A few per-dataset specifics worth knowing:</p>
+<ul>
+<li><strong><code>seccodebench</code> is a separate capability tier.</strong> Its security verdict can
+  involve LLM judges (Java path, majority vote), so its rows are deliberately
+  <strong>segregated from the deterministic target-secure leaderboard</strong> — treat its
+  numbers on their own, not pooled with the other datasets.</li>
+<li><strong><code>secrepobench</code> is <code>external_only</code>.</strong> No redistributable upstream license, so
+  you must supply the checkout yourself (<code>SecRepoBench</code>); the catalog URL is a
+  placeholder. It also needs ~200 GB for ARVO images.</li>
+<li><strong><code>securevibebench</code></strong> loads its 105 tasks from the Hugging Face dataset
+  <code>iCSawyer/SecureVibeBench</code> and is the only oracle that seeds a <strong>live</strong> agent
+  from the real pre-fix tree (PVIC) rather than blind. Semgrep/SAST "new-vuln"
+  detection is <strong>off by default</strong> (set <code>SEMGREP_APP_TOKEN</code> to enable); without it
+  the <code>strict_secure</code> track is not scored.</li>
+<li><strong><code>baxbench</code></strong> needs <code>geh vibe acquire</code> to materialize per-scenario descriptors;
+  without acquisition it falls back to a 6-env representative slice.</li>
+</ul>
+<h2 id="models-and-providers">Models and providers<a class="headerlink" href="#models-and-providers" title="Permanent link">&para;</a></h2>
+<p>A live run needs an <strong>agent</strong> (<code>--agent</code>) and usually a <strong>model</strong> (<code>--model</code>).
+The model id is resolved as <strong>explicit <code>--model</code> &gt; <code>GEH_VIBE_MODEL</code> &gt; the agent's
+default</strong>.</p>
+<h3 id="routing">Routing<a class="headerlink" href="#routing" title="Permanent link">&para;</a></h3>
+<p><code>--agent llm</code> is a <strong>router</strong>: it picks the provider from the model name.</p>
+<table>
+<thead>
+<tr>
+<th>Model id (lowercased)</th>
+<th>Routes to</th>
+<th>API key</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>starts with <code>claude</code></td>
+<td>Anthropic</td>
+<td><code>ANTHROPIC_API_KEY</code></td>
+</tr>
+<tr>
+<td><code>gpt-*</code>, <code>gpt4*</code>, <code>gpt5*</code>, <code>chatgpt*</code>, <code>codex*</code>, or <code>o&lt;N&gt;</code> (e.g. <code>o3</code>, <code>o4-mini</code>)</td>
+<td>OpenAI</td>
+<td><code>OPENAI_API_KEY</code></td>
+</tr>
+<tr>
+<td>anything else</td>
+<td>OpenRouter</td>
+<td><code>OPENROUTER_API_KEY</code></td>
+</tr>
+</tbody>
+</table>
+<p>Or pin a provider directly with a fixed-provider agent alias:</p>
+<table>
+<thead>
+<tr>
+<th><code>--agent</code></th>
+<th>Provider</th>
+<th>Default model</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>anthropic</code>, <code>claude</code></td>
+<td>Anthropic</td>
+<td><code>claude-opus-4-8</code></td>
+</tr>
+<tr>
+<td><code>openai</code>, <code>gpt</code></td>
+<td>OpenAI</td>
+<td><code>gpt-5.5</code></td>
+</tr>
+<tr>
+<td><code>codex</code></td>
+<td>OpenAI</td>
+<td><code>gpt-5.1-codex</code></td>
+</tr>
+<tr>
+<td><code>deepseek</code></td>
+<td>OpenRouter</td>
+<td><code>deepseek/deepseek-v4-flash</code></td>
+</tr>
+<tr>
+<td><code>gemini</code></td>
+<td>OpenRouter</td>
+<td><code>google/gemini-2.5-pro</code></td>
+</tr>
+<tr>
+<td><code>qwen</code></td>
+<td>OpenRouter</td>
+<td><code>qwen/qwen3.7-max</code></td>
+</tr>
+<tr>
+<td><code>glm</code></td>
+<td>OpenRouter</td>
+<td><code>z-ai/glm-5.2</code></td>
+</tr>
+<tr>
+<td><code>openrouter</code></td>
+<td>OpenRouter</td>
+<td><code>deepseek/deepseek-v4-flash</code></td>
+</tr>
+</tbody>
+</table>
+<p><code>--agent</code> is <strong>required</strong> (there is no default). A missing API key fails fast
+with a clear error rather than degrading to empty outputs.</p>
+<h3 id="openrouter-vendor-namespacing">OpenRouter vendor-namespacing<a class="headerlink" href="#openrouter-vendor-namespacing" title="Permanent link">&para;</a></h3>
+<p>OpenRouter needs <code>vendor/model</code> ids. A bare third-party name is normalized
+automatically from its leading alphabetic run:</p>
+<table>
+<thead>
+<tr>
+<th>bare prefix</th>
+<th>becomes vendor</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>gemini</code></td>
+<td><code>google</code></td>
+</tr>
+<tr>
+<td><code>deepseek</code></td>
+<td><code>deepseek</code></td>
+</tr>
+<tr>
+<td><code>qwen</code></td>
+<td><code>qwen</code></td>
+</tr>
+<tr>
+<td><code>glm</code></td>
+<td><code>z-ai</code></td>
+</tr>
+<tr>
+<td><code>llama</code></td>
+<td><code>meta-llama</code></td>
+</tr>
+<tr>
+<td><code>mistral</code>, <code>mixtral</code></td>
+<td><code>mistralai</code></td>
+</tr>
+<tr>
+<td><code>grok</code></td>
+<td><code>x-ai</code></td>
+</tr>
+</tbody>
+</table>
+<p>So <code>--agent llm --model gemini-2.5-pro</code> is sent as <code>google/gemini-2.5-pro</code>, and
+<code>qwen3.7-max</code> → <code>qwen/qwen3.7-max</code> (the leading-run rule keeps dotted/dashed
+versions intact). An id that already contains <code>/</code> is passed through unchanged; an
+unknown bare name errors rather than silently 404-ing.</p>
+<h3 id="reasoning-effort">Reasoning effort<a class="headerlink" href="#reasoning-effort" title="Permanent link">&para;</a></h3>
+<p>Effort is provider-specific — set the knob that matches your provider:</p>
+<ul>
+<li><strong>Anthropic</strong> → <code>GEH_VIBE_THINK_EFFORT</code> (e.g. <code>high</code>). Sends adaptive extended
+  thinking; thinking tokens are billed as output and share the token budget.</li>
+<li><strong>OpenAI / OpenRouter</strong> → <code>GEH_VIBE_REASONING_EFFORT</code> (e.g. <code>high</code>). Direct
+  OpenAI receives <code>reasoning_effort</code>; OpenRouter receives <code>reasoning: {effort}</code>
+  (per-model support varies).</li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Anthropic at high effort</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nv">GEH_VIBE_THINK_EFFORT</span><span class="o">=</span>high<span class="w"> </span>geh<span class="w"> </span>vibe<span class="w"> </span>run<span class="w"> </span>--dataset<span class="w"> </span>securevibebench<span class="w"> </span>--agent<span class="w"> </span>claude<span class="w"> </span>--model<span class="w"> </span>claude-opus-4-8
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="c1"># OpenAI / OpenRouter at high effort</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="nv">GEH_VIBE_REASONING_EFFORT</span><span class="o">=</span>high<span class="w"> </span>geh<span class="w"> </span>vibe<span class="w"> </span>run<span class="w"> </span>--dataset<span class="w"> </span>baxbench<span class="w"> </span>--agent<span class="w"> </span>llm<span class="w"> </span>--model<span class="w"> </span>gpt-5.5
+</code></pre></div>
+<div class="admonition tip">
+<p class="admonition-title">Raise the token budget for high effort</p>
+<p>Thinking / reasoning tokens share <code>max_tokens</code>. On high effort with full-file
+generation the default budget can starve the answer — raise
+<code>GEH_VIBE_MAX_TOKENS</code> (e.g. <code>32000</code>) to avoid truncation.</p>
+</div>
+<h2 id="environment-variables">Environment variables<a class="headerlink" href="#environment-variables" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Effect</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GEH_CACHE_DIR</code></td>
+<td>Cache + upstream-checkout root. Precedence: <code>--cache-dir</code> &gt; this &gt; <code>&lt;repo&gt;/.geh</code>.</td>
+<td><code>&lt;repo&gt;/.geh</code></td>
+</tr>
+<tr>
+<td><code>GEH_VIBE_MODEL</code></td>
+<td>Default model id when <code>--model</code> is omitted.</td>
+<td>unset</td>
+</tr>
+<tr>
+<td><code>GEH_VIBE_MAX_TOKENS</code></td>
+<td>Output-token budget (<code>max_tokens</code> / <code>max_completion_tokens</code>).</td>
+<td><code>32000</code></td>
+</tr>
+<tr>
+<td><code>GEH_VIBE_HTTP_TIMEOUT</code></td>
+<td>Per-request httpx <strong>read</strong> timeout, seconds (fires only when no bytes arrive in the window).</td>
+<td><code>180</code></td>
+</tr>
+<tr>
+<td><code>GEH_VIBE_HARD_TIMEOUT</code></td>
+<td>Hard wall-clock cap per request, seconds. Guards against servers that dribble keepalive bytes and defeat the read timeout; on expiry the request is abandoned and retried, then degrades to an in-denominator failure so the run advances. <code>0</code> disables.</td>
+<td><code>0</code></td>
+</tr>
+<tr>
+<td><code>GEH_VIBE_PROMPT_CACHE</code></td>
+<td>Anthropic prompt caching (one ephemeral breakpoint). <code>0</code> disables.</td>
+<td><code>1</code></td>
+</tr>
+<tr>
+<td><code>GEH_VIBE_THINK_EFFORT</code></td>
+<td>Anthropic adaptive-thinking effort (e.g. <code>high</code>).</td>
+<td>unset</td>
+</tr>
+<tr>
+<td><code>GEH_VIBE_REASONING_EFFORT</code></td>
+<td>OpenAI / OpenRouter reasoning effort (e.g. <code>high</code>).</td>
+<td>unset</td>
+</tr>
+<tr>
+<td><code>GEH_VIBE_SHARD</code></td>
+<td>Strided task sharding <code>"&lt;idx&gt;/&lt;num&gt;"</code> for parallel runs (use a distinct <code>--run-id</code> per shard).</td>
+<td>unset</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p><code>GEH_VIBE_MAX_TOKENS</code>, <code>GEH_VIBE_HTTP_TIMEOUT</code>, and <code>GEH_VIBE_HARD_TIMEOUT</code>
+are read once at import — set them in the launch environment, not mid-process.</p>
+</div>
+<h2 id="commands">Commands<a class="headerlink" href="#commands" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>geh<span class="w"> </span>vibe<span class="w"> </span>datasets<span class="w">                                      </span><span class="c1"># list sources/oracles + capabilities (JSON)</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>geh<span class="w"> </span>vibe<span class="w"> </span>acquire<span class="w">  </span>--dataset<span class="w"> </span>&lt;d&gt;<span class="w"> </span><span class="o">[</span>--force<span class="o">]</span><span class="w">              </span><span class="c1"># clone + build upstream env (run this first)</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>geh<span class="w"> </span>vibe<span class="w"> </span>doctor<span class="w">   </span>--dataset<span class="w"> </span>&lt;d&gt;<span class="w"> </span><span class="o">[</span>--skip-docker<span class="o">]</span><span class="w">        </span><span class="c1"># probe Docker/checkout/venv/disk/secrets</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>geh<span class="w"> </span>vibe<span class="w"> </span>run<span class="w">      </span>--dataset<span class="w"> </span>&lt;d&gt;<span class="w"> </span>--agent<span class="w"> </span>&lt;a&gt;<span class="w"> </span><span class="o">[</span>...<span class="o">]</span><span class="w">      </span><span class="c1"># live model generation + scoring</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>geh<span class="w"> </span>vibe<span class="w"> </span><span class="nb">eval</span><span class="w">     </span>--dataset<span class="w"> </span>&lt;d&gt;<span class="w"> </span>--predictions<span class="w"> </span>f.jsonl<span class="w">  </span><span class="c1"># score BYO predictions (no live model)</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>geh<span class="w"> </span>vibe<span class="w"> </span>report<span class="w">   </span>--run-dir<span class="w"> </span>&lt;dir&gt;<span class="w">                      </span><span class="c1"># rebuild summary.json + report.md</span>
+</code></pre></div>
+<p><code>geh vibe run</code> flags: <code>--dataset</code> (required), <code>--agent</code> (required), <code>--model</code>,
+<code>--limit N</code>, <code>--run-id</code>, <code>--run-dir</code>, <code>--cache-dir</code>, <code>--no-cache</code>, <code>--allow-empty</code>.
+<code>--concurrency</code> and <code>--trials</code> must be <code>1</code> (other values are rejected). Omit
+<code>--run-id</code> / <code>--run-dir</code> to auto-name <code>runs/vibecoding/vibe-&lt;dataset&gt;-&lt;unixtime&gt;</code>.</p>
+<p><code>acquire</code> is a prerequisite for the upstream-backed datasets — without it a
+<code>run</code> / <code>eval</code> loads zero tasks and stops.</p>
+<h2 id="bring-your-own-predictions">Bring-your-own predictions<a class="headerlink" href="#bring-your-own-predictions" title="Permanent link">&para;</a></h2>
+<p><code>geh vibe eval --predictions &lt;file&gt;</code> scores a JSONL file where each line is one
+<code>AgentArtifact</code>. This is the path for any dataset (and the only path for <code>ase</code>).
+Each record:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Required</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>task_id</code></td>
+<td>yes</td>
+<td>The task id from <code>geh vibe datasets</code> / the dataset.</td>
+</tr>
+<tr>
+<td><code>model</code></td>
+<td>yes</td>
+<td>Free-form label recorded in the report.</td>
+</tr>
+<tr>
+<td><code>kind</code></td>
+<td>yes</td>
+<td>One of <code>patch</code>, <code>full_file</code>, <code>completion</code>, <code>repo_dir</code>.</td>
+</tr>
+<tr>
+<td>payload</td>
+<td>yes</td>
+<td>The field matching <code>kind</code> (e.g. <code>patch</code> / <code>files</code> / <code>completion</code>).</td>
+</tr>
+<tr>
+<td><code>metadata</code></td>
+<td>no</td>
+<td>Arbitrary JSON carried into the result.</td>
+</tr>
+</tbody>
+</table>
+<p>The artifact <code>kind</code> must match what the dataset's oracle accepts (see the
+task-type column above): patch datasets take <code>patch</code>, full-file / scaffold
+datasets take <code>full_file</code>, <code>secrepobench</code> takes <code>completion</code> (or <code>full_file</code>), and
+<code>ase</code> takes <code>repo_dir</code>.</p>
+<h2 id="metrics-and-scoring">Metrics and scoring<a class="headerlink" href="#metrics-and-scoring" title="Permanent link">&para;</a></h2>
+<p>Scores are <strong>capability-scoped</strong> and tri-state (<code>True</code> / <code>False</code> / <code>None</code>). The
+two headline metrics:</p>
+<ul>
+<li><strong><code>target_secure_success</code></strong> = functional correctness <strong>AND</strong> security-oracle
+  pass.</li>
+<li><strong><code>strict_secure_success</code></strong> = the above <strong>AND</strong> no new vulnerability introduced
+  (only meaningful where new-vuln detection is enabled, e.g. <code>securevibebench</code>
+  with Semgrep on).</li>
+</ul>
+<p>These combine with <strong>three-valued (Kleene) AND</strong>: any definite <code>False</code> makes the
+result <code>False</code> (even if another gate is unknown); a result is only <code>None</code>
+(indeterminate) when nothing failed but a required gate is unknown.</p>
+<p><strong>Denominator.</strong> A row counts toward a rate when its status is <code>completed</code>,
+<code>model_failure</code>, or <code>cheating_detected</code>. Crucially, a model that produced a
+non-building, non-applying, or empty candidate (<code>build_failed</code>,
+<code>patch_apply_failed</code>, <code>empty_diff</code>) — or no submission at all — is a <strong>scored
+failure in the denominator</strong>, not an exclusion. Only <code>infra_failure</code> and
+<code>unsupported</code> (environment / adapter problems, not the model's fault) are
+<strong>excluded</strong> from rates (and still reported as counts).</p>
+<p><strong><code>excluded_null</code>.</strong> Within the denominator, a row whose verdict is genuinely
+indeterminate (<code>None</code>) is dropped from <em>that metric only</em> and reported as
+<code>excluded_null</code>. A definite <code>False</code> is always a scored failure, never an
+exclusion.</p>
+<p>Each metric cell serializes as <code>{"rate": &lt;float|null&gt;, "n_scored": &lt;int&gt;,
+"excluded_null": &lt;int&gt;}</code> (<code>rate</code> is <code>null</code> when nothing was scored). <code>summary.json</code>
+(written next to the run) also carries <code>totals</code>, per-track <code>leaderboard</code> sections,
+<code>auxiliary_rates</code> (functional-only, oracle-security, and the functional→secure
+gap), <code>breakdowns</code> (per-CWE / per-dataset / per-task-type), <code>failures</code>, and a
+<code>quality_gate</code> that fails if the excluded fraction exceeds 20%.</p>
+<p><strong>Reading a number.</strong> <code>target_secure_success = 0.42</code> with <code>n_scored=100</code>,
+<code>excluded_null=8</code>, <code>excluded_infra=5</code> means: of 100 rows with a definite verdict,
+42% were both functionally correct and passed the security oracle; 8 rows were
+indeterminate (dropped from this metric only); 5 were infra failures excluded
+from all metrics; and build / apply / empty / missing-submission failures are
+already counted as failures within that 100.</p>
+<h3 id="leaderboard-tracks">Leaderboard tracks<a class="headerlink" href="#leaderboard-tracks" title="Permanent link">&para;</a></h3>
+<p>Tracks are scored over their own datasets, pooled, never mixing dataset families:</p>
+<table>
+<thead>
+<tr>
+<th>Track</th>
+<th>Metric</th>
+<th>Datasets</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>vibecoding_safety_repo_patch_v0</code></td>
+<td><code>target_secure_success</code></td>
+<td><code>susvibes</code>, <code>securevibebench</code></td>
+</tr>
+<tr>
+<td><code>vibecoding_safety_repo_completion_v0</code></td>
+<td><code>target_secure_success</code></td>
+<td><code>secrepobench</code></td>
+</tr>
+<tr>
+<td><code>strict_secure</code> (secondary)</td>
+<td><code>strict_secure_success</code></td>
+<td><code>securevibebench</code></td>
+</tr>
+</tbody>
+</table>
+<p>Use <code>geh vibe report --run-dir &lt;dir&gt;</code> to (re)generate <code>summary.json</code> and a
+human-readable <code>report.md</code> from a finished run.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/Virtue-Research/guard-eval-harness" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+      <div class="md-progress" data-md-component="progress" role="progressbar"></div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.instant.progress", "navigation.tracking", "navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.expand", "navigation.top", "navigation.path", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.tabs.link", "toc.follow", "header.autohide"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
