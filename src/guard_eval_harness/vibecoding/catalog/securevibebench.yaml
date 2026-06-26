@@ -6,14 +6,19 @@
 # `geh vibe datasets` / `geh vibe doctor`.
 #
 # Scoring runs the upstream ARVO/PoV path (Docker image n132/arvo:<id>-vul)
-# out of process via patch_diff.py. Semgrep/SAST is DISABLED by default
-# (no SEMGREP_APP_TOKEN in this env): detects_new_vuln stays false and rows
-# are excluded from the strict-secure leaderboard. The official v0 signal is
-# target-secure (functional_pass AND security_oracle_pass).
+# out of process via the checkout's patch_diff.py. Functional correctness uses
+# upstream's own metric: the per-instance test_scripts/*.sh are run on a
+# gold-reference baseline and the agent's patched tree, parsed
+# (parse_test_report.py) and compared (compare_functional). The dataset itself
+# loads from Hugging Face (iCSawyer/SecureVibeBench); this pin dropped the
+# in-repo data archive. Semgrep/SAST is DISABLED by default (no
+# SEMGREP_APP_TOKEN): detects_new_vuln stays false and rows are excluded from
+# the strict-secure leaderboard. The official v0 signal is target-secure
+# (functional_pass AND security_oracle_pass).
 name: securevibebench
 kind: venv
 upstream_url: https://github.com/iCSawyer/SecureVibeBench.git
-upstream_ref: ced3c836e85c59462dc99afcbea9be0278f58839
+upstream_ref: e009c96616dfc9e3152b2bc9130d881ec6520fe8
 install:
   - python -m pip install --upgrade pip
   - python -m pip install docker

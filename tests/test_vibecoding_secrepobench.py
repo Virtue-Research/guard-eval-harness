@@ -11,6 +11,7 @@ that returns a canned :class:`RawOracleResult`.
 from __future__ import annotations
 
 import copy
+import fcntl
 import json
 import shutil
 from pathlib import Path
@@ -46,8 +47,8 @@ _REPORT_EVAL: dict[str, dict] = {
     "910": {
         "none": {
             "gpt-test": {
-                "full": {
-                    "instruct": {
+                "in-file": {
+                    "no-security-reminder": {
                         "perturbed": {
                             "testcase": "pass",
                             "unittest": {
@@ -69,8 +70,8 @@ _REPORT_EVAL: dict[str, dict] = {
     "1065": {
         "none": {
             "gpt-test": {
-                "full": {
-                    "instruct": {
+                "in-file": {
+                    "no-security-reminder": {
                         "perturbed": {
                             "testcase": "crash",
                             "unittest": {
@@ -88,8 +89,8 @@ _REPORT_EVAL: dict[str, dict] = {
     "1427": {
         "none": {
             "gpt-test": {
-                "full": {
-                    "instruct": {
+                "in-file": {
+                    "no-security-reminder": {
                         "perturbed": {
                             "testcase": "error: compile error (1)",
                             "unittest": {
@@ -235,8 +236,8 @@ def test_stage_writes_completion_text_not_a_diff(tmp_path: Path) -> None:
     expected_name = _completion_filename(
         agent="none",
         model="gpt-test",
-        context_type="full",
-        prompt_type="instruct",
+        context_type="in-file",
+        prompt_type="no-security-reminder",
         mode="perturbed",
     )
     written = (
@@ -276,8 +277,8 @@ def test_stage_full_file_artifact_writes_single_file(
         / _completion_filename(
             agent="none",
             model="gpt-test",
-            context_type="full",
-            prompt_type="instruct",
+            context_type="in-file",
+            prompt_type="no-security-reminder",
             mode="perturbed",
         )
     )
@@ -340,24 +341,62 @@ def test_stage_rejects_escaping_model(tmp_path: Path) -> None:
             oracle.stage(tasks, [artifact], tmp_path)
 
 
-def test_stage_accepts_hf_style_model_confined(tmp_path: Path) -> None:
-    """A normal ``org/model`` stays inside ``completions/`` (no escape)."""
+def test_slashed_model_id_sanitized_for_upstream(tmp_path: Path) -> None:
+    """A vendor-namespaced model id round-trips through the upstream layout.
+
+    SecRepoBench's ``run_eval.py`` concatenates the model name into shell-script
+    and report paths, so a ``/`` (every OpenRouter slug, e.g.
+    ``qwen/qwen3.7-max``) would split into a phantom subdirectory and the scorer
+    would fail to find its own staged files -- every task degrading to
+    ``build_failed``. stage() must hand upstream a slash-free name (used for the
+    completion filename, ``--model-names``, and the nested report key), while
+    the raw id is preserved on the result row.
+    """
     oracle = SecRepoBenchOracle()
     tasks = _source().load()
+    raw_model = "qwen/qwen3.7-max"
+    sanitized = "qwen__qwen3.7-max"
     artifact = AgentArtifact(
         task_id="secrepobench/910",
-        model="acme/coder",
-        kind="full_file",
-        files={"src/cmsio0.c": "int main(void) { return 0; }\n"},
+        model=raw_model,
+        kind="completion",
+        completion="secure fill\n",
     )
     staged = oracle.stage(tasks, [artifact], tmp_path)
-    completions = (Path(staged.inputs_dir) / "completions").resolve()
-    written = Path(staged.metadata["entries"]["secrepobench/910"][
-        "completion_path"
-    ]).resolve()
-    assert written.is_relative_to(completions)
-    # Non-vacuity: the confined completion file is actually written.
-    assert written.exists()
+
+    # Everything upstream-facing is slash-free; the raw id is kept for the row.
+    assert staged.metadata["model_names"] == [sanitized]
+    entry = staged.metadata["entries"]["secrepobench/910"]
+    assert entry["model"] == raw_model
+    assert entry["upstream_model"] == sanitized
+    completion = Path(entry["completion_path"])
+    assert completion.parent.name == "910"  # no phantom 'qwen/' subdir
+    assert sanitized in completion.name
+    assert "/" not in completion.name
+
+    # parse(): a report nested under the sanitized key resolves the verdict (NOT
+    # an infra gap), and the row carries the RAW id.
+    report = {
+        "910": {"none": {sanitized: _REPORT_EVAL["910"]["none"]["gpt-test"]}}
+    }
+    outputs = tmp_path / "outputs"
+    outputs.mkdir(parents=True, exist_ok=True)
+    (outputs / "report_eval.json").write_text(
+        json.dumps(report), encoding="utf-8"
+    )
+    shutil.copy(_RAW / "report.json", outputs / "report.json")
+    raw = RawOracleResult(
+        adapter_name="secrepobench",
+        outputs_dir=str(outputs),
+        task_ids=["secrepobench/910"],
+        metadata=staged.metadata,
+    )
+    rows = oracle.parse(raw)
+    assert len(rows) == 1
+    row = rows[0]
+    assert row.model == raw_model  # raw id reported, not the sanitized key
+    assert row.status == "completed"  # leaf found -> not an infra gap
+    assert row.security_oracle_pass is True  # testcase == "pass"
 
 
 def test_stage_rejects_escaping_upstream_id_from_task_id(
@@ -477,6 +516,50 @@ def test_evaluate_locates_and_copies_reports(tmp_path: Path) -> None:
     # Score every staged target fresh: bypass the upstream report_eval.json
     # cache (keyed on model name, not the candidate) via --rerun.
     assert "--rerun" in raw.metadata["upstream_command"]
+
+
+def test_evaluate_holds_checkout_lock_across_ensure_ready_and_run(
+    tmp_path: Path,
+) -> None:
+    # The cache-root lock must be held across BOTH ensure_ready() (which does a
+    # git checkout/reset of the shared upstream) AND the mutate-run-collect
+    # section, so concurrent GEH_VIBE_SHARD shards on a shared --cache-dir
+    # serialize instead of clobbering each other's in-place edits. Prove the
+    # lock is held during ensure_ready *and* during run: a probe opening the
+    # SAME lock file and trying a non-blocking exclusive flock must be denied
+    # (flock conflicts across fds even within one process).
+    cache_root = tmp_path / "cache"
+    cache_root.mkdir()
+    oracle, staged = _stage_three(tmp_path)
+    oracle.run_cache_dir = cache_root  # lock path derives from this
+    held: dict[str, bool] = {}
+    lock_path = cache_root / ".geh-secrepo-eval.lock"
+
+    def _probe(label: str) -> None:
+        with open(lock_path, "w") as probe:
+            try:
+                fcntl.flock(probe, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                fcntl.flock(probe, fcntl.LOCK_UN)
+                held[label] = False
+            except BlockingIOError:
+                held[label] = True
+
+    class _LockProbeEnv(_StubEnvProvider):
+        def ensure_ready(self, *, force: bool = False):
+            _probe("ensure_ready")  # lock must already be held here (R10-1)
+            return super().ensure_ready(force=force)
+
+        def run(self, argv, *, run_dir, timeout_s=None, budget=None):
+            _probe("run")
+            return super().run(
+                argv, run_dir=run_dir, timeout_s=timeout_s, budget=budget
+            )
+
+    env = _LockProbeEnv(tmp_path)
+    run_config = OracleRunConfig(run_id="r", run_dir=str(tmp_path))
+    oracle.evaluate(staged, run_config, ResourceBudget(max_workers=1), env)
+    assert held.get("ensure_ready") is True
+    assert held.get("run") is True
 
 
 def test_evaluate_clears_stale_canonical_report_cache(tmp_path: Path) -> None:
@@ -657,8 +740,8 @@ def test_parse_missing_leaf_is_infra_failure(tmp_path: Path) -> None:
                 }
             },
             "agent": "none",
-            "context_type": "full",
-            "prompt_type": "instruct",
+            "context_type": "in-file",
+            "prompt_type": "no-security-reminder",
             "mode": "perturbed",
         },
     )
@@ -711,8 +794,8 @@ def test_parse_undecodable_report_degrades_to_infra(tmp_path: Path) -> None:
                 }
             },
             "agent": "none",
-            "context_type": "full",
-            "prompt_type": "instruct",
+            "context_type": "in-file",
+            "prompt_type": "no-security-reminder",
             "mode": "perturbed",
         },
     )
@@ -753,7 +836,7 @@ def test_functional_pass_false_when_baseline_not_subset(
     # Build a report where eval pass-set is missing a baseline test (deep-copy
     # the inline OUTPUT literal so the shared fixture is not mutated).
     report_eval = copy.deepcopy(_REPORT_EVAL)
-    report_eval["910"]["none"]["gpt-test"]["full"]["instruct"][
+    report_eval["910"]["none"]["gpt-test"]["in-file"]["no-security-reminder"][
         "perturbed"
     ]["unittest"]["pass"] = ["quick floor"]
     outputs = tmp_path / "outputs"
@@ -778,8 +861,8 @@ def test_functional_pass_false_when_baseline_not_subset(
                 }
             },
             "agent": "none",
-            "context_type": "full",
-            "prompt_type": "instruct",
+            "context_type": "in-file",
+            "prompt_type": "no-security-reminder",
             "mode": "perturbed",
         },
     )
@@ -788,6 +871,56 @@ def test_functional_pass_false_when_baseline_not_subset(
     assert row.functional_pass is False
     # Secure testcase but functional fail => not target-secure.
     assert row.target_secure_success is False
+
+
+def test_parse_navigates_report_by_sanitized_upstream_model(
+    tmp_path: Path,
+) -> None:
+    """A slash-bearing live model is keyed in the upstream report by its
+    sanitized name (what --model-names passed). parse() must navigate with the
+    entry's upstream_model -- not the raw id -- and still report the raw model on
+    the row. Navigating with the raw ``acme/coder`` would miss the leaf and
+    degrade to an infra row, so a real verdict proves the key was used."""
+    oracle = SecRepoBenchOracle()
+    report_eval = copy.deepcopy(_REPORT_EVAL)
+    # Re-key the per-task report under the sanitized name upstream wrote.
+    report_eval["910"]["none"]["acme__coder"] = report_eval["910"]["none"].pop(
+        "gpt-test"
+    )
+    outputs = tmp_path / "outputs"
+    outputs.mkdir(parents=True, exist_ok=True)
+    (outputs / "report_eval.json").write_text(
+        json.dumps(report_eval), encoding="utf-8"
+    )
+    shutil.copy(_RAW / "report.json", outputs / "report.json")
+
+    raw = RawOracleResult(
+        adapter_name="secrepobench",
+        outputs_dir=str(outputs),
+        logs_dir=str(tmp_path),
+        exit_code=0,
+        task_ids=["secrepobench/910"],
+        metadata={
+            "entries": {
+                "secrepobench/910": {
+                    "upstream_id": "910",
+                    "model": "acme/coder",
+                    "upstream_model": "acme__coder",
+                    "source_dataset": "secrepobench",
+                }
+            },
+            "agent": "none",
+            "context_type": "in-file",
+            "prompt_type": "no-security-reminder",
+            "mode": "perturbed",
+        },
+    )
+    row = oracle.parse(raw)[0]
+    # The leaf was found via the sanitized key (a verdict, not an infra miss)...
+    assert row.functional_pass is not None
+    assert row.status != "infra_failure"
+    # ...while the row keeps the raw model id for display/provenance.
+    assert row.model == "acme/coder"
 
 
 def test_derive_metrics_consistency(tmp_path: Path) -> None:

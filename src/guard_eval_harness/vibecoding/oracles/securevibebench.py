@@ -1,26 +1,30 @@
 """SecureVibeBench oracle adapter (ARVO / PoV, Semgrep-disabled by default).
 
-Wraps the upstream SecureVibeBench ``patch_diff.py`` evaluator. The upstream
-flow is live-agent oriented: an agent writes a ``*.patch`` into a timestamped
-result directory, then ``patch_diff.py`` spins up the ARVO Docker image
-(``n132/arvo:<id>-vul``), checks out the parent-of-vulnerability commit (PVIC),
-applies the patch, runs ``arvo compile`` + the PoV crash oracle, optionally
-runs functional ``test_scripts/*.sh``, and (optionally) Semgrep/SAST.
+Wraps the upstream SecureVibeBench ``patch_diff.py`` evaluator, run from the
+pinned checkout. The upstream flow is live-agent oriented: an agent writes a
+``*.patch`` into a timestamped result directory, then ``patch_diff.py`` spins up
+the ARVO Docker image (``n132/arvo:<id>-vul``), checks out the
+parent-of-vulnerability commit (PVIC), applies the patch, runs ``arvo compile``
++ the PoV crash oracle, runs the functional ``evaluation/test_scripts/*.sh`` on
+both a gold-reference baseline and the patched tree and compares them via
+``parse_test_report.py`` (the candidate must pass at least the tests the
+baseline passes), and (optionally) Semgrep/SAST. The tasks themselves load from
+the upstream Hugging Face dataset (see ``sources/securevibebench.py``); this
+pin dropped the in-repo data archive.
 
 GEH does not run a live agent. Instead :meth:`stage` materializes the exact
 "fake result directory" the upstream evaluator expects
 (``RESULTS_ROOT/<ARVO_ID>/vul/<ts>/patches/<task>.patch``) from a BYO ``patch``
 artifact, :meth:`evaluate` runs ``my_utils/patch_diff.py`` out of process via
 the injected :class:`EnvProvider`, and :meth:`parse` maps the upstream
-``arvo_result.json`` (+ optional ``test_<phase>.log``) onto a normalized
+``arvo_result.json`` (+ the functional verdict JSON) onto a normalized
 :class:`VibeTaskResult` with correct infra-vs-model attribution.
 
 Semgrep policy: this env has no ``SEMGREP_APP_TOKEN``, so we default to
 SEMGREP-DISABLED mode -- ``detects_new_vuln=False``, ``new_vuln_introduced``
 stays ``None``, and the row is therefore excluded from the strict-secure
 leaderboard (``strict_secure_success`` stays ``None`` via null propagation).
-The upstream ``--run-sast`` flag is forced to ``FALSE`` so no Semgrep is
-attempted out of process.
+``--run-sast`` is passed ``TRUE`` only when a host token is present.
 
 This module imports no upstream package and spawns no subprocess directly; all
 execution goes through ``env_provider.run(...)``.
@@ -29,6 +33,7 @@ execution goes through ``env_provider.run(...)``.
 from __future__ import annotations
 
 import json
+import logging
 import os
 import subprocess
 from datetime import datetime, timezone
@@ -72,16 +77,50 @@ from guard_eval_harness.vibecoding.schema import (
 # --- upstream pin + layout constants ----------------------------------
 
 _UPSTREAM_URL = "https://github.com/iCSawyer/SecureVibeBench.git"
-# Pin to a concrete commit (tip of origin/main at provisioning time) rather
-# than the branch name; the env provider verifies HEAD against this ref as a
-# SHA prefix, so a branch name like "main" fails verification.
-_UPSTREAM_REF = "ced3c836e85c59462dc99afcbea9be0278f58839"
+# Pin to the commit that ships the functional ``test_scripts`` plus the
+# parse-and-compare scoring (``parse_test_report.py`` + the differential
+# ``patch_diff.py``). That commit also dropped ``data/full_dataset.zip``, so the
+# task source loads tasks from Hugging Face instead (see
+# ``sources/securevibebench.py``). Pinned as a concrete SHA: the env provider
+# verifies HEAD against it as a prefix.
+_UPSTREAM_REF = "e009c96616dfc9e3152b2bc9130d881ec6520fe8"
 
 # Mode is always "vul" for the v0 target-vuln track (matches run.sh MODE=vul).
 _MODE = "vul"
 
 # Per-task subprocess wall-clock cap (upstream run.sh uses `timeout 30m`).
 _DEFAULT_TIMEOUT_S = 1800.0
+
+# Operator override: point ``run_test`` at a different ``test_scripts``
+# directory; otherwise the checkout's ``evaluation/test_scripts`` is used.
+_TEST_SCRIPTS_DIR_ENV = "GEH_VIBE_SVB_TEST_SCRIPTS_DIR"
+
+# Functional verdict file the upstream ``patch_diff.py`` writes into the result
+# dir. Upstream scores functional correctness by running the script on a
+# gold-reference baseline and the agent's patched tree, parsing both
+# (``parse_test_report``), and comparing (``compare_functional`` -> the agent
+# must pass at least the tests the baseline passes). The verdict lands here:
+# ``functional_pass`` 1 -> True, 0 -> False; a compare error (e.g. NumberResult,
+# which upstream does not compare) / null / missing -> None (excluded).
+_FUNCTIONAL_RESULT = "test_pvic_with_agent_patched_functional_result.json"
+
+_log = logging.getLogger(__name__)
+
+
+def _test_scripts_dir(upstream_dir: Path) -> Path:
+    """Functional ``test_scripts`` dir: override, else the checkout's copy."""
+    override = os.environ.get(_TEST_SCRIPTS_DIR_ENV)
+    if override:
+        return Path(override).expanduser().resolve()
+    return upstream_dir / "evaluation" / "test_scripts"
+
+
+def _count_test_scripts(scripts_dir: Path) -> int:
+    """Count ``*.sh`` functional scripts present in ``scripts_dir``."""
+    try:
+        return sum(1 for _ in scripts_dir.glob("*.sh"))
+    except OSError:
+        return 0
 
 # Upstream ``analysis_result`` values emitted into ``arvo_result.json``.
 _SAFE = "safe"
@@ -417,17 +456,16 @@ class SecureVibeBenchOracle(OracleAdapter):
     ) -> RawOracleResult:
         """Run upstream ``patch_diff.py`` per task via the env provider.
 
-        Semgrep-disabled: ``--run-sast FALSE`` is always passed so no SAST is
-        attempted out of process. One container per task (``per_task_external``,
+        Runs the pinned checkout's ``patch_diff.py`` (PoV + the parse/baseline
+        functional harness). One container per task (``per_task_external``,
         serial); the upstream tool is keyed by a single ARVO id per call.
         """
         resolved = env_provider.ensure_ready()
         upstream_dir = Path(resolved.upstream_dir)
+        # Run the pinned checkout's evaluator directly (parse_test_report.py is
+        # its sibling); the venv (docker SDK) comes from the env provider.
         patch_diff = (
-            upstream_dir
-            / "evaluation"
-            / "my_utils"
-            / "patch_diff.py"
+            upstream_dir / "evaluation" / "my_utils" / "patch_diff.py"
         )
         venv_python = resolved.venv_python
 
@@ -438,6 +476,33 @@ class SecureVibeBenchOracle(OracleAdapter):
             "results_root", staged.inputs_dir
         )
         pvic_cache = Path(resolved.cache_dir) / "securevibebench-repos"
+        # Gold-reference baseline cache (one parsed result per script_id, shared
+        # across runs/models): upstream ``ensure_ic_baseline`` reads/writes here.
+        baseline_dir = Path(resolved.cache_dir) / "securevibebench-baseline"
+
+        # Functional scoring points ``run_test`` at the checkout's
+        # ``evaluation/test_scripts`` via ``TEST_SCRIPTS_DIR``. If that directory
+        # is missing/empty (an override points nowhere, or the checkout is
+        # incomplete), no test log is produced and ``functional_pass`` is None
+        # for every task -- quietly degrading target_secure to security-only.
+        # Warn LOUDLY so the gap is caught rather than masquerading as
+        # correct-and-secure.
+        scripts_dir = _test_scripts_dir(upstream_dir)
+        n_scripts = _count_test_scripts(scripts_dir)
+        functional_enabled = n_scripts > 0
+        if not functional_enabled:
+            _log.warning(
+                "securevibebench: functional DISABLED -- no test_scripts/*.sh "
+                "found at %s; --run-test is requested but every task's "
+                "functional_pass will be None, so target_secure_success "
+                "degrades to security-only (vuln-removed) for all %d task(s). "
+                "Set %s to a populated directory to restore functional "
+                "scoring.",
+                scripts_dir,
+                len(staged.task_ids),
+                _TEST_SCRIPTS_DIR_ENV,
+            )
+
         exit_code = 0
         for task_id in staged.task_ids:
             meta = per_task.get(task_id, {})
@@ -474,8 +539,9 @@ class SecureVibeBenchOracle(OracleAdapter):
                 "TRUE",
                 "--run-test",
                 "TRUE",
-                # SAST runs only with a host Semgrep token (_semgrep_enabled);
-                # the upstream still gates it on a target-secure PoV result.
+                # SAST runs only with a host Semgrep token (upstream gates it on
+                # a target-secure PoV result); absent a token it is off and the
+                # new-vuln signal stays None (strict-secure excluded).
                 "--run-sast",
                 "TRUE" if _semgrep_enabled() else "FALSE",
                 "--keep-alive",
@@ -486,6 +552,13 @@ class SecureVibeBenchOracle(OracleAdapter):
                 run_dir=Path(run_config.run_dir),
                 timeout_s=_DEFAULT_TIMEOUT_S,
                 budget=resource_budget,
+                # ``TEST_SCRIPTS_DIR``: the checkout's (or overridden) scripts.
+                # ``TEST_BASELINE_DIR``: gold-reference baseline cache (one
+                # parsed result per script_id, reused across runs).
+                extra_env={
+                    "TEST_SCRIPTS_DIR": str(scripts_dir),
+                    "TEST_BASELINE_DIR": str(baseline_dir),
+                },
             )
             rc = getattr(result, "returncode", None)
             if rc not in (0, None):
@@ -507,6 +580,9 @@ class SecureVibeBenchOracle(OracleAdapter):
                 "mode": _MODE,
                 "per_task": per_task,
                 "semgrep_enabled": _semgrep_enabled(),
+                "functional_enabled": functional_enabled,
+                "test_scripts_dir": str(scripts_dir),
+                "test_scripts_count": n_scripts,
             },
         )
 
@@ -556,29 +632,46 @@ class SecureVibeBenchOracle(OracleAdapter):
         return None
 
     def _read_functional(self, result_dir: Path) -> tuple[bool | None, str]:
-        """Read the functional ``test_*.log`` if present.
+        """Read the upstream evaluator's functional verdict (parse + compare).
 
-        Returns ``(functional_pass, detail)``. Upstream ``test_scripts/*.sh``
-        are frequently MISSING, in which case no ``test_*.log`` is written and
-        ``functional_pass`` stays ``None`` (excluded from functional and
-        target-secure denominators via null propagation).
+        Returns ``(functional_pass, detail)``. Upstream's ``patch_diff.py`` runs
+        the test on a gold-reference baseline and the agent's patched tree,
+        parses both with ``parse_test_report``, and writes
+        :data:`_FUNCTIONAL_RESULT` via ``compare_functional`` (the candidate must
+        pass at least the tests the baseline passes). We read its verdict:
+
+        * ``functional_pass == 1`` (no compare error) -> ``True``
+        * ``functional_pass == 0`` (no compare error) -> ``False``
+        * ``functional_compare_error``, a null ``functional_pass``, or a missing
+          file -> ``None`` (excluded from the functional and target-secure
+          denominators via null propagation). This is upstream's own behavior:
+          it cannot compare ``NumberResult`` outputs, so those tasks are
+          undecidable -- we exclude them rather than scoring them as failures.
         """
-        logs = sorted(result_dir.glob("test_*.log"))
-        if not logs:
-            return None, "no test_*.log (test_scripts missing)"
-        text = logs[-1].read_text(encoding="utf-8", errors="replace")
-        # Upstream appends ``[exit code: N]`` after running the script.
-        marker = "[exit code:"
-        idx = text.rfind(marker)
-        if idx == -1:
-            return None, "test log present but no exit-code marker"
-        tail = text[idx + len(marker):]
-        code_token = tail.split("]", 1)[0].strip()
+        path = Path(result_dir) / _FUNCTIONAL_RESULT
+        if not path.is_file():
+            return None, "no functional_result.json (no functional verdict)"
         try:
-            code = int(code_token)
-        except ValueError:
-            return None, f"unparseable exit code {code_token!r}"
-        return (code == 0), f"functional test exit code {code}"
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return None, "functional_result.json unreadable"
+        if not isinstance(payload, dict):
+            return None, "functional_result.json not an object"
+        if payload.get("functional_compare_error"):
+            at, bt = payload.get("agent_type"), payload.get("baseline_type")
+            return None, (
+                f"functional comparison unavailable (agent={at}, baseline={bt})"
+            )
+        fp = payload.get("functional_pass")
+        if fp is None:
+            return None, "functional_pass null"
+        try:
+            passed = int(fp) == 1
+        except (TypeError, ValueError):
+            return None, f"unparseable functional_pass {fp!r}"
+        ac, bc = payload.get("agent_count"), payload.get("baseline_count")
+        verdict = "pass" if passed else "fail"
+        return passed, f"functional {verdict} (agent {ac} vs baseline {bc})"
 
     def _read_new_vuln(self, result_dir: Path) -> bool | None:
         """Read the upstream Semgrep result; ``True`` if any finding.

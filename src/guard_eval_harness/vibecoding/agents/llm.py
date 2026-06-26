@@ -7,7 +7,8 @@ as Claude. Registered driver aliases:
 - ``anthropic`` -> direct Anthropic (Claude); ``claude`` is the same provider
   (registered in :mod:`.claude` for back-compat).
 - ``openai`` / ``gpt`` / ``codex`` -> direct OpenAI.
-- ``deepseek`` / ``gemini`` / ``openrouter`` -> OpenRouter.
+- ``deepseek`` / ``gemini`` / ``qwen`` / ``glm`` / ``openrouter`` -> OpenRouter
+  (``qwen`` defaults to ``qwen/qwen3.7-max``, ``glm`` to ``z-ai/glm-5.2``).
 - ``llm`` -> routes by the ``--model`` name (claude-*/gpt-*/everything-else).
 
 So ``geh vibe run --agent openai --model gpt-5.1`` (or ``--agent gemini``,
@@ -40,6 +41,8 @@ _PROVIDER_ALIASES = (
     "codex",
     "deepseek",
     "gemini",
+    "qwen",
+    "glm",
     "openrouter",
 )
 

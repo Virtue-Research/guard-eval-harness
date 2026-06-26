@@ -318,3 +318,21 @@ def test_missing_openai_key_raises_before_any_attempt(monkeypatch):
         )
     assert post.calls == 0
     assert sleeps == []
+
+
+def test_http_timeout_honors_env_override(monkeypatch):
+    """``providers._HTTP_TIMEOUT`` is env-overridable so ``geh vibe run`` (which
+    uses these providers directly) honors a long ``GEH_VIBE_HTTP_TIMEOUT`` for
+    slow reasoning-model generations instead of timing out at the 180s default.
+    """
+    import importlib
+
+    monkeypatch.setenv("GEH_VIBE_HTTP_TIMEOUT", "1234")
+    try:
+        importlib.reload(providers_mod)
+        assert providers_mod._HTTP_TIMEOUT == 1234.0
+    finally:
+        monkeypatch.delenv("GEH_VIBE_HTTP_TIMEOUT", raising=False)
+        importlib.reload(providers_mod)
+    # Unset -> back to the conservative 180s default (no behavior change).
+    assert providers_mod._HTTP_TIMEOUT == 180.0
